@@ -1,0 +1,868 @@
+---
+title: "Modelling writing hesitations in text production as finite mixture model"
+author: "Jens Roeser"
+date: "Compiled `r format(Sys.Date(), '%b %d %Y')`"
+output: 
+  rmdformats::downcute:
+    keep_md: true
+    self_contained: true
+    thumbnails: false # for images
+    lightbox: true
+    gallery: false
+    highlight: tango
+    use_bookdown: true # for cross references
+bibliography: references.bib
+csl: apa.csl
+link-citations: yes
+---
+  
+```{r include = F}
+library(tidyverse)
+library(kableExtra)
+library(janitor)
+library(brms)
+library(polspline)
+library(patchwork)
+library(rmdformats)
+library(gridExtra)
+library(grid)
+library(gtable)
+library(gridExtra)
+library(scales)
+library(caret)
+library(InformationValue)
+
+
+# Calculate Bayes Factor
+BF <- function(ps, prior_sd = 1){
+  fit_posterior <- logspline(ps) 
+  posterior <- dlogspline(0, fit_posterior) # Height of the posterior at 0 
+  prior <- dnorm(0, 0, prior_sd) # Height of the prior at 0
+  BF10 <- prior / posterior 
+  return(BF10)
+}
+
+logit <- function(p) log(p / (1-p))
+ilogit <- function(x) 1 / (1 + exp(-x))
+inv_logit <- function(logit) exp(logit) / (1 + exp(logit))
+
+se_bin <- function(x) sqrt((mean(x, na.rm = T)*(1 - mean(x, na.rm = T)))/length(x)) # se for binary data
+
+lower <- function(x) quantile(x, prob = .025)
+upper <- function(x) quantile(x, prob = .975)
+
+# Remove leading zeros and round numbers
+dezero <- function(x, dp){ # dp is decimal places
+  fmt = paste0('%.',dp,'f')
+  x = sprintf(fmt,x)
+  x = str_replace(x, '(-|^)0\\.','\\1\\.')
+  return(x)
+}
+dezero_plot <- function(x) dezero(x, 1)
+
+
+theme_set(theme_bw(base_size = 14) +
+            theme(strip.background = element_blank(),
+                  legend.position = "top",
+                  legend.justification = "right",
+                  panel.grid = element_blank(),
+                  panel.background = element_rect(fill = "transparent"), # bg of the panel
+                  plot.background = element_rect(fill = "transparent", color = NA)))
+
+options(scipen = 999)
+
+beta_label <- "Short key transition\nduration"
+delta_label <- "Slowdown for hesitant key\ntransitions"
+theta_label <- "Probability of hesitant\ntransitions"
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      comment = NA,
+                      #                      dev = c("pdf", "png"), 
+                      #                     fig.keep = "all", 
+                      #                    fig.path = "figures/",
+                      fig.align = 'center', 
+                      #                   pdf.options(encoding = "ISOLatin9.enc"),
+                      fig.width = 8, 
+                      fig.height = 5,
+                      width=90)
+```
+
+
+# SPL2
+
+## Model comparisons
+
+```{r}
+files <- list.files("../stanout/spl2", pattern = "^modelcomp", full.names = T)
+table <- purrr::map_dfr(files, read_csv) %>% 
+  mutate(across(location, replace_na, "overall")) %>% 
+  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
+  mutate(across(where(is.numeric), round, 0),
+         across(where(is.numeric), format, big.mark = ","),
+         across(everything(), str_trim)) %>%
+  transmute(across(location, ~str_c("Text location: ",.)),
+            across(model, recode, lmm = "Unimodal log-normal",
+                                  lmmgaus = "Unimodal Gaussian",
+                                  mog = "Bimodal log-normal",
+                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
+            across(elpd_diff, str_c, " (", se_diff, ")"),
+            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
+  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
+  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
+  select(Model = model, 
+         ends_with("overall"), 
+         ends_with("sent"), 
+         ends_with("beforeword"), 
+         ends_with("withinword"))
+
+```
+
+
+```{r spl2, results='asis'}
+names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
+
+kable(table, caption = "SPL2 data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
+        align =c("l", rep("r", 8))) %>%
+  kable_styling(position = "center", 
+                full_width = T, 
+                font_size = 11) %>%
+  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
+  add_header_above(c(" " = 1, 
+                     "All transitions" = 2,
+                     "Before sentence" = 2, 
+                     "Before word" = 2,
+                     "Within word" = 2)) %>%
+  column_spec(1, width = "8em")
+
+```
+
+## Posterior parameter estimates of mixture model
+
+
+```{r spl2post, fig.cap="SPL2. Posterior parameter distribution"}
+file <- list.files(path = "../stanout/spl2", pattern = "mog.csv$",full.names = T)
+ps <- read_csv(file) %>% 
+  mutate(across(lang, recode, "EN" = "L1", "ES" = "L2")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, delta, prob)) %>% 
+  mutate(across(delta, ~.+beta),
+         across(c(delta, beta), exp),
+         across(delta, ~.-beta),
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:prob) %>% 
+  group_by(lang, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}"))
+
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = lang,
+             shape = lang)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  geom_errorbar(width = 0, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "Language",
+       shape = "Language")
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = lang,
+             shape = lang)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  geom_errorbar(width = 0, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "Language",
+       shape = "Language") +
+  theme(axis.title.y = element_blank())
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = lang,
+             shape = lang)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  geom_errorbar(width = 0, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "Language",
+       shape = "Language") +
+  theme(axis.title.y = element_blank())
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+
+# PlanTra
+
+## Model comparisons
+
+```{r}
+files <- list.files("../stanout/plantra", pattern = "^modelcomp", full.names = T)
+table <- purrr::map_dfr(files, read_csv) %>% 
+  mutate(across(location, replace_na, "overall")) %>% 
+  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
+  mutate(across(where(is.numeric), round, 0),
+         across(where(is.numeric), format, big.mark = ","),
+         across(everything(), str_trim)) %>%
+  transmute(across(location, ~str_c("Text location: ",.)),
+            across(model, recode, lmm = "Unimodal log-normal",
+                                  lmmgaus = "Unimodal Gaussian",
+                                  mog = "Bimodal log-normal",
+                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
+            across(elpd_diff, str_c, " (", se_diff, ")"),
+            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
+  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
+  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
+  select(Model = model, 
+         ends_with("overall"), 
+         ends_with("sent"), 
+         ends_with("beforeword"), 
+         ends_with("withinword"))
+```
+
+
+```{r plantra, results='asis'}
+names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
+
+kable(table, caption = "PlanTra data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
+        align =c("l", rep("r", 8))) %>%
+  kable_styling(position = "center", 
+                full_width = T, 
+                font_size = 11) %>%
+  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
+  add_header_above(c(" " = 1, 
+                     "All transitions" = 2,
+                     "Before sentence" = 2, 
+                     "Before word" = 2,
+                     "Within word" = 2)) %>%
+  column_spec(1, width = "8em")
+
+```
+
+## Posterior parameter estimates of mixture model
+
+
+```{r plantrapost, fig.cap="PlanTra. Posterior parameter distribution"}
+file <- list.files(path = "../stanout/plantra", pattern = "mog.csv$",full.names = T)
+ps <- read_csv(file) %>% 
+  mutate(across(task, factor, levels = c("pre-test", "post-test"), ordered = T)) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, delta, prob)) %>% 
+  mutate(across(delta, ~.+beta),
+         across(c(delta, beta), exp),
+         across(delta, ~.-beta),
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:prob) %>% 
+  group_by(task, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}"))
+
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = task,
+             shape = task)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  geom_errorbar(width = 0, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "Task",
+       shape = "Task")
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = task,
+             shape = task)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  geom_errorbar(width = 0, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "Task",
+       shape = "Task") +
+  theme(axis.title.y = element_blank())
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = task,
+             shape = task)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  geom_errorbar(width = 0, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 23)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "Task",
+       shape = "Task") +
+  theme(axis.title.y = element_blank())
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+
+
+
+# LIFT
+
+## Model comparisons
+
+```{r}
+files <- list.files("../stanout/lift", pattern = "^modelcomp", full.names = T)
+table <- purrr::map_dfr(files, read_csv) %>% 
+  mutate(across(location, replace_na, "overall")) %>% 
+  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
+  mutate(across(where(is.numeric), round, 0),
+         across(where(is.numeric), format, big.mark = ","),
+         across(everything(), str_trim)) %>%
+  transmute(across(location, ~str_c("Text location: ",.)),
+            across(model, recode, lmm = "Unimodal log-normal",
+                                  lmmgaus = "Unimodal Gaussian",
+                                  mog = "Bimodal log-normal",
+                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
+            across(elpd_diff, str_c, " (", se_diff, ")"),
+            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
+  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
+  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
+  select(Model = model, 
+         ends_with("overall"), 
+         ends_with("sent"), 
+         ends_with("beforeword"), 
+         ends_with("withinword"))
+```
+
+
+```{r lift, results='asis'}
+names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
+
+kable(table, caption = "LIFT data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
+        align =c("l", rep("r", 8))) %>%
+  kable_styling(position = "center", 
+                full_width = T, 
+                font_size = 11) %>%
+  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
+  add_header_above(c(" " = 1, 
+                     "All transitions" = 2,
+                     "Before sentence" = 2, 
+                     "Before word" = 2,
+                     "Within word" = 2)) %>%
+  column_spec(1, width = "8em")
+
+```
+
+## Posterior parameter estimates of mixture model
+
+```{r}
+file <- list.files(path = "../stanout/lift", pattern = "mog.csv$",full.names = T)
+ps <- read_csv(file) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, delta, prob)) %>% 
+  mutate(across(delta, ~.+beta),
+         across(c(delta, beta), exp),
+         across(delta, ~.-beta),
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:prob) %>% 
+  group_by(genre, topic, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}")) %>% 
+  ungroup() %>% 
+  mutate(group = str_c("Topic: ", topic, "; Genre: ", genre))
+```
+
+
+```{r liftpost, fig.cap="LIFT. Posterior parameter distribution"}
+posd <- position_dodge(.65)
+dotsize <- 2.5
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = group,
+             shape = group)) +
+  geom_point(size = dotsize, position = posd) +
+  geom_errorbar(width = 0, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1:8)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "",
+       shape = "")
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = group,
+             shape = group)) +
+  geom_point(size = dotsize, position = posd) +
+  geom_errorbar(width = 0, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1:8)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank())
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = group,
+             shape = group)) +
+  geom_point(size = dotsize, position = posd) +
+  geom_errorbar(width = 0, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1:8)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank())
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+# Cross-task / data set comparisons
+
+```{r}
+# Get the differences for tasks / across data set
+# use effect size = beta / sd
+# averaged across grouping variable
+
+
+# Also look at by ppt estimates?
+
+```
+
+
+
+
+```{r}
+files <- str_c("../stanout/", c("lift", "spl2", "plantra"), "/mog.csv")
+ps <- purrr::map_dfr(files, ~read_csv(.x) %>% 
+  mutate(data = .x)) %>% 
+  mutate(across(data, str_remove_all, "\\.|\\/|stanout|\\mog.csv"),
+         across(data, recode_factor, 
+                "spl2" = "SPL2", 
+                "plantra" = "PlanTra",
+                "lift" = "LIFT", 
+                .ordered = TRUE)) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, delta, prob)) %>% 
+  mutate(across(delta, ~.+beta),
+         across(c(delta, beta), exp),
+         across(delta, ~.-beta),
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:prob) %>% 
+  group_by(data, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper),
+                   .names = "{.fn}")) %>% 
+  ungroup()
+```
+
+
+```{r crossstudypost, fig.cap="Across studies. Posterior parameter distribution"}
+posd <- position_dodge(.65)
+dotsize <- 2.5
+grouplabel <- "Data set"
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = data,
+             shape = data)) +
+  geom_point(size = dotsize, position = posd) +
+  geom_errorbar(width = 0, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1, 4, 7)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = grouplabel,
+       shape = grouplabel)
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = data,
+             shape = data)) +
+  geom_point(size = dotsize, position = posd) +
+  geom_errorbar(width = 0, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1, 4, 7)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = grouplabel,
+       shape = grouplabel) +
+  theme(axis.title.y = element_blank())
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             colour = data,
+             shape = data)) +
+  geom_point(size = dotsize, position = posd) +
+  geom_errorbar(width = 0, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1, 4, 7)) +
+  scale_colour_viridis_d(end = .7) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = grouplabel,
+       shape = grouplabel) +
+  theme(axis.title.y = element_blank())
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+```{r eval = F}
+# use posterior to calculate interactions, cell means and dataset differences
+files <- str_c("../stanout/", c("lift", "spl2", "plantra"), "/mog.csv")
+
+plantra <- read_csv(files[1], id = "data") %>% 
+  pivot_wider(names_from = c(genre, topic), values_from = value) %>% 
+  unnest(cols = c(ARG_A, ARG_B, ARG_C, ARG_D, INF_A, INF_B, INF_C, INF_D)) %>% 
+  rowwise() %>% 
+  mutate(value = mean(c_across(contains("_")))) %>% 
+  ungroup() %>% 
+  select(param, location, value, data)
+
+spl2 <- read_csv(files[2], id = "data") %>% 
+  pivot_wider(names_from = c(lang), values_from = value) %>% 
+  unnest(cols = c(EN, ES)) %>% 
+  rowwise() %>% 
+  mutate(value = mean(c_across(c(EN, ES)))) %>% 
+  ungroup() %>% 
+  select(param, location, value, data)
+
+lift <- read_csv(files[3], id = "data") %>% 
+  pivot_wider(names_from = c(task), values_from = value) %>% 
+  unnest(cols = c(`pre-test`, `post-test`)) %>% 
+  rowwise() %>% 
+  mutate(value = mean(c_across(contains("-test")))) %>% 
+  ungroup() %>% 
+  select(param, location, value, data)
+
+
+ps <- bind_rows(plantra, spl2, lift) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, delta, prob)) %>% 
+  mutate(across(data, 
+                str_remove_all, 
+                "\\.|\\/|stanout|\\mog.csv"),
+         theta = logit_scaled(prob)) %>% 
+  select(-prob) %>%
+  pivot_longer(beta:theta) %>%
+  pivot_wider(names_from = c(data, location), 
+              values_from = value, 
+              names_sep = "_") %>% 
+  unnest(contains("_"))
+
+# Get main effects, interactions, nested effects
+ps_effects <- ps %>%
+  rowwise() %>%
+  mutate(# Main effects
+         DS_1 = mean(c_across(starts_with("lift_"))) - 
+                mean(c_across(starts_with("spl2_"))),
+         DS_2 = mean(c_across(starts_with("lift_"))) - 
+                mean(c_across(starts_with("plantra_"))),
+         DS_3 = mean(c_across(starts_with("spl2_"))) - 
+                mean(c_across(starts_with("plantra_"))),
+         TL_1 =  mean(c_across(contains(" sentence"))) - 
+                mean(c_across(contains("_before word"))),
+         TL_2 =  mean(c_across(contains("_before"))) - 
+                mean(c_across(contains("_within word"))),
+         # Two-way interactions
+         `DS_1:TL_1` = (`lift_before sentence` - `lift_before word`) -
+                       (`spl2_before sentence` - `spl2_before word`),  
+           
+         `DS_2:TL_1` = (`lift_before sentence` - `lift_before word`) -
+                       (`plantra_before sentence` - `plantra_before word`),  
+         
+         `DS_3:TL_1` = (`spl2_before sentence` - `spl2_before word`) -
+                       (`plantra_before sentence` - `plantra_before word`),  
+         
+         `DS_1:TL_2` = (mean(c_across(starts_with("lift_") & contains("_before"))) - 
+                        mean(c_across(starts_with("spl2_") & contains("_before")))) -
+                       (`lift_within word` - `spl2_within word`),  
+          
+         `DS_2:TL_2` = (mean(c_across(starts_with("lift_") & contains("_before"))) - 
+                        mean(c_across(starts_with("plantra_") & contains("_before")))) -
+                       (`lift_within word` - `plantra_within word`),  
+         
+         `DS_3:TL_2` = (mean(c_across(starts_with("spl2_") & contains("_before"))) - 
+                        mean(c_across(starts_with("plantra_") & contains("_before")))) -
+                       (`spl2_within word` - `plantra_within word`)) %>%
+  ungroup() %>%
+  mutate(# data set effects
+         before_word_lift_spl2 = `lift_before word` - `spl2_before word`,
+         before_word_lift_plantra = `lift_before word` - `plantra_before word`,
+         before_word_spl2_plantra = `spl2_before word` - `plantra_before word`,
+
+         before_sentence_lift_spl2 = `lift_before sentence` - `spl2_before sentence`,
+         before_sentence_lift_plantra = `lift_before sentence` - `plantra_before sentence`,
+         before_sentence_spl2_plantra = `spl2_before sentence` - `plantra_before sentence`,
+
+         within_word_lift_spl2 = `lift_within word` - `spl2_within word`,
+         within_word_lift_plantra = `lift_within word` - `plantra_within word`,
+         within_word_spl2_plantra = `spl2_within word` - `plantra_within word`) %>%
+  rename(parameter = name) 
+
+write_csv(ps_effects, "tables/ps_effects_acrossdata.csv")
+
+#conda <- c(2, 3, 4, 1)
+#condb <- c(4, 5, 6, 1)
+#condc <- c(1, 2, 3, 4)
+#condd <- c(4, 3, 2, 1)
+
+#me1 <- (conda + condb)/2 - (condc + condd)/2
+#me2 <- (conda + condc)/2 - (condb + condd)/2
+#int <- (conda - condc) - (condb - condd)
+
+```
+
+
+```{r}
+ps_effects <- read_csv("tables/ps_effects_acrossdata.csv")
+
+# Main effects and interaction summary
+ps_effects_summary <- ps_effects %>% 
+  select(parameter,
+         starts_with("DS"), 
+         starts_with("TL")) %>%
+  pivot_longer(-parameter) %>%
+  group_by(parameter, name) %>%
+  summarise(
+    across(value, list(est = mean,
+                       lower = lower,
+                       upper = upper,
+                       BF = BF), .names = "{.fn}")) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), round, 2),
+         across(est, str_c, " [", lower, " -- ", upper, "]"),
+         across(BF, ~ifelse( . > 100, "> 100", as.character(.))),
+         across(name, recode_factor, 
+                DS_1 = "Dataset 1 (LIFT, SPL2)",
+                DS_2 = "Dataset 2 (LIFT, PlanTra)",
+                DS_3 = "Dataset 1 (SPL2, PlanTra)",
+                TL_1 = "Location 1 (before sentence, before word)",
+                TL_2 = "Location 2 (before word / sentence, within word)",
+               `DS_1:TL_1` = "Dataset 1 : Location 1",
+               `DS_1:TL_2` = "Dataset 1 : Location 2",
+               `DS_2:TL_1` = "Dataset 2 : Location 1",
+               `DS_2:TL_2` = "Dataset 2 : Location 2",
+               `DS_3:TL_1` = "Dataset 3 : Location 1",
+               `DS_3:TL_2` = "Dataset 3 : Location 2", .ordered = T)) %>%
+  select(-lower,-upper) %>%
+  pivot_wider(names_from = parameter, values_from = c(est, BF)) %>%
+  arrange(name) %>% 
+  select(Predictor = name, ends_with("beta"), ends_with("delta"), ends_with("theta"))
+  
+```
+
+```{r effects, results='asis'}
+ps_effects_summary %>%
+  knitr::kable(align =c("l", "r", "r", "r", "r", "r", "r"), 
+               col.names = c("Predictor", rep(c("Estimate", "$BF_{10}$"), 3)),
+               caption = "Mixture model results of transition duration with predictor estimates for the distribution of short and hesitant transition durations (on log scale) and the probability of hesitant transitions (on logit scale). Estimates are shown with 95% PI.") %>%
+  kable_styling(position = "center", full_width = T, font_size = 10) %>%
+  footnote("Colon indicates interactions. PI is the probability interval. $BF_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+           threeparttable = T) %>%
+  add_header_above(c("", "Short transition duration" = 2, "Slowdown for hesitant transitions" = 2, "Probability of hesitant transitions" = 2))  %>%
+  group_rows("Main effects", 1, 5) %>%
+  group_rows("Two-way interactions", 6, 11) 
+
+```
+
+
+```{r eval = F}
+cellmeans <- ps_effects %>% 
+  select(parameter, contains(" ")) %>%
+  pivot_longer(-parameter) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  unnest() %>%
+  mutate(delta = exp(beta + delta) - exp(beta),
+         across(beta, exp),
+         across(theta, ilogit)) %>%
+  pivot_longer(cols = beta:theta, names_to = "param") %>% 
+  group_by(name, param) %>%
+  summarise(across(value, 
+                   list(mean = mean, 
+                        lower = lower, 
+                        upper = upper),
+                   .names = "{.fn}")) %>%
+  ungroup() %>% 
+  separate(name, into = c("data", "loc"), sep = "_") %>%
+  mutate(across(data, recode, "lift" = "LIFT", "spl2" = "SPL2", "plantra" = "PlanTra")) %>% 
+  pivot_wider(names_from = param, values_from = c(mean, lower, upper)) %>%
+  mutate(across(c(ends_with("beta"), ends_with("delta")), round, 0),
+         across(c(ends_with("beta"), ends_with("delta")), scales::comma, accuracy = 1),
+         across(contains("theta"), dezero, 2),
+         across(everything(), as.character)) %>%
+  pivot_longer(contains("_"), 
+               names_to = c(".value", "parameter"), 
+               names_sep ="_") %>%
+  mutate(across(mean, str_c, " [", lower, " -- ", upper, "]")) %>%
+  select(-lower,-upper) %>% 
+  pivot_wider(names_from = data, values_from = mean)
+
+tmp <- ps_effects %>% 
+  select(parameter, starts_with("before"), starts_with("within")) %>%
+  pivot_longer(-parameter) %>%
+  group_by(parameter, name) %>%
+  summarise(across(value, 
+                   list(mean = mean, 
+                        lower = lower, 
+                        upper = upper,
+                        BF = BF),
+                   .names = "{.fn}")) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), round, 2),
+         across(mean, str_c, " [", lower, " -- ", upper, "]"),
+         across(BF, ~ifelse(.>100, "> 100", as.character(.)))) %>%
+  rename(diff = mean) %>% 
+  select(-lower,-upper) %>% 
+  separate(name, into = c("loc", "loc2", "comp", "comp2")) %>% 
+  unite("loc", loc:loc2, sep = " ") %>% 
+  unite("comp", comp:comp2, sep = " - ") %>% 
+  right_join(cellmeans) %>% 
+  arrange(parameter, loc, comp) %>% 
+  select(parameter, `Transition location` = loc, LIFT, PlanTra, SPL2, Contrasts = comp, `Difference` = diff, `$BF_{10}$`= BF) 
+
+write_csv(tmp, "tables/cellmeans_transdur.csv")
+```
+
+
+```{r cellmeans, results = 'asis'}
+tmp <- read_csv("tables/cellmeans_transdur.csv") %>% 
+  mutate(across(Contrasts, str_replace, "lift", "LIFT"),
+         across(Contrasts, str_replace, "spl2", "SPL2"),
+         across(Contrasts, str_replace, "plantra", "PlanTra")) 
+
+cellmeans <- tmp %>% select(1:5) %>% 
+  pivot_longer(3:5) %>% 
+  unique() %>% 
+  arrange(parameter, `Transition location`) %>% 
+  select(-parameter, -`Transition location`)
+
+
+tmp %>% select(-LIFT:-SPL2) %>% 
+  arrange(parameter, `Transition location`) %>% 
+  pivot_wider(names_from = parameter, values_from = c(Difference, contains("BF"))) %>% 
+  select(1, Contrasts, 
+         ends_with("beta"), 
+         ends_with("delta"), 
+         ends_with("theta")) %>% 
+  knitr::kable(
+  align =c("l", "l", rep("r", 6)),
+  col.names = c("Transition location", "Comparisons", rep(c("Est. with 95% PI", "BF$_{10}$"),3)),
+  caption = "By-transition location differences for transition duration estimates inferred from mixture model. Differences are shown on the log scale (for durations) and logit scale for probability of hesitant transitions. 95% PIs in brackets.") %>%
+  collapse_rows(columns = 1, valign = "middle") %>% 
+  kable_styling(position = "center", 
+                full_width = T, 
+                font_size = 10) %>%
+  footnote("PIs are probability intervals. $BF_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+           threeparttable = T) %>% 
+  add_header_above(c(" " = 2, "Short interval durations" = 2, "Slowdown for hesitant transitions" = 2, "Probability of hesitant transitions" = 2)) #%>% 
+#  group_rows("Short transition duration", 1, 9) %>%
+#  group_rows("Slowdown for hesitant transitions", 10, 18) %>%
+#  group_rows("Probability of hesitant transitions", 19, 27) #%>%
+#  column_spec(1, "2.5cm") %>% 
+#  column_spec(2:4, "1.75cm") %>% 
+#  column_spec(5:6, "1.75cm") %>% 
+#  column_spec(7, "1cm") 
+```
+
+
+
+# References
