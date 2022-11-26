@@ -1,7 +1,7 @@
 ---
-title: "Modelling writing hesitations in text production as finite mixture model"
+title: "Modelling writing hesitations in free text production as finite mixture model"
 author: "Jens Roeser"
-date: "Compiled Nov 24 2022"
+date: "Compiled Nov 25 2022"
 output: 
   rmdformats::downcute:
     keep_md: true
@@ -24,6 +24,18 @@ link-citations: yes
 # SPL2
 
 ## Model comparisons
+
+
+### Fit to data
+
+<div class="figure" style="text-align: center">
+<img src="results_files/figure-html/predictionsspl2-1.png" alt="SPL2 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."  />
+<p class="caption">(\#fig:predictionsspl2)SPL2 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs.</p>
+</div>
+
+
+
+### Out-of-samples cross-validation
 
 
 
@@ -85,7 +97,7 @@ link-citations: yes
    <td style="text-align:right;"> -39,969 (127) </td>
   </tr>
   <tr>
-   <td style="text-align:left;width: 8em; "> Unimodal Gaussian </td>
+   <td style="text-align:left;width: 8em; "> Unimodal normal </td>
    <td style="text-align:right;"> -34,837 (440) </td>
    <td style="text-align:right;"> -138,115 (482) </td>
    <td style="text-align:right;"> -1,698 (59) </td>
@@ -116,6 +128,18 @@ link-citations: yes
 # PlanTra
 
 ## Model comparisons
+
+
+### Fit to data
+
+<div class="figure" style="text-align: center">
+<img src="results_files/figure-html/predictionsplantra-1.png" alt="PlanTra data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."  />
+<p class="caption">(\#fig:predictionsplantra)PlanTra data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs.</p>
+</div>
+
+
+
+### Out-of-samples cross-validation
 
 
 
@@ -177,7 +201,7 @@ link-citations: yes
    <td style="text-align:right;"> -18,899 (101) </td>
   </tr>
   <tr>
-   <td style="text-align:left;width: 8em; "> Unimodal Gaussian </td>
+   <td style="text-align:left;width: 8em; "> Unimodal normal </td>
    <td style="text-align:right;"> -17,868 (349) </td>
    <td style="text-align:right;"> -69,932 (394) </td>
    <td style="text-align:right;"> -3,215 (93) </td>
@@ -210,6 +234,18 @@ link-citations: yes
 # LIFT
 
 ## Model comparisons
+
+### Fit to data
+
+<div class="figure" style="text-align: center">
+<img src="results_files/figure-html/predictionslift-1.png" alt="LIFT data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."  />
+<p class="caption">(\#fig:predictionslift)LIFT data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs.</p>
+</div>
+
+
+
+
+### Out-of-samples cross-validation
 
 
 
@@ -271,7 +307,7 @@ link-citations: yes
    <td style="text-align:right;"> -342,321 (368) </td>
   </tr>
   <tr>
-   <td style="text-align:left;width: 8em; "> Unimodal Gaussian </td>
+   <td style="text-align:left;width: 8em; "> Unimodal normal </td>
    <td style="text-align:right;"> -83,305 (1,657) </td>
    <td style="text-align:right;"> -363,332 (1,745) </td>
    <td style="text-align:right;"> -68,376 (977) </td>
@@ -333,11 +369,11 @@ link-citations: yes
   <tr>
    <th style="text-align:left;"> Predictor </th>
    <th style="text-align:right;"> Estimate </th>
-   <th style="text-align:right;"> $BF_{10}$ </th>
+   <th style="text-align:right;"> BF$_{10}$ </th>
    <th style="text-align:right;"> Estimate </th>
-   <th style="text-align:right;"> $BF_{10}$ </th>
+   <th style="text-align:right;"> BF$_{10}$ </th>
    <th style="text-align:right;"> Estimate </th>
-   <th style="text-align:right;"> $BF_{10}$ </th>
+   <th style="text-align:right;"> BF$_{10}$ </th>
   </tr>
  </thead>
 <tbody>
@@ -446,7 +482,7 @@ link-citations: yes
 <tfoot>
 <tr><td style="padding: 0; " colspan="100%"><span style="font-style: italic;">Note: </span></td></tr>
 <tr><td style="padding: 0; " colspan="100%">
-<sup></sup> Colon indicates interactions. PI is the probability interval. $BF_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.</td></tr>
+<sup></sup> Colon indicates interactions. PI is the probability interval. BF$_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.</td></tr>
 </tfoot>
 </table>
 
@@ -476,7 +512,7 @@ link-citations: yes
  </thead>
 <tbody>
   <tr>
-   <td style="text-align:left;vertical-align: middle !important;" rowspan="3"> before sentence </td>
+   <td style="text-align:left;vertical-align: middle !important;width: 1.25cm; " rowspan="3"> before sentence </td>
    <td style="text-align:left;"> LIFT - PlanTra </td>
    <td style="text-align:right;"> 0.06 [-0.02 -- 0.14] </td>
    <td style="text-align:right;"> 0.12 </td>
@@ -487,7 +523,7 @@ link-citations: yes
   </tr>
   <tr>
    
-   <td style="text-align:left;"> LIFT - SPL2 </td>
+   <td style="text-align:left;width: 1.25cm; "> LIFT - SPL2 </td>
    <td style="text-align:right;"> -0.91 [-1.1 -- -0.75] </td>
    <td style="text-align:right;"> &gt; 100 </td>
    <td style="text-align:right;"> -0.54 [-0.66 -- -0.43] </td>
@@ -497,7 +533,7 @@ link-citations: yes
   </tr>
   <tr>
    
-   <td style="text-align:left;"> SPL2 - PlanTra </td>
+   <td style="text-align:left;width: 1.25cm; "> SPL2 - PlanTra </td>
    <td style="text-align:right;"> 0.97 [0.8 -- 1.17] </td>
    <td style="text-align:right;"> &gt; 100 </td>
    <td style="text-align:right;"> 0.23 [0.08 -- 0.39] </td>
@@ -506,7 +542,7 @@ link-citations: yes
    <td style="text-align:right;"> 82.58 </td>
   </tr>
   <tr>
-   <td style="text-align:left;vertical-align: middle !important;" rowspan="3"> before word </td>
+   <td style="text-align:left;vertical-align: middle !important;width: 1.25cm; " rowspan="3"> before word </td>
    <td style="text-align:left;"> LIFT - PlanTra </td>
    <td style="text-align:right;"> 0.08 [0 -- 0.15] </td>
    <td style="text-align:right;"> 0.32 </td>
@@ -517,7 +553,7 @@ link-citations: yes
   </tr>
   <tr>
    
-   <td style="text-align:left;"> LIFT - SPL2 </td>
+   <td style="text-align:left;width: 1.25cm; "> LIFT - SPL2 </td>
    <td style="text-align:right;"> -0.18 [-0.28 -- -0.09] </td>
    <td style="text-align:right;"> 29.86 </td>
    <td style="text-align:right;"> -0.15 [-0.23 -- -0.08] </td>
@@ -527,7 +563,7 @@ link-citations: yes
   </tr>
   <tr>
    
-   <td style="text-align:left;"> SPL2 - PlanTra </td>
+   <td style="text-align:left;width: 1.25cm; "> SPL2 - PlanTra </td>
    <td style="text-align:right;"> 0.26 [0.16 -- 0.37] </td>
    <td style="text-align:right;"> &gt; 100 </td>
    <td style="text-align:right;"> -0.15 [-0.26 -- -0.03] </td>
@@ -536,7 +572,7 @@ link-citations: yes
    <td style="text-align:right;"> 0.24 </td>
   </tr>
   <tr>
-   <td style="text-align:left;vertical-align: middle !important;" rowspan="3"> within word </td>
+   <td style="text-align:left;vertical-align: middle !important;width: 1.25cm; " rowspan="3"> within word </td>
    <td style="text-align:left;"> LIFT - PlanTra </td>
    <td style="text-align:right;"> 0.01 [-0.06 -- 0.08] </td>
    <td style="text-align:right;"> 0.04 </td>
@@ -547,7 +583,7 @@ link-citations: yes
   </tr>
   <tr>
    
-   <td style="text-align:left;"> LIFT - SPL2 </td>
+   <td style="text-align:left;width: 1.25cm; "> LIFT - SPL2 </td>
    <td style="text-align:right;"> -0.04 [-0.12 -- 0.06] </td>
    <td style="text-align:right;"> 0.06 </td>
    <td style="text-align:right;"> 0.04 [-0.09 -- 0.17] </td>
@@ -557,7 +593,7 @@ link-citations: yes
   </tr>
   <tr>
    
-   <td style="text-align:left;"> SPL2 - PlanTra </td>
+   <td style="text-align:left;width: 1.25cm; "> SPL2 - PlanTra </td>
    <td style="text-align:right;"> 0.05 [-0.05 -- 0.15] </td>
    <td style="text-align:right;"> 0.08 </td>
    <td style="text-align:right;"> -0.27 [-0.45 -- -0.08] </td>
@@ -569,7 +605,7 @@ link-citations: yes
 <tfoot>
 <tr><td style="padding: 0; " colspan="100%"><span style="font-style: italic;">Note: </span></td></tr>
 <tr><td style="padding: 0; " colspan="100%">
-<sup></sup> PIs are probability intervals. $BF_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.</td></tr>
+<sup></sup> PIs are probability intervals. BF$_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.</td></tr>
 </tfoot>
 </table>
 

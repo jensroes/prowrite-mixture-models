@@ -1,5 +1,5 @@
 ---
-title: "Modelling writing hesitations in text production as finite mixture model"
+title: "Modelling writing hesitations in text writing as finite mixture process"
 author: "Jens Roeser"
 date: "Compiled `r format(Sys.Date(), '%b %d %Y')`"
 output: 
@@ -92,9 +92,115 @@ knitr::opts_chunk$set(echo = FALSE,
 ```
 
 
+# Analysis
+
+We reanalysed data sets including process information from participants writing text. For all data sets we fit a series of four models each with random effects for participants. Probability functions used were normal and log-normal in line with typically treatments used in the literature, a log-normal distribution with unequal variances for model predictions, and a bimodal mixed effects model. Stan code for mixture models was based on @roeser2021modelling. Text locations (levels: before sentence, before word, within word) was included as predictor in all models.
+
+
+Data were analysed in Bayesian mixed effects models [@gelman2014;@mcelreath2016statistical]. The R [@R-base] package rstan [@rstan] was used to interface with the probabilistic programming language Stan [@carpenter2016stan] which was used to implement all models. Models were fitted with weakly informative priors [see @mcelreath2016statistical], and run with 10,000 iterations on 3 chains with a warm-up of 5,000 iterations and no thinning. Model convergence was confirmed by the Rubin-Gelman statistic ($\hat{R}$ = 1) [@gelman1992] and inspection of the Markov chain Monte Carlo chains.
+
+For model comparisons we used out-of-sample predictions estimated using Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and the difference $\Delta\widehat{elpd}$ between models. The advantage of using leave-one-out cross-validation is that models with more parameters are penalised to prevent overfit.
+
+
+
+
 # SPL2
 
+Data are going to be published in @torrance.
+
+## Methods
+
+Undergraduate university students--*N* = 39, 28 female, mean age = 20.6 years (SD = 1.51)--wrote two short argumentative essays, one in English (the student's first language in all cases; L1) and one in Spanish (L2) using CyWrite [@chukharev2019combined]. CyWrite provides a writing environment with basic word processing functionality (e.g., Microsoft WordPad), including text selection by mouse action, and copy-and-paste. We recorded the time of each keystroke and mouse action, and tracked writers' eye movements within their emerging text.
+
+Writing tasks: Participants were given a 40 minute time limit. They wrote essays in response to each of two prompts, with order and L1 / L2 counterbalanced across subjects.
+
+
+## Data processing
+
+
 ## Model comparisons
+
+
+### Fit to data
+
+```{r predictionsspl2, fig.cap="SPL2 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+files <- list.files("../stanout/spl2", pattern = "sims", full.names = T)
+sims <- read_csv(files) %>% 
+  pivot_longer(cols = c(y_obs, y_tilde))  %>% 
+  mutate(across(name, recode_factor, 
+                y_tilde = "Simulated data",
+                y_obs = "Observed data",
+                .ordered = T)) %>% 
+  filter(name ==  "Simulated data" |
+         (name == "Observed data" & sim_idx == 1))
+
+max_iki <- 2000
+
+plot_mog <- sims %>%
+  filter(model == "mog", value < max_iki) %>% 
+  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmm <- sims %>%
+  filter(model == "lmm", value < max_iki) %>% 
+  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmmgaus <- sims %>%
+  filter(model == "lmmgaus", value < max_iki) %>% 
+  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmmuneqvar <- sims %>%
+  filter(model == "lmmuneqvar", value < max_iki) %>% 
+  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = 'A')
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+### Out-of-samples cross-validation
 
 ```{r}
 files <- list.files("../stanout/spl2", pattern = "^modelcomp", full.names = T)
@@ -106,7 +212,7 @@ table <- purrr::map_dfr(files, read_csv) %>%
          across(everything(), str_trim)) %>%
   transmute(across(location, ~str_c("Text location: ",.)),
             across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal Gaussian",
+                                  lmmgaus = "Unimodal normal",
                                   mog = "Bimodal log-normal",
                                   lmmuneqvar = "Unimodal log-normal (unequal variance)"),
             across(elpd_diff, str_c, " (", se_diff, ")"),
@@ -227,7 +333,95 @@ beta + delta + theta +
 
 # PlanTra
 
+
+## Methods
+
+## Data processing
+
+
 ## Model comparisons
+
+
+### Fit to data
+
+```{r predictionsplantra, fig.cap="PlanTra data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+files <- list.files("../stanout/plantra", pattern = "sims", full.names = T)
+sims <- read_csv(files) %>% 
+  pivot_longer(cols = c(y_obs, y_tilde))  %>% 
+  mutate(across(name, recode_factor, 
+                y_tilde = "Simulated data",
+                y_obs = "Observed data",
+                .ordered = T)) %>% 
+  filter(name ==  "Simulated data" |
+         (name == "Observed data" & sim_idx == 1))
+
+max_iki <- 2000
+
+plot_mog <- sims %>%
+  filter(model == "mog", value < max_iki) %>% 
+  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmm <- sims %>%
+  filter(model == "lmm", value < max_iki) %>% 
+  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmmgaus <- sims %>%
+  filter(model == "lmmgaus", value < max_iki) %>% 
+  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmmuneqvar <- sims %>%
+  filter(model == "lmmuneqvar", value < max_iki) %>% 
+  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = 'A')
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+### Out-of-samples cross-validation
 
 ```{r}
 files <- list.files("../stanout/plantra", pattern = "^modelcomp", full.names = T)
@@ -239,7 +433,7 @@ table <- purrr::map_dfr(files, read_csv) %>%
          across(everything(), str_trim)) %>%
   transmute(across(location, ~str_c("Text location: ",.)),
             across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal Gaussian",
+                                  lmmgaus = "Unimodal normal",
                                   mog = "Bimodal log-normal",
                                   lmmuneqvar = "Unimodal log-normal (unequal variance)"),
             across(elpd_diff, str_c, " (", se_diff, ")"),
@@ -361,7 +555,93 @@ beta + delta + theta +
 
 # LIFT
 
+## Methods
+
+## Data processing
+
 ## Model comparisons
+
+### Fit to data
+
+```{r predictionslift, fig.cap="LIFT data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+files <- list.files("../stanout/lift", pattern = "sims", full.names = T)
+sims <- read_csv(files) %>% 
+  pivot_longer(cols = c(y_obs, y_tilde))  %>% 
+  mutate(across(name, recode_factor, 
+                y_tilde = "Simulated data",
+                y_obs = "Observed data",
+                .ordered = T)) %>% 
+  filter(name ==  "Simulated data" |
+         (name == "Observed data" & sim_idx == 1))
+
+max_iki <- 2000
+
+plot_mog <- sims %>%
+  filter(model == "mog", value < max_iki) %>% 
+  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmm <- sims %>%
+  filter(model == "lmm", value < max_iki) %>% 
+  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmmgaus <- sims %>%
+  filter(model == "lmmgaus", value < max_iki) %>% 
+  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plot_lmmuneqvar <- sims %>%
+  filter(model == "lmmuneqvar", value < max_iki) %>% 
+  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
+  ggplot(aes(x = value, 
+             group = interaction(sim_idx,name), 
+             colour = name)) +
+  geom_density() +
+  facet_wrap(~model) +
+  scale_colour_manual(values = c("firebrick3", "black")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(colour = "") +
+  theme(axis.title = element_blank())
+
+plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = 'A')
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+
+### Out-of-samples cross-validation
 
 ```{r}
 files <- list.files("../stanout/lift", pattern = "^modelcomp", full.names = T)
@@ -373,7 +653,7 @@ table <- purrr::map_dfr(files, read_csv) %>%
          across(everything(), str_trim)) %>%
   transmute(across(location, ~str_c("Text location: ",.)),
             across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal Gaussian",
+                                  lmmgaus = "Unimodal normal",
                                   mog = "Bimodal log-normal",
                                   lmmuneqvar = "Unimodal log-normal (unequal variance)"),
             across(elpd_diff, str_c, " (", se_diff, ")"),
@@ -753,10 +1033,10 @@ ps_effects_summary <- ps_effects %>%
 ```{r effects, results='asis'}
 ps_effects_summary %>%
   knitr::kable(align =c("l", "r", "r", "r", "r", "r", "r"), 
-               col.names = c("Predictor", rep(c("Estimate", "$BF_{10}$"), 3)),
+               col.names = c("Predictor", rep(c("Estimate", "BF$_{10}$"), 3)),
                caption = "Mixture model results of transition duration with predictor estimates for the distribution of short and hesitant transition durations (on log scale) and the probability of hesitant transitions (on logit scale). Estimates are shown with 95% PI.") %>%
   kable_styling(position = "center", full_width = T, font_size = 10) %>%
-  footnote("Colon indicates interactions. PI is the probability interval. $BF_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+  footnote("Colon indicates interactions. PI is the probability interval. BF$_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
            threeparttable = T) %>%
   add_header_above(c("", "Short transition duration" = 2, "Slowdown for hesitant transitions" = 2, "Probability of hesitant transitions" = 2))  %>%
   group_rows("Main effects", 1, 5) %>%
@@ -817,7 +1097,7 @@ tmp <- ps_effects %>%
   unite("comp", comp:comp2, sep = " - ") %>% 
   right_join(cellmeans) %>% 
   arrange(parameter, loc, comp) %>% 
-  select(parameter, `Transition location` = loc, LIFT, PlanTra, SPL2, Contrasts = comp, `Difference` = diff, `$BF_{10}$`= BF) 
+  select(parameter, `Transition location` = loc, LIFT, PlanTra, SPL2, Contrasts = comp, `Difference` = diff, `BF$_{10}$`= BF) 
 
 write_csv(tmp, "tables/cellmeans_transdur.csv")
 ```
@@ -851,13 +1131,13 @@ tmp %>% select(-LIFT:-SPL2) %>%
   kable_styling(position = "center", 
                 full_width = T, 
                 font_size = 10) %>%
-  footnote("PIs are probability intervals. $BF_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+  footnote("PIs are probability intervals. BF$_{10}$ is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
            threeparttable = T) %>% 
-  add_header_above(c(" " = 2, "Short interval durations" = 2, "Slowdown for hesitant transitions" = 2, "Probability of hesitant transitions" = 2)) #%>% 
+  add_header_above(c(" " = 2, "Short interval durations" = 2, "Slowdown for hesitant transitions" = 2, "Probability of hesitant transitions" = 2)) %>% 
 #  group_rows("Short transition duration", 1, 9) %>%
 #  group_rows("Slowdown for hesitant transitions", 10, 18) %>%
 #  group_rows("Probability of hesitant transitions", 19, 27) #%>%
-#  column_spec(1, "2.5cm") %>% 
+  column_spec(1, "1.25cm") 
 #  column_spec(2:4, "1.75cm") %>% 
 #  column_spec(5:6, "1.75cm") %>% 
 #  column_spec(7, "1cm") 
