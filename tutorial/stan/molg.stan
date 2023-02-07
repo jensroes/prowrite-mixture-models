@@ -53,7 +53,7 @@ model {
   vector[2] lp_parts;
 
   // Priors
-  beta_mu ~ normal(5, 2);
+  beta_mu ~ normal(5, .5);
   beta_sigma ~ cauchy(0, 1);
   beta_raw ~ normal(0, 1);
   sigma ~ cauchy(0, 2.5);

@@ -148,6 +148,9 @@ fit_gaus <- brm(formula = formula,
 
 Because Bayesian models tend to take more time to run, it makes sense to save the results using `saveRDS` for later re-use.
 
+The output of the model (i.e. the posterior) can be saved, so we don't need to run the model again (which can take a while). The function requires the name of the fitted model `fit_gaus`. We prefer to keep the name of the output similar to the name of the Stan code used and ideally the R script that is running the model so it is easy to find the script that is running which model. The model is stored as compressed ".rda" file.
+
+
 ```{r eval = F}
 saveRDS(object = fit_gaus,
         file = "stan/gaussian.rda", 
@@ -310,7 +313,7 @@ In the below code, the names on the left side of the arrow must correspond to th
 
 ```{r}
 data_list <- within( list(), {
-  ppts <- ppts  
+  ppt <- ppts  
   nS <- max(ppts) # max no of ppts
   condition <- condition
   K <- max(condition) # no of conditions
@@ -328,20 +331,22 @@ glimpse(data_list)
 
 ## Load model
 
-The Stan code can be downloaded from [GitHub](https://osf.io/t34jn/) using `readLines` and `writeLines`. The code will be saved in R's current working directory as "molg.stan" (mixture of log-Gaussians). 
+The Stan code can be downloaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/blob/main/tutorial/stan/molg.stan) using `readLines` and `writeLines`. The code will be saved as "molg.stan" (mixture of log-Gaussians) in a directory called "stan" which needs to be available in your current working directory. 
 
 ```{r eval = F}
+# Create an empty directory called "stan"
+dir.create("stan")
 # Download Stan code
-file <- readLines("https://osf.io/j6dzt/download")
+file <- readLines("https://raw.githubusercontent.com/jensroes/prowrite-mixture-models/main/tutorial/stan/molg.stan")
 # Save Stan code to current working directory
-writeLines(file, "molg.stan")
+writeLines(file, "stan/molg.stan")
 ```
 
-The Stan model can be loaded for data fitting using the `stan_model` function and assign it to the object `mog`. The "MoG.stan" file needs to be available in the current working directory of R or the file path needs to be indicated.
+The Stan model can be loaded into R using the `stan_model` function and assign it to the object `molg`. The "molg.stan" file needs to be available in the directory "stan" located inside the current working directory.
 
 
 ```{r eval = F}
-mog <- stan_model(file = "MoG.stan")
+molg <- stan_model(file = "stan/molg.stan")
 ```
 
 
@@ -350,18 +355,16 @@ This code fits the posterior of a categorical predictor with any number of level
 This Stan code used is largely based on @sorensen2016bayesian and @vasishth2017. @sorensen2016bayesian presents a detailed tutorial on how to fit Stan models [see also @lambert2018student].
 
 
-
-
-
 The model is fitting a number of parameters that are not relevant for our inference. To reduce the size of the R object that contains the posterior we can select the parameters of interest and disregard all parameters that are not relevant for our inference.
 
 ```{r}
 # Parameters to keep in output
 pars <- c("beta",                        # fluent typing
           "delta",                       # disfluency slowdown
-          "theta",                       # mixing proportion
-          "beta_s",                      # by-participant typing speed
-          "theta_s",                     # by-participant disfluency probability
+          "theta",                       # mixing proportion on logit scale
+          "prob",                        # mixing proportion as probability
+          "theta_s",                     # by-participant disfluency probability (logit scale)
+          "prob_s",                      # by-participant disfluency probability
           "sigma",                       # variance component
           "sigma_diff", "sigmap_e", "sigma_e",  # variance by mixture component
           "sigma_u",                     # variance for random ppt 
@@ -374,17 +377,17 @@ The `sampling` function applies the model to the data using the information spec
 
 ```{r eval = F}
 # Fit model
-m <- sampling(mog, 
-              data = data_list,
-              iter = iterations,
-              warmup = warmup,
-              chains = n_chains, 
-              cores = n_cores,
-              pars = pars, # Parameters to keep.
-              save_warmup = FALSE, # Don't save the warmup samples.
-              seed = 365, 
-              control = list(adapt_delta = .96, # default: .9
-                             max_treedepth = 12)) # default: 10
+fit_molg <- sampling(molg, 
+                     data = data_list,
+                     iter = iterations,
+                     warmup = warmup,
+                     chains = nchains, 
+                     cores = ncores,
+                     pars = pars, # Parameters to keep.
+                     save_warmup = FALSE, # Don't save the warmup samples.
+                     seed = 365, 
+                     control = list(adapt_delta = 0.96,  # default: 0.9
+                                    max_treedepth = 14)) # default: 10
 ```
 
 ```{r echo =F}
@@ -397,38 +400,41 @@ m <- sampling(mog,
 #print(inits_chain1)
 ```
 
-Running this model will take a while to complete sampling depending on your hardware specifications. The time it took my machine to complete this job can me viewed using `get_elapsed_time`. Therefore it is worth to not use all cores for this to run or to use a dedicated high performance machine.
+
+Save the results using `saveRDS`.
+
+```{r eval = F}
+saveRDS(object = fit_molg,
+        file = "stan/molg.rda", 
+        compress = "xz")
+```
 
 
 ```{r echo = F}
-m <- readRDS("MoG.rda")
+fit_molg <- readRDS("stan/molg.rda")
 ```
+
+The function `fixef` provide a summary of the inferred posterior estimates as average and 95% probability interval by transition location in log msecs.
 
 
 ```{r}
-get_elapsed_time(m)/60 # in mins
+print(fit_molg, pars = c("beta", "delta", "theta"), probs = c(.025, .975))
 ```
 
 
-## Reusing model output
+Running this model will take a while to complete sampling depending on your hardware specifications. The time it took my machine to complete this job can me viewed using `get_elapsed_time`. Therefore it is worth to not use all cores for this to run or to use a dedicated high performance machine.
 
-The output of the model (i.e. the posterior) can be saved, so we don't need to run the model again (which admittedly can take a while). The function requires the name of the fitted model `m`. We prefer to keep the name of the output similar to the name of the Stan code used. The model is stored as compressed ".rda" file.
 
-```{r eval = F}
-saveRDS(m, "MoG.rda", compress = "xz")
-```
-
-The model can be load into the environment of R using `readRDS`.
-
-```{r eval = F}
-m <- readRDS("MoG.rda")
+```{r}
+get_elapsed_time(fit_molg)/60 # in mins
 ```
 
 
 
-# Model diagnostics
 
-## Convergence
+## Model diagnostics
+
+### Convergence
 
 Model convergence can be established in two practically simple techniques. First, we can inspect the chains in trace plots which show the parameter estimate across iterations (here after warmup) for each chain. We will look at the population-level parameters (names are determined by the model) corresponding to the Greek symbols used **in the manuscript** and assign those to `pars`.
 
@@ -457,7 +463,7 @@ summary(m, pars=pars)$summary %>% as.data.frame() %>%
 Convergence problems can have many reasons and therefore many solutions: running longer chains (in particular longer warmups), increasing the maximum treedepth and the average acceptance probability (`adapt_delta`), specifying starting values, adjusting priors, constraining parameters, or changing the parametrisation of the model. Severe convergence problems are indicative of a misspecification of the model.
 
 
-## Posterior predictive check
+### Posterior predictive check
 
 The model used the posterior parameter values to simulate hypothetical data sets. This happened for every iteration for every chains. 
 
@@ -487,7 +493,7 @@ ppc_dens_overlay(data_list$y, y_tilde_sample) +
 
 
 
-# Posterior probability distribution
+# Posterior probability distributions
 
 
 At the core of Bayesian inference is the posterior probability distribution. For each model parameter we have `r scales::comma(total_samples)` posterior samples that form a posterior probability distribution. These samples are the results of the number of iterations after warmup for all chains.
