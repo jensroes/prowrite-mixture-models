@@ -1,28 +1,31 @@
-parameter,Transition location,LIFT,PlanTra,SPL2,Contrasts,Difference,$BF_{10}$
-beta,before sentence,179 [172 -- 187],168 [157 -- 181],446 [379 -- 535],lift - plantra,0.06 [-0.02 -- 0.14],0.12
-beta,before sentence,179 [172 -- 187],168 [157 -- 181],446 [379 -- 535],lift - spl2,-0.91 [-1.1 -- -0.75],> 100
-beta,before sentence,179 [172 -- 187],168 [157 -- 181],446 [379 -- 535],spl2 - plantra,0.97 [0.8 -- 1.17],> 100
-beta,before word,187 [179 -- 195],173 [162 -- 184],225 [206 -- 245],lift - plantra,0.08 [0 -- 0.15],0.32
-beta,before word,187 [179 -- 195],173 [162 -- 184],225 [206 -- 245],lift - spl2,-0.18 [-0.28 -- -0.09],29.86
-beta,before word,187 [179 -- 195],173 [162 -- 184],225 [206 -- 245],spl2 - plantra,0.26 [0.16 -- 0.37],> 100
-beta,within word,144 [138 -- 150],142 [134 -- 150],149 [137 -- 162],lift - plantra,0.01 [-0.06 -- 0.08],0.04
-beta,within word,144 [138 -- 150],142 [134 -- 150],149 [137 -- 162],lift - spl2,-0.04 [-0.12 -- 0.06],0.06
-beta,within word,144 [138 -- 150],142 [134 -- 150],149 [137 -- 162],spl2 - plantra,0.05 [-0.05 -- 0.15],0.08
-delta,before sentence,607 [535 -- 685],"844 [700 -- 1,008]","2,921 [2,459 -- 3,496]",lift - plantra,-0.31 [-0.47 -- -0.16],78.6
-delta,before sentence,607 [535 -- 685],"844 [700 -- 1,008]","2,921 [2,459 -- 3,496]",lift - spl2,-0.54 [-0.66 -- -0.43],> 100
-delta,before sentence,607 [535 -- 685],"844 [700 -- 1,008]","2,921 [2,459 -- 3,496]",spl2 - plantra,0.23 [0.08 -- 0.39],4.81
-delta,before word,352 [324 -- 382],500 [429 -- 584],532 [468 -- 605],lift - plantra,-0.3 [-0.41 -- -0.19],> 100
-delta,before word,352 [324 -- 382],500 [429 -- 584],532 [468 -- 605],lift - spl2,-0.15 [-0.23 -- -0.08],41.79
-delta,before word,352 [324 -- 382],500 [429 -- 584],532 [468 -- 605],spl2 - plantra,-0.15 [-0.26 -- -0.03],1.19
-delta,within word,164 [144 -- 186],238 [182 -- 303],157 [125 -- 194],lift - plantra,-0.22 [-0.39 -- -0.06],2.91
-delta,within word,164 [144 -- 186],238 [182 -- 303],157 [125 -- 194],lift - spl2,0.04 [-0.09 -- 0.17],0.08
-delta,within word,164 [144 -- 186],238 [182 -- 303],157 [125 -- 194],spl2 - plantra,-0.27 [-0.45 -- -0.08],4.94
-theta,before sentence,.25 [.22 -- .28],.48 [.42 -- .54],.69 [.59 -- .77],lift - plantra,-1.03 [-1.32 -- -0.74],> 100
-theta,before sentence,.25 [.22 -- .28],.48 [.42 -- .54],.69 [.59 -- .77],lift - spl2,-1.92 [-2.33 -- -1.47],> 100
-theta,before sentence,.25 [.22 -- .28],.48 [.42 -- .54],.69 [.59 -- .77],spl2 - plantra,0.89 [0.4 -- 1.35],82.58
-theta,before word,.36 [.33 -- .39],.41 [.35 -- .46],.44 [.38 -- .50],lift - plantra,-0.19 [-0.45 -- 0.07],0.38
-theta,before word,.36 [.33 -- .39],.41 [.35 -- .46],.44 [.38 -- .50],lift - spl2,-0.33 [-0.6 -- -0.06],2.6
-theta,before word,.36 [.33 -- .39],.41 [.35 -- .46],.44 [.38 -- .50],spl2 - plantra,0.14 [-0.19 -- 0.48],0.24
-theta,within word,.12 [.10 -- .13],.14 [.11 -- .17],.12 [.10 -- .15],lift - plantra,-0.18 [-0.46 -- 0.11],0.31
-theta,within word,.12 [.10 -- .13],.14 [.11 -- .17],.12 [.10 -- .15],lift - spl2,-0.07 [-0.35 -- 0.23],0.17
-theta,within word,.12 [.10 -- .13],.14 [.11 -- .17],.12 [.10 -- .15],spl2 - plantra,-0.11 [-0.46 -- 0.24],0.22
+parameter,data,mean_before sentence,lower_before sentence,upper_before sentence,mean_before word,lower_before word,upper_before word,mean_within word,lower_within word,upper_within word,Contrasts,diff,lower,upper,BF
+beta,C2L1,446,387,516,448,420,477,299,282,316,before sentence - before word,-0.01,-0.14,0.13,0.07
+beta,C2L1,446,387,516,448,420,477,299,282,316,before word - within word,0.41,0.38,0.44,> 100
+beta,CATO,259,233,289,257,242,274,180,170,191,before sentence - before word,0.01,-0.08,0.1,0.05
+beta,CATO,259,233,289,257,242,274,180,170,191,before word - within word,0.36,0.32,0.39,> 100
+beta,LIFT,179,172,187,187,179,195,144,138,150,before sentence - before word,-0.04,-0.07,-0.02,6.83
+beta,LIFT,179,172,187,187,179,195,144,138,150,before word - within word,0.26,0.25,0.28,> 100
+beta,PLanTra,168,157,181,173,162,184,142,134,150,before sentence - before word,-0.03,-0.08,0.03,0.04
+beta,PLanTra,168,157,181,173,162,184,142,134,150,before word - within word,0.2,0.16,0.23,> 100
+beta,SPL2,446,379,535,225,206,245,149,137,162,before sentence - before word,0.68,0.55,0.86,> 100
+beta,SPL2,446,379,535,225,206,245,149,137,162,before word - within word,0.41,0.38,0.44,> 100
+delta,C2L1,"1,325",823,"1,988",886,766,"1,024",240,185,306,before sentence - before word,0.28,-0.04,0.58,0.71
+delta,C2L1,"1,325",823,"1,988",886,766,"1,024",240,185,306,before word - within word,0.5,0.37,0.63,> 100
+delta,CATO,"2,174","1,762","2,645",582,502,668,161,121,212,before sentence - before word,1.06,0.88,1.23,> 100
+delta,CATO,"2,174","1,762","2,645",582,502,668,161,121,212,before word - within word,0.54,0.38,0.69,> 100
+delta,LIFT,607,535,685,352,324,382,164,144,186,before sentence - before word,0.42,0.33,0.51,> 100
+delta,LIFT,607,535,685,352,324,382,164,144,186,before word - within word,0.3,0.22,0.38,> 100
+delta,PLanTra,844,700,"1,008",500,429,584,238,182,303,before sentence - before word,0.43,0.27,0.6,> 100
+delta,PLanTra,844,700,"1,008",500,429,584,238,182,303,before word - within word,0.38,0.2,0.56,95.06
+delta,SPL2,"2,921","2,459","3,496",532,468,605,157,125,194,before sentence - before word,0.81,0.7,0.91,> 100
+delta,SPL2,"2,921","2,459","3,496",532,468,605,157,125,194,before word - within word,0.5,0.37,0.62,> 100
+theta,C2L1,.43,.26,.63,.32,.26,.38,.12,.09,.16,before sentence - before word,0.49,-0.31,1.34,0.77
+theta,C2L1,.43,.26,.63,.32,.26,.38,.12,.09,.16,before word - within word,1.24,0.82,1.66,> 100
+theta,CATO,.53,.43,.63,.34,.29,.40,.12,.09,.16,before sentence - before word,0.75,0.29,1.23,35.44
+theta,CATO,.53,.43,.63,.34,.29,.40,.12,.09,.16,before word - within word,1.36,0.96,1.78,> 100
+theta,LIFT,.25,.22,.28,.36,.33,.39,.12,.10,.13,before sentence - before word,-0.54,-0.73,-0.35,> 100
+theta,LIFT,.25,.22,.28,.36,.33,.39,.12,.10,.13,before word - within word,1.46,1.28,1.65,> 100
+theta,PLanTra,.48,.42,.54,.41,.35,.46,.14,.11,.17,before sentence - before word,0.3,-0.03,0.63,0.84
+theta,PLanTra,.48,.42,.54,.41,.35,.46,.14,.11,.17,before word - within word,1.47,1.15,1.8,> 100
+theta,SPL2,.69,.59,.77,.44,.38,.50,.12,.10,.15,before sentence - before word,1.05,0.58,1.5,> 100
+theta,SPL2,.69,.59,.77,.44,.38,.50,.12,.10,.15,before word - within word,1.73,1.38,2.08,> 100
