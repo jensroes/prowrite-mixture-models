@@ -25,9 +25,10 @@ library(brms)
 
 ```{r setup, include=FALSE}
 options(scipen = 999) # Turn off scientific notation
-opts_chunk$set(fig.width = 8, fig.height = 4.5)
-opts_knit$set(width=90)
-knitr::opts_chunk$set(echo = TRUE,
+knitr::opts_knit$set(width=90)
+knitr::opts_chunk$set(fig.width = 8, 
+                      fig.height = 4.5,
+                      echo = TRUE,
                       comment = NA, 
                       warning = FALSE,
                       message = FALSE)
@@ -47,24 +48,237 @@ library(tidyverse)
 library(brms)
 ```
 
-# Fitting the model
 
-## Preparing the data
+# Preparing the data
 
-First we load a sample of keystroke data. Data are loaded from [OSF](https://osf.io/y3p4d/) using the URL as below and the `read_csv` function. For brevity we use a random subset. Data are from participants that completed an essay writing task in the context of the Prowrite project. 
+First we load a sample of keystroke data. Data are loaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/) using the URL as below and the `read_csv` function. For brevity we use a random subset. Data are from participants that completed an essay writing task in the context of the Prowrite project. 
 
 
 ```{r}
 # Load data
-data <- read_csv("https://osf.io/e5gy6/download") 
+data <- read_csv("https://raw.githubusercontent.com/jensroes/prowrite-mixture-models/main/tutorial/data/sampledata.csv") 
 ```
-
 
 We reduced the data to three variables: a participant identifier `participant`, the inter-keystroke intervals `iki`, and the transition location `location` (levels: within-word, before-word, before-sentence).
 
 ```{r}
 data
 ```
+
+We reduced the number of keystroke transitions to `n` observations per participant and per location.
+
+```{r}
+count(data, participant, location)
+```
+
+
+# Uni-modal mixed-effects models
+
+## Gaussian mixed-effects model
+
+### Model
+
+
+$$
+\text{iki}_i \sim \text{N}(\mu_i, \sigma_\text{e}^2)\\
+\mu_i = \beta_\text{location[i]} + u_i\\
+u \sim \text{N}(0, \sigma_u) 
+$$
+
+```{r}
+formula <- bf(iki ~ 0 + location + (1|participant), family = gaussian())
+```
+
+
+### Priors
+
+```{r}
+get_prior(formula = formula, data = data)
+```
+
+```{r}
+prior <- set_prior('student_t(3, 350, 100)', class = 'b')
+```
+
+
+```{r}
+mean <- 350
+sd <- 100
+tibble(x = 0:1000) %>% 
+  mutate(df_3 = dstudent_t(x, 3, mean, sd),
+         df_10 = dstudent_t(x, 10, mean, sd),
+         df_100 = dstudent_t(x, 100, mean, sd)) %>% 
+  pivot_longer(-x) %>% 
+  mutate(across(name, str_remove, "df_"),
+         across(name, factor, levels = c(3, 10, 100), ordered = TRUE)) %>% 
+  ggplot(aes(x = x, y = value, colour = name)) +
+  geom_line() +
+  labs(colour = "Degrees of\nfreedom")
+```
+
+
+### Initiate sampling
+
+For the model to converge we need to run a sufficient number of iterations. 30,000 iterations, as below, are a lot but does not guarantee convergence. We need to test convergence using the model's posterior (see blow). To test whether the model has converged, we need to run the model more than one time (i.e. different chains). These can be run at the same time (in parallel) using more than one core of your computer (three cores below).^[If you want to use R to check how many cores are available on your machine, run `parallel::detectCores()` (you might need to install the package `parallel`).] There is no need to use more cores and chains and using less cores would mean that at least one process has to wait until after other processes are completed. When the model has settled on a parameter values, we should observe that all three streams (chains) overlap. Running long chains (many iterations) is useful to get more accurate parameter estimates. 
+
+
+```{r}
+iterations <- 30000       # No of iterations
+warmup <- iterations/2    # Warmup samples to be discarded
+nchains <- ncores <- 3  # No of chains / cores used (one chain per core)
+```
+
+### Fitting the model
+
+
+The following code combines the model, the data, and the prior and returns the posterior. This will take a couple of minutes.
+
+```{r eval = F}
+fit_gaus <- brm(formula = formula, 
+                 data = data,
+                 prior = prior,
+                 chains = nchains,
+                 cores = ncores,
+                 iter = iterations,
+                 warmup = warmup,
+                 sample_prior = TRUE,
+                 inits = 0,
+                 seed = 365)
+```
+
+Because Bayesian models tend to take more time to run, it makes sense to save the results using `saveRDS` for later re-use.
+
+```{r eval = F}
+saveRDS(object = fit_gaus,
+        file = "stan/gaussian.rda", 
+        compress = "xz")
+```
+
+To read the fitted model back into your working environment used `readRDS`.
+
+```{r}
+fit_gaus <- readRDS("stan/gaussian.rda")
+```
+
+The function `fixef` provide a summary of the model inference showing the posterior estimates as average and 95% probability interval by transition location in msecs.
+
+```{r}
+fixef(fit_gaus) %>% round()
+```
+
+
+
+## Log-Gaussian mixed-effects model
+
+### Model
+
+$$
+\text{iki}_i \sim \text{logN}(\mu_i, \sigma_\text{e}^2)\\
+\mu_i = \beta_\text{location[i]} + u_i\\
+u \sim \text{N}(0, \sigma_u) 
+$$
+
+```{r}
+formula <- bf(iki ~ 0 + location + (1|participant), family = lognormal())
+```
+
+
+### Priors
+
+```{r}
+get_prior(formula = formula, data = data)
+```
+
+```{r}
+prior <- set_prior('student_t(3, 5, .5)', class = 'b')
+```
+
+
+```{r}
+mean <- 5
+sd <- .5
+tibble(x = seq(3, 7, .01)) %>% 
+  mutate(df_3 = dstudent_t(x, 3, mean, sd),
+         df_10 = dstudent_t(x, 10, mean, sd),
+         df_100 = dstudent_t(x, 100, mean, sd)) %>% 
+  pivot_longer(-x) %>% 
+  mutate(across(name, str_remove, "df_"),
+         across(name, factor, levels = c(3, 10, 100), ordered = TRUE)) %>% 
+  ggplot(aes(x = x, y = value, colour = name)) +
+  geom_line() +
+  labs(colour = "Degrees of\nfreedom") 
+```
+
+### Fitting the model
+
+
+```{r eval = F}
+fit_lgaus <- brm(formula = formula, 
+                 data = data,
+                 prior = prior,
+                 chains = nchains,
+                 cores = ncores,
+                 iter = iterations,
+                 warmup = warmup,
+                 sample_prior = TRUE,
+                 inits = 0,
+                 seed = 365)
+```
+
+Save the results using `saveRDS`.
+
+```{r eval = F}
+saveRDS(object = fit_lgaus,
+        file = "stan/loggaussian.rda", 
+        compress = "xz")
+```
+
+
+The function `fixef` provide a summary of the inferred posterior estimates as average and 95% probability interval by transition location in log msecs.
+
+
+```{r echo = F}
+fit_lgaus <- readRDS("stan/loggaussian.rda")
+```
+
+
+```{r}
+fixef(fit_lgaus) %>% round(1)
+```
+
+
+
+## Model comparison
+
+To evaluate the predictive performance of the models we can use leave-one-out cross-validation. The out-of-sample predictive performance was determined via Pareto smoothed importance-sampling [@vehtari2015pareto; @vehtari2017practical]. Cross-validation, in contrast to more conventional model-comparison metrics such as $R^2$, prevent overfitting by penalising models with more parameters [see @mcelreath2016statistical; @lambert2018student]. Predictive quality was summarised as the sum of the expected log predictive density (`elpd_loo`; $\widehat{elpd}$). The difference in `elpd_loo` is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. 
+
+```{r}
+loo_fit <- loo(fit_gaus, fit_lgaus)
+loo_fit$diffs %>% 
+  as.data.frame() %>% 
+  round(1)
+```
+The model comparison shows that the model `fit_lgaus` (the model with the log-Gaussian likelihood) is approximately `r round(abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2]),0)` times better than `fit_gaus` (try `abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2])`).
+
+
+
+# Bi-modal mixed-effects log-Gaussian mixture model
+
+The model returns population estimates for the average typing speed of fluent keystroke transitions ($\beta$), the slowdown for hesitant transitions ($\delta$) and the frequency of hesitant transitions ($\theta$) for each level of a categorical predictor after taking into account three sources of random error: (1) each participant has an individual fluent typing speed that differs across levels of the categorical predictor; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor; (3) keystroke intervals for some bigrams are slower than for others.
+
+
+$$
+
+$$
+
+
+
+## Mixture model app
+
+
+
+
+
 
 
 The data must be transformed into a list to feed them into Stan. The information required from the data is determined in the Stan code and has to do with what we need to estimate the model parameters and how the model is implemented. The exert from the Stan code below shows which information is expected as input (e.g. int is integer), how they are named, and what the smallest (i.e. lower) and largest possible value (i.e. upper) are. The full Stan code can be found at the end of this document.
@@ -85,25 +299,22 @@ data {
 ```
 
 
-Depending on the data we might have different numbers of participants, bigrams, and conditions. The Stan code is using indices to be able to fit varying numbers for each. In the code below we use `factor` in combination with `as.numeric` to ensure that there are no empty indices. We create vectors with participant identifiers `ppts` (numbers $1$ through $I$ where $I$ is the number of participants), bigram identifiers `bigrams` (numbers 1 through $J$ where $J$ is the maximum number of bigrams), and a numeric identifier `components` for each copy task component (levels: consonants = 1, LF = 2).  The returned values are indices for the parameters in the model: For example, for the components identifier, `beta[1]` is the population estimate for non-hesitant typing in the consonants task, `beta[2]` is same for LF-bigram; `theta[1]` and `theta[2]` are the disfluency probability for the consonants and LF-bigrams task, respectively.
+Depending on the data we might have different numbers of participants and conditions. The Stan code is using indices to be able to fit varying numbers for each. In the code below we use `factor` in combination with `as.numeric` to ensure that there are no empty indices. We create vectors with participant identifiers `ppts` (numbers $1$ through $I$ where $I$ is the number of participants) and a numeric identifier `location` for each transition locations (levels: before-sentence = 1, before-word = 2, within-word = 3).  The returned values are indices for the parameters in the model: For example, for the location identifier, `beta[1]` is the population estimate for non-hesitant typing intervals at before-sentence transition locations, `beta[2]` is same for before-word transition locations; `theta[1]` and `theta[2]` are the disfluency probability on the logit scale for before-sentence and before-word transition locations, respectively.
 
 ```{r}
-ppts <- as.numeric(factor(data$ppts))
-bigrams <- as.numeric(factor(data$bigram))
-condition <- as.numeric(factor(data$component))
+ppts <- pull(data, participant) %>% factor() %>% as.numeric()
+condition <- pull(data, location) %>% factor() %>% as.numeric()
 ```
 
-In the below code, the names on the left side of the arrow must correspond to the names expected in the Stan code (above); names on the right side do not. We assign the participant, bigram, and component identifiers created above and their maximum values `nS`, `nB`, `K`, respectively. The keystroke data `IKI` are assigned to `y` and the total number of observations (number of participants $\times$ number of bigrams produced by participant) is assigned to `N` (number of rows in the data `nrow(data`).
+In the below code, the names on the left side of the arrow must correspond to the names expected in the Stan code (above); names on the right side do not. We assign the participant and location identifiers created above and their maximum values `nS` and `K`, respectively. The keystroke data `iki` are assigned to `y` and the total number of observations is assigned to `N` (number of rows in the data `nrow(data`).
 
 ```{r}
 data_list <- within( list(), {
   ppts <- ppts  
   nS <- max(ppts) # max no of ppts
-  bigrams <- bigrams 
-  nB <- max(bigrams) # max no of bigrams
   condition <- condition
   K <- max(condition) # no of conditions
-  y <- data$IKI
+  y <- data$iki
   N <- nrow(data)
 } )
 ```
@@ -117,13 +328,13 @@ glimpse(data_list)
 
 ## Load model
 
-The Stan code described **in the manuscript** was extended to fit more than one copy-task component (i.e. a categorical predictor with $K$ levels). The code is stored in the file "MoG.stan" (i.e. mixture of Gaussians) and can be downloaded from the "walkthrough" folder on [OSF](https://osf.io/t34jn/). Alternatively, `readLines` and `writeLines` can be used to download the Stan code from OSF so it will be saved in R's current working directory.
+The Stan code can be downloaded from [GitHub](https://osf.io/t34jn/) using `readLines` and `writeLines`. The code will be saved in R's current working directory as "molg.stan" (mixture of log-Gaussians). 
 
 ```{r eval = F}
 # Download Stan code
 file <- readLines("https://osf.io/j6dzt/download")
 # Save Stan code to current working directory
-writeLines(file, "MoG.stan")
+writeLines(file, "molg.stan")
 ```
 
 The Stan model can be loaded for data fitting using the `stan_model` function and assign it to the object `mog`. The "MoG.stan" file needs to be available in the current working directory of R or the file path needs to be indicated.
@@ -140,19 +351,9 @@ This Stan code used is largely based on @sorensen2016bayesian and @vasishth2017.
 
 
 
-## Initiate sampling
-
-For the model to converge we need to run a sufficient number of iterations. 30,000 iterations, as below, are a lot but does not guarantee convergence. We need to test convergence using the model's posterior (see blow). To test whether the model has converged, we need to run the model more than one time (i.e. different chains). These can be run at the same time (in parallel) using more than one core of your computer (three cores below).^[If you want to use R to check how many cores are available on your machine, run `parallel::detectCores()` (you might need to install the package `parallel`).] There is no need to use more cores and chains and using less cores would mean that at least one process has to wait until after other processes are completed. When the model has settled on a parameter values, we should observe that all three streams (chains) overlap. Running long chains (many iterations) is useful to get more accurate parameter estimates. 
 
 
-```{r}
-iterations <- 30000       # No of iterations
-warmup <- 15000           # Warmup samples to be discarded
-n_chains <- n_cores <- 3  # No of chains / cores used (one chain per core)
-```
-
-
-The model is fitting a number of parameters that are not relevant for our inference. To reduce the size of the R object that containts the posterior we can select the parameters of interest and disregard all paremters that are not relevant for our inference.
+The model is fitting a number of parameters that are not relevant for our inference. To reduce the size of the R object that contains the posterior we can select the parameters of interest and disregard all parameters that are not relevant for our inference.
 
 ```{r}
 # Parameters to keep in output
@@ -163,7 +364,7 @@ pars <- c("beta",                        # fluent typing
           "theta_s",                     # by-participant disfluency probability
           "sigma",                       # variance component
           "sigma_diff", "sigmap_e", "sigma_e",  # variance by mixture component
-          "sigma_u", "sigma_w",          # variance for random ppt and bigram intercepts
+          "sigma_u",                     # variance for random ppt 
           "log_lik",                     # log likelihood (for model comparison) 
           "y_tilde")                     # predicted data 
 ```
