@@ -44,8 +44,8 @@ transformed parameters{
   vector<lower=0>[K] sigma_e = sigma - sigma_diff;
   matrix[K, nS] log_theta_s_1 = log_inv_logit(theta_s);
   matrix[K, nS] log_theta_s_2 = log1m_inv_logit(theta_s);
-  vector[K] prob = 1 - inv_logit(theta); 
-  matrix[K, nS] prob_s = 1 - inv_logit(theta_s); 
+  vector[K] prob = inv_logit(theta); 
+  matrix[K, nS] prob_s = inv_logit(theta_s); 
 
 }
 
@@ -58,10 +58,10 @@ model {
   beta_raw ~ normal(0, 1);
   sigma ~ cauchy(0, 2.5);
   sigma_diff ~ normal(0, 1);
-  delta ~ normal(0, 1);
-  theta_mu ~ normal(0, 2);
+  delta ~ normal(0, .5);
+  theta_mu ~ normal(0, 1);
   theta_sigma ~ cauchy(0, 1);
-  theta_raw ~ normal(0, 1);
+  theta_raw ~ normal(0, .5);
   tau ~ cauchy(0, .5);
     
   for(s in 1:nS){
@@ -77,8 +77,8 @@ model {
   // likelihood
   for(n in 1:N){
     real mu = beta[condition[n]] + u[ppt[n]];
-    lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
-    lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
+    lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
+    lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
     target += log_sum_exp(lp_parts);
   }
 }
@@ -91,8 +91,8 @@ generated quantities{
 
   for(n in 1:N){
     real mu = beta[condition[n]] + u[ppt[n]];
-    lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
-    lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
+    lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
+    lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
     log_lik[n] = log_sum_exp(lp_parts);
  		prob_tilde = bernoulli_rng(prob_s[condition[n], ppt[n]]); 
     if(prob_tilde) { 
