@@ -2,6 +2,8 @@ library(tidyverse)
 library(janitor)
 #source("scripts/functions.R")
 
+# plantra: translation and rewrite text to plain language; professional translators
+
 # Get log files
 files <- list.files(path = "data/WritingPhases/PlanTra_Data/data_out", 
                     full.names = TRUE);files

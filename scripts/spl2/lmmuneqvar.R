@@ -1,41 +1,21 @@
 # Load packages
 library(tidyverse)
 library(rstan)
+source("scripts/spl2/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 # Sampling parameters
 n_cores = 3
 n_chain = 3
-iterations = 10000
+iterations = 20000 # random number of observatations per ppt / cell
+n_samples = 100
+file = "data/spl2.csv"
 
 # Load df
-d <- read_csv("data/spl2.csv") %>%
-  filter(!is.na(transition_dur), 
-         transition_dur > 50, 
-         transition_dur < 30000,
-         edit == "noedit") %>%
-  group_by(SubNo, Lang, transition_type) %>% 
-  mutate(location_count = n()) %>% 
-  group_by(SubNo) %>% 
-  mutate(enough_sentences = min(location_count) > 10) %>% # at least 10 sentences
-  ungroup() %>%
-  filter(enough_sentences) %>% 
-  mutate(SubNo = as.numeric(factor(SubNo)),
-         condition = factor(str_c(Lang, transition_type, sep =  "_")),
-         cond_num = as.integer(condition)) %>% 
-  select(ppt = SubNo, iki = transition_dur, condition, cond_num) 
+d <- get_data(file, n_samples)
 
-# Sample within each category 100 random data points per loc and ppt
-set.seed(365)
-d <- d %>% group_by(ppt, condition) %>%
-  mutate(keep = 1:n(),
-         keep = sample(keep),
-         keep = keep <= 100) %>% 
-  ungroup() %>% 
-  filter(keep) %>% 
-  select(-keep)
-
+# Check condition counts
 count(d, ppt, condition)
 
 # Data as list
@@ -44,6 +24,8 @@ dat <- within( list(), {
   subj <- d$ppt
   K <- length(unique(d$cond_num))
   condition <- as.numeric(d$cond_num)
+  K_loc <- length(unique(d$loc_num))
+  location <- as.numeric(d$loc_num)
   y <- d$iki
   N <- nrow(d)
 } );str(dat)
@@ -51,25 +33,18 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_mu = 5
-          , beta_sigma = .1
-          , beta_raw = rep(0, dat$K)
-          , sigma_mu = 1
-          , sigma_sigma = .1
-          , sigma_raw = rep(0.1, dat$K)
+  list(   alpha = 5
+          , beta = rep(0, dat$K)
+          , sigma = rep(0.5, dat$K_loc)
           , sigma_u = 0.1)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
-# --------------
-# Stan models ##
-# --------------
-#---- 
 # Load model
 lmm <- stan_model(file = "stan/lmmuneqvar.stan")
 
 # Parameters to omit in output
-omit <- c("mu",  "_mu", "_raw", "_sigma")
+omit <- c("mu")
 
 # Fit model
 m <- sampling(lmm, 
@@ -84,9 +59,8 @@ m <- sampling(lmm,
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
               seed = 81,
-              control = list(max_treedepth = 14,
-                             adapt_delta = 0.96)
-)
+              control = list(max_treedepth = 16,
+                             adapt_delta = 0.99))
 
 # Save model
 saveRDS(m, 
@@ -98,6 +72,8 @@ saveRDS(m,
 (param <- c("beta", "sigma", "sigma_u"))
 
 # Traceplots
-summary(print(m, pars = param, probs = c(.025,.975)))
 traceplot(m, param, inc_warmup = F)
+
+# Posterior summary
+summary(print(m, pars = param, probs = c(.025,.975)))
 

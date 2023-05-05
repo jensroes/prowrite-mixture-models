@@ -29,36 +29,9 @@ library(grid)
 library(gtable)
 library(gridExtra)
 library(scales)
-#library(caret)
-#library(InformationValue)
-
-# Calculate Bayes Factor
-BF <- function(ps, prior_sd = 1){
-  fit_posterior <- logspline(ps) 
-  posterior <- dlogspline(0, fit_posterior) # Height of the posterior at 0 
-  prior <- dnorm(0, 0, prior_sd) # Height of the prior at 0
-  BF10 <- prior / posterior 
-  return(BF10)
-}
-
-logit <- function(p) log(p / (1-p))
-ilogit <- function(x) 1 / (1 + exp(-x))
-inv_logit <- function(logit) exp(logit) / (1 + exp(logit))
-
-se_bin <- function(x) sqrt((mean(x, na.rm = T)*(1 - mean(x, na.rm = T)))/length(x)) # se for binary data
-
-lower <- function(x) quantile(x, prob = .025)
-upper <- function(x) quantile(x, prob = .975)
-
-# Remove leading zeros and round numbers
-dezero <- function(x, dp){ # dp is decimal places
-  fmt = paste0('%.',dp,'f')
-  x = sprintf(fmt,x)
-  x = str_replace(x, '(-|^)0\\.','\\1\\.')
-  return(x)
-}
-dezero_plot <- function(x) dezero(x, 1)
-
+library(ggthemes)
+source("../scripts/functions.R")
+source("scripts/get_pdens_plot.R")
 
 theme_set(theme_bw(base_size = 12) +
             theme(strip.background = element_blank(),
@@ -90,1166 +63,249 @@ knitr::opts_chunk$set(echo = FALSE,
                       width=90)
 ```
 
+# Introduction
+
+```{r eval = F}
+Take intro from Mark's draft of SPL2 paper
+
+
+Different views on pausing in text production, largely representing typing as a unimodal or bimodal process
+
+- pauses are represented in the right tail of the distribution (unimodal) explaining the long positive skew and therefore possibly making a log transformation redundant (there are people arguing against log transformation of keystrokes but I don't understand their argument)
+- as pauses are more likely at linguistic edges, the variance of the distribution is going to be larger
+- pauses are represented as an independent distribution / process
+  - short distribution: fluent key transitions only limited by the ability to move fingers (same across text locations)
+  - short distribution: processes involved in cascade are different when lexical and syntactic planning is involved (differences across text locations)
+
+
+```
+
+
+# Model definitions
+
+The models presented in the following can be divided into two general groups. The first three models are largely akin to models typically used in the literature. By this we mean models that assume a uni-modal process that generates keystroke data as is incorporated in statistical models such as analysis of variance and linear mixed-effects models. Second, the last two models model keystroke intervals as a combination of two weighted processes of which one presents a smooth information flow from mind into finger; the other component is more important as it represents moments at which the information flow was interrupted leading to longer latencies. The latter two models map directly on the idea of a cascading model of writing.
+
+## Uni-modal Gaussian
+
+We start with a Gaussian mixed-effects models similar to a standard analysis of variance. We describe the process that generates each iki $i$ as normal Gaussian distribution $\text{N}()$ characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $\text{participant}_i$. $\beta$ will be allowed to take on a different value for each transition location. Average participant-ikis are allowed to deviate from the average which is achieved by assuming a normal distribution for participant deviations distributed around 0 with a standard deviation $\sigma_\text{p}^2$.
+
+$$
+\begin{align}
+\text{iki}_i & \sim \text{N}(\mu_i, \sigma_\text{e}^2)\\
+\text{where: } & \mu_i = \beta_\text{location[i]} + \text{participant}_i\\
+& \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) 
+\end{align}
+$$
+
+## Uni-modal log-Gaussian
+
+This model is largely identical to the previous model, except we use a log-normal distribution instead of a normal distribution. The advantage of using a log-normal distribution is two-fold: (1) the log-normal distribution has a lower bound of zero. For our data we generally consider negative ikis as mistakes which occasionally occur when the next key was pressed before the current key. Other than that keystroke intervals are constrained by a persons ability to move their fingers and keyboard polling. (2) the log-scale is known to be a better match for data from human behaviour, in particular motor responses. In particular, a normal distribution assumes that units are linearly scaled. For example, a 50 msecs difference is the same between 100 msecs and 150 msecs than it is between 5 secs and 5 secs 50 msecs (i.e. 5,050 msecs). This is not necessarily plausible for keystroke data. We would assume that differences that are due to motor activity (typing a high frequency bigram vs a low frequency bigram) are smaller than difference that are due to high levels of cognitive activity (retrieving a word in your L1 or L2). Log-normal distributions are a natural way of scaling units so that a 50 msecs difference on the lower end of the iki scale (motor activity) is more meaningful than a 50 msecs difference on the upper end of the iki scale (retrieving words, planning sentences).
+
+The model can be described like this:
+
+$$
+\begin{align}
+\text{iki}_i & \sim \text{logN}(\mu_i, \sigma_\text{e}^2) \\
+\text{where: } &
+\mu_i = \beta_\text{location[i]} + \text{participant}_i\\
+& \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) 
+\end{align}
+$$
+
+## Uni-modal unequal-variance log-Gaussian
+
+$$
+\begin{align}
+\text{iki}_i & \sim \text{logN}(\mu_i, \sigma_{e_\text{location[i]}}^2) \\
+\text{where: } & \mu_i = \beta_\text{location[i]} + \text{participant}_i\\
+ & \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) 
+\end{align}
+$$
+
+
+
+
+## Bi-modal log-Gaussian (constrained)
+
+This models extends the intuition from the previous model that higher levels of activation lead to longer pauses. Instead of assuming that there is one process that underlies the generation of ikis, we assume there are two. (1) activation can flow into keystrokes without interrupts. These fluent keystroke transitions are merely limited by a person's ability to move their finger and will be captured but the parameter $\beta$. In principle, there are no differences for fluent key-transitions between transition location. The next model with loosen this assumption (hence, "unconstrained model"). (2) difficulty in the activation flow leads to pauses when fingers have to catch-up with cognitive activity, when spelling, words, or contents couldn't be retrieved in time. The size of these pauses will depend on the reason for delays which is typically associated with transition locations (contents are typically planned before sentences, words are retrieved before they are typed and spelling difficulty typically occurs when typing a word). Pauses will be captured by two model parameters: (1) the slowdown for these hesitant transitions will be captured by $\delta$ which is the deviation compared to normal typing intervals (constrained to be positive). (2) the frequency of hesitant transitions will be captured by $\theta$ for each level of a categorical predictor. 
+
+$$
+\begin{align}
+\text{iki}_{i} & \sim \theta_\text{location[i]} \cdot \text{LogN}(\beta + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta + \text{participant}_i, \sigma_{e}^2)\\
+\text{where: }
+		&\delta \sim \text{N}(0,1)\\
+\text{constraint: } & \delta > 0\\
+		& \sigma_{e'}^2 > \sigma_{e}^2
+\end{align}
+$$
+This models takes into account two sources of participant-specific error: (1) each participant has an individual fluent typing as in the previous models; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor.
+
+
+## Bi-modal log-Gaussian (unconstrained)
+
+This model is identical to the previous model with one exception. The distribution of fluent keystroke transitions captured by $\beta$ was fixed to be the same across transition locations is the previous model. In other words, the mean $\beta$ and it's standard deviation $\sigma_{e}^2$ was the same for before-sentence, before-word, and within-word transitions. This means, because of the naturally larger number of within-word transitions, the posterior is dominated by within-word transitions. 
+
+In this model we will loosen this constraint and allow $\beta$ and $\sigma_{e}^2$ to vary by transition-location.
+
+$$
+\begin{align}
+\text{iki}_{i} &\sim \theta_\text{location[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
+	\text{where: } & \delta \sim \text{N}(0,1)\\
+\text{constraint: } & \delta > 0\\
+		& \sigma_{e'}^2 > \sigma_{e}^2
+\end{align}
+$$
+
+
+
 
 # Analysis
 
 We reanalysed data sets including process information from participants writing text. For all data sets we fit a series of four models each with random effects for participants. Probability functions used were normal and log-normal in line with typically treatments used in the literature, a log-normal distribution with unequal variances for model predictions, and a bimodal mixed effects model. Stan code for mixture models was based on @roeser2021modelling. Text locations (levels: before sentence, before word, within word) was included as predictor in all models.
 
 
-Data were analysed in Bayesian mixed effects models [@gelman2014;@mcelreath2016statistical]. The R [@R-base] package rstan [@rstan] was used to interface with the probabilistic programming language Stan [@carpenter2016stan] which was used to implement all models. Models were fitted with weakly informative priors [see @mcelreath2016statistical], and run with 10,000 iterations on 3 chains with a warm-up of 5,000 iterations and no thinning. Model convergence was confirmed by the Rubin-Gelman statistic ($\hat{R}$ = 1) [@gelman1992] and inspection of the Markov chain Monte Carlo chains.
+Data were analysed in Bayesian mixed effects models [@gelman2014;@mcelreath2016statistical]. The R [@R-base] package rstan [@rstan] was used to interface with the probabilistic programming language Stan [@carpenter2016stan] which was used to implement all models. Models were fitted with weakly informative priors [see @mcelreath2016statistical], and run with 20,000 iterations on 3 chains with a warm-up of 10,000 iterations and no thinning. Model convergence was confirmed by the Rubin-Gelman statistic ($\hat{R}$ = 1) [@gelman1992] and inspection of the Markov chain Monte Carlo chains.
+
+
+
+
+
+# Datasets in overview
+
+Five dataset with keystroke data from text production were used for analysis. An overview can be found in Table \@ref(tab:datasets).
+
+
+```{r datasets, results='asis'}
+tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT"),
+                Source = c("@ronneberg2022process",
+                              "@torrance2016adolescent",
+                              "@torrance",
+                              "@rossetti2022s",
+                              "@nina_vandermeulen_2020_3893538"),
+                Keylogger = c("EyeWrite", 
+                           "EyeWrite", 
+                           "CyWrite", 
+                           "InputLog", 
+                           "InputLog"),
+                `Writing task` = c(
+                                 "Argumentative essays", 
+                                 "Expository texts",
+                                 "Argumentative essays",
+                                 "Text simplification",
+                                 "Synthesis"),
+                n_ppt = c(126, 26*2, 39, 47, 658),
+#                n_texts = c(1, 2, 2, 2, NA),
+#                n_sentences = c(),
+#                n_words = c(),
+                conditions = c(" ", 
+                               "weak decoders / control; masked / unmasked",
+                               "write in L1 / L2",
+                               "pre / post test trained in plain language principles and control", 
+                               "Various topics and genres"),
+                `Mean age` = c(11.8, 16.9, 20.6, 23, 16.95),
+                 Language = c( "Norwegian", 
+                               "Norwegian", 
+                               "English (L1) / Spanish (L2)", 
+                               "English (L2)", 
+                               "Dutch")) %>% 
+  kable(caption = "Datasets in brief.") %>%
+  kable_styling(position = "center", 
+                full_width = T, 
+                font_size = 12) 
+
+```
+
+
+```{r eval = F}
+Data reduction using random samples of subsets of participants for larger data sets
+
+Also for larger data sets, only used participants that provided a min number of sentences
+
+Locations with example from Marks 
+
+Removed transitions that were followed by an editing operation
+
+Extremely short and long intervals
+
+Add a description with general data filtering and a table with how many data were removed from the analysis by study.
+
+```
+
+
+
+# Out-of-samples cross-validation
 
 For model comparisons we used out-of-sample predictions estimated using Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and the difference $\Delta\widehat{elpd}$ between models. The advantage of using leave-one-out cross-validation is that models with more parameters are penalised to prevent overfit.
 
-
-# Data processing
-
-TODO: Add a description with general data filtering and a table with how many data were removed from the analysis by study.
-
-# C2L1
-
-The C2L1 data set comprises data Norwegian 6th graders--*N*=133, mean age 11 years 10 months--published in @ronneberg2022process. The children composed argumentative essays in Norwegian, a language with a relatively shallow orthography.
-
-```{r eval = F}
-d <- read_csv("../data/c2l1.csv") %>%
-  filter(!is.na(iki), 
-         iki > 50, 
-         iki < 30000) %>%
-  mutate(ppt = as.numeric(factor(subno)),
-         condition = factor(str_c(location, sep = "_")),
-         cond_num = as.integer(condition)) %>% 
-  select(ppt, iki, condition, cond_num) 
-
-count(d, ppt) %>% 
-  filter(n < 100)
-pull(d, ppt) %>% unique() %>% length()
-```
+Results for all data sets are shown in Table \@ref(tab:loos). For all data sets we found the same pattern. The mixture of log-normal distributions provided a substantially better fit than uni-modal distribution models. The unconstrained version of the mixture of log-normal distributions rendered a higher predictive performance than the constrained version that does not allow the distribution of short keystroke-intervals to vary across conditions. 
 
 
-TODO: might need to remove kids that don't speak Norwegian at home (see github issue).
-
-## Model comparisons
-
-### Fit to data
-
-```{r predictionsc2l1, fig.cap="C2L1 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
-
-files <- list.files("../stanout/c2l1", pattern = "sims", full.names = T)
-sims <- read_csv(files) %>% 
-  pivot_longer(cols = c(y_obs, y_tilde)) %>% 
-  mutate(across(name, recode_factor, 
-                y_tilde = "Simulated data",
-                y_obs = "Observed data",
-                .ordered = T)) %>% 
-  filter(name ==  "Simulated data" |
-         (name == "Observed data" & sim_idx == 1))
-
-max_iki <- 2000
-
-plot_mog <- sims %>%
-  filter(model == "mog", value < max_iki) %>% 
-  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmm <- sims %>%
-  filter(model == "lmm", value < max_iki) %>% 
-  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmgaus <- sims %>%
-  filter(model == "lmmgaus", value < max_iki) %>% 
-  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmuneqvar <- sims %>%
-  filter(model == "lmmuneqvar", value < max_iki) %>% 
-  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = 'A')
-
-grid.arrange(patchworkGrob(plots), 
-             left = "Density",
-             bottom = "Transition duration in msecs")
-```
-
-
-
-### Out-of-samples cross-validation
 
 ```{r}
-files <- list.files("../stanout/c2l1", pattern = "^modelcomp", full.names = T)
-table <- purrr::map_dfr(files, read_csv) %>% 
-  mutate(across(location, replace_na, "overall")) %>% 
-  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
-  mutate(across(where(is.numeric), round, 0),
+files <- list.files(
+  str_c("../stanout/", 
+  c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1")), 
+  pattern = "model.+.csv", 
+  full.names = T)
+
+table <- purrr::map_dfr(files, ~read_csv(.) %>% 
+                          mutate(dataset = .x)) %>% 
+  select(dataset, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
+  mutate(across(dataset, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(where(is.numeric), round, 0),
          across(where(is.numeric), format, big.mark = ","),
          across(everything(), str_trim)) %>%
-  transmute(across(location, ~str_c("Text location: ",.)),
-            across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal normal",
-                                  mog = "Bimodal log-normal",
-                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
+  transmute(
+     across(dataset, recode, 
+                "cato" = "CATO",
+                "spl2" = "SPL2", 
+                "spl2_shift" = "SPL2 (shift + C)", 
+                "plantra" = "PLanTra",
+                "lift" = "LIFT",
+                "c2l1" = "C2L1"),
+    across(model, recode, lmm = "Unimodal log-normal",
+                          lmmgaus = "Unimodal normal",
+                          mogbetaconstr = "Bimodal log-normal (constrained)",
+                          mogbetacontr = "Bimodal log-normal (constrained)",
+                          mogbetaunconstr = "Bimodal log-normal (unconstrained)",
+                          lmmuneqvar = "Unimodal log-normal (unequal variance)"),
             across(elpd_diff, str_c, " (", se_diff, ")"),
             across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
   mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
-  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
-  select(Model = model, 
-         ends_with("overall"), 
-         ends_with("sent"), 
-         ends_with("beforeword"), 
-         ends_with("withinword"))
+  pivot_wider(names_from = dataset, values_from = contains("elpd")) %>% 
+  select(Model = model, ends_with("CATO"), ends_with("C2L1"), ends_with("LIFT"), ends_with("PLanTra"), ends_with("SPL2"), ends_with("+ C)"))
 
 ```
 
 
-```{r c2l1, results='asis'}
-names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
+```{r loos, results='asis'}
+names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"), 6)
 
-kable(table, caption = "C2L1 data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-        align =c("l", rep("r", 8))) %>%
+kable(table, 
+      caption = "Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
+        align =c("l", rep("r", 12))) %>%
   kable_styling(position = "center", 
                 full_width = T, 
                 font_size = 11) %>%
   footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
   add_header_above(c(" " = 1, 
-                     "All transitions" = 2,
-                     "Before sentence" = 2, 
-                     "Before word" = 2,
-                     "Within word" = 2)) %>%
+                     "CATO" = 2,
+                     "CL21" = 2, 
+                     "LIFT" = 2,
+                     "PLanTra" = 2,
+                     "SPL2" = 2,
+                     "SPL2 (shift + C)" = 2)) %>%
   column_spec(1, width = "8em")
 
 ```
 
-## Posterior parameter estimates of mixture model
 
 
-```{r c2l1post, fig.cap="C2l1. Posterior parameter distribution"}
-file <- list.files(path = "../stanout/c2l1", pattern = "mog.csv$",full.names = T)
-ps <- read_csv(file) %>% 
-  pivot_wider(names_from = param, values_from = value) %>% 
-  unnest(cols = c(beta, delta, prob)) %>% 
-  mutate(across(delta, ~.+beta),
-         across(c(delta, beta), exp),
-         across(delta, ~.-beta),
-         across(location, str_replace, " ", "\n")) %>% 
-  pivot_longer(beta:prob) %>% 
-  group_by(location, name) %>% 
-  summarise(across(value, list(mean = mean, 
-                               lower = lower, 
-                               upper = upper), .names = "{.fn}")) 
 
-beta <- filter(ps, name == "beta") %>% 
-  mutate(name = beta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = 1:4) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = scales::comma) +
-  labs(y = "Posterior estimate with 95% PIs",
-       x = "",
-       colour = "",
-       shape = "") +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
 
-
-delta <- filter(ps, name == "delta") %>% 
-  mutate(name = delta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = 1:4) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "",
-       x = "Transition location",
-       colour = "",
-       shape = "") +
-  theme(axis.title.y = element_blank()) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-theta <- filter(ps, name == "prob") %>% 
-  mutate(name = theta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = 1:4) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
-  labs(y = "",
-       x = "",
-       colour = "",
-       shape = "") +
-  theme(axis.title.y = element_blank()) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-beta + delta + theta +
-  plot_layout(guides = "collect") 
-
-```
-
-
-
-# CATO
-
-Data are published in @torrance2016adolescent. Norwegian upper
-secondary students--*N*=26, mean age = 16.9 years--with weak decoding skills and 26 age-matched controls composed expository texts by keyboard under two conditions: normally and with letters masked to prevent them reading what they were writing. 
-
-
-
-
-## Model comparisons
-
-### Fit to data
-
-```{r predictionscato, fig.cap="CATO data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
-
-files <- list.files("../stanout/cato", pattern = "sims", full.names = T)
-sims <- read_csv(files) %>% 
-  pivot_longer(cols = c(y_obs, y_tilde)) %>% 
-  mutate(across(name, recode_factor, 
-                y_tilde = "Simulated data",
-                y_obs = "Observed data",
-                .ordered = T)) %>% 
-  filter(name ==  "Simulated data" |
-         (name == "Observed data" & sim_idx == 1))
-
-max_iki <- 2000
-
-plot_mog <- sims %>%
-  filter(model == "mog", value < max_iki) %>% 
-  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmm <- sims %>%
-  filter(model == "lmm", value < max_iki) %>% 
-  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmgaus <- sims %>%
-  filter(model == "lmmgaus", value < max_iki) %>% 
-  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmuneqvar <- sims %>%
-  filter(model == "lmmuneqvar", value < max_iki) %>% 
-  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = 'A')
-
-grid.arrange(patchworkGrob(plots), 
-             left = "Density",
-             bottom = "Transition duration in msecs")
-```
-
-
-
-### Out-of-samples cross-validation
-
-```{r}
-files <- list.files("../stanout/cato", pattern = "^modelcomp", full.names = T)
-table <- purrr::map_dfr(files, read_csv) %>% 
-  mutate(across(location, replace_na, "overall")) %>% 
-  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
-  mutate(across(where(is.numeric), round, 0),
-         across(where(is.numeric), format, big.mark = ","),
-         across(everything(), str_trim)) %>%
-  transmute(across(location, ~str_c("Text location: ",.)),
-            across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal normal",
-                                  mog = "Bimodal log-normal",
-                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
-            across(elpd_diff, str_c, " (", se_diff, ")"),
-            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
-  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
-  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
-  select(Model = model, 
-         ends_with("overall"), 
-         ends_with("sent"), 
-         ends_with("beforeword"), 
-         ends_with("withinword"))
-
-```
-
-
-```{r cato, results='asis'}
-names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
-
-kable(table, caption = "CATO data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-        align =c("l", rep("r", 8))) %>%
-  kable_styling(position = "center", 
-                full_width = T, 
-                font_size = 11) %>%
-  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
-  add_header_above(c(" " = 1, 
-                     "All transitions" = 2,
-                     "Before sentence" = 2, 
-                     "Before word" = 2,
-                     "Within word" = 2)) %>%
-  column_spec(1, width = "8em")
-
-```
-
-## Posterior parameter estimates of mixture model
-
-
-```{r catopost, fig.cap="CATO. Posterior parameter distribution"}
-file <- list.files(path = "../stanout/cato", pattern = "mog.csv$",full.names = T)
-ps <- read_csv(file) %>% 
-  pivot_wider(names_from = param, values_from = value) %>% 
-  unnest(cols = c(beta, delta, prob)) %>% 
-  mutate(across(delta, ~.+beta),
-         across(c(delta, beta), exp),
-         across(delta, ~.-beta),
-         across(location, str_replace, " ", "\n")) %>% 
-  pivot_longer(beta:prob) %>% 
-  group_by(task, group, location, name) %>% 
-  summarise(across(value, list(mean = mean, 
-                               lower = lower, 
-                               upper = upper), .names = "{.fn}")) %>% 
-  mutate(task = str_c("Task: ", task, "; Group: ", group))
-
-beta <- filter(ps, name == "beta") %>% 
-  mutate(name = beta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = task,
-             shape = task)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = 1:4) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = scales::comma) +
-  labs(y = "Posterior estimate with 95% PIs",
-       x = "",
-       colour = "",
-       shape = "") +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-
-delta <- filter(ps, name == "delta") %>% 
-  mutate(name = delta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = task,
-             shape = task)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = 1:4) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "",
-       x = "Transition location",
-       colour = "",
-       shape = "") +
-  theme(axis.title.y = element_blank()) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-theta <- filter(ps, name == "prob") %>% 
-  mutate(name = theta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = task,
-             shape = task)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = 1:4) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
-  labs(y = "",
-       x = "",
-       colour = "",
-       shape = "") +
-  theme(axis.title.y = element_blank()) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-
-beta + delta + theta +
-  plot_layout(guides = "collect") 
-
-```
-
-
-
-
-# SPL2
-
-Data are going to be published in @torrance.
-
-## Methods
-
-Undergraduate university students--*N* = 39, 28 female, mean age = 20.6 years (SD = 1.51)--wrote two short argumentative essays, one in English (the student's first language in all cases; L1) and one in Spanish (L2) using CyWrite [@chukharev2019combined]. CyWrite provides a writing environment with basic word processing functionality (e.g., Microsoft WordPad), including text selection by mouse action, and copy-and-paste. We recorded the time of each keystroke and mouse action, and tracked writers' eye movements within their emerging text.
-
-Writing tasks: Participants were given a 40 minute time limit. They wrote essays in response to each of two prompts, with order and L1 / L2 counterbalanced across subjects.
-
-
-
-
-## Model comparisons
-
-### Fit to data
-
-```{r predictionsspl2, fig.cap="SPL2 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
-
-files <- list.files("../stanout/spl2", pattern = "sims", full.names = T)
-sims <- read_csv(files) %>% 
-  pivot_longer(cols = c(y_obs, y_tilde))  %>% 
-  mutate(across(name, recode_factor, 
-                y_tilde = "Simulated data",
-                y_obs = "Observed data",
-                .ordered = T)) %>% 
-  filter(name ==  "Simulated data" |
-         (name == "Observed data" & sim_idx == 1))
-
-max_iki <- 2000
-
-plot_mog <- sims %>%
-  filter(model == "mog", value < max_iki) %>% 
-  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmm <- sims %>%
-  filter(model == "lmm", value < max_iki) %>% 
-  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmgaus <- sims %>%
-  filter(model == "lmmgaus", value < max_iki) %>% 
-  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmuneqvar <- sims %>%
-  filter(model == "lmmuneqvar", value < max_iki) %>% 
-  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = 'A')
-
-grid.arrange(patchworkGrob(plots), 
-             left = "Density",
-             bottom = "Transition duration in msecs")
-```
-
-
-
-### Out-of-samples cross-validation
-
-```{r}
-files <- list.files("../stanout/spl2", pattern = "^modelcomp", full.names = T)
-table <- purrr::map_dfr(files, read_csv) %>% 
-  mutate(across(location, replace_na, "overall")) %>% 
-  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
-  mutate(across(where(is.numeric), round, 0),
-         across(where(is.numeric), format, big.mark = ","),
-         across(everything(), str_trim)) %>%
-  transmute(across(location, ~str_c("Text location: ",.)),
-            across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal normal",
-                                  mog = "Bimodal log-normal",
-                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
-            across(elpd_diff, str_c, " (", se_diff, ")"),
-            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
-  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
-  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
-  select(Model = model, 
-         ends_with("overall"), 
-         ends_with("sent"), 
-         ends_with("beforeword"), 
-         ends_with("withinword"))
-
-```
-
-
-```{r spl2, results='asis'}
-names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
-
-kable(table, caption = "SPL2 data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-        align =c("l", rep("r", 8))) %>%
-  kable_styling(position = "center", 
-                full_width = T, 
-                font_size = 11) %>%
-  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
-  add_header_above(c(" " = 1, 
-                     "All transitions" = 2,
-                     "Before sentence" = 2, 
-                     "Before word" = 2,
-                     "Within word" = 2)) %>%
-  column_spec(1, width = "8em")
-
-```
-
-## Posterior parameter estimates of mixture model
-
-
-```{r spl2post, fig.cap="SPL2. Posterior parameter distribution"}
-file <- list.files(path = "../stanout/spl2", pattern = "mog.csv$",full.names = T)
-ps <- read_csv(file) %>% 
-  mutate(across(lang, recode, "EN" = "L1", "ES" = "L2")) %>% 
-  pivot_wider(names_from = param, values_from = value) %>% 
-  unnest(cols = c(beta, delta, prob)) %>% 
-  mutate(across(delta, ~.+beta),
-         across(c(delta, beta), exp),
-         across(delta, ~.-beta),
-         across(location, str_replace, " ", "\n")) %>% 
-  pivot_longer(beta:prob) %>% 
-  group_by(lang, location, name) %>% 
-  summarise(across(value, list(mean = mean, 
-                               lower = lower, 
-                               upper = upper), .names = "{.fn}"))
-
-beta <- filter(ps, name == "beta") %>% 
-  mutate(name = beta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = lang,
-             shape = lang)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(21, 23)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = scales::comma) +
-  labs(y = "Posterior estimate with 95% PIs",
-       x = "",
-       colour = "Language",
-       shape = "Language")
-
-delta <- filter(ps, name == "delta") %>% 
-  mutate(name = delta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = lang,
-             shape = lang)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(21, 23)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "",
-       x = "Transition location",
-       colour = "Language",
-       shape = "Language") +
-  theme(axis.title.y = element_blank())
-
-theta <- filter(ps, name == "prob") %>% 
-  mutate(name = theta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = lang,
-             shape = lang)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(21, 23)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
-  labs(y = "",
-       x = "",
-       colour = "Language",
-       shape = "Language") +
-  theme(axis.title.y = element_blank())
-
-beta + delta + theta +
-  plot_layout(guides = "collect")
-
-```
-
-
-
-# PLanTra
-
-
-## Methods
-
-The PLanTra (Plain Language for Financial Content: Assessing the Impact of Training on Students' Revisions and Readers' Comprehension) data set [@rossetti2022s] involved the collection of keystroke data from 47 university students, who were randomly divided into an experimental and a control group. In a pre-test session, all students were assigned an extract of a corporate report dealing with sustainability and were instructed to revise it to make it easier to read for a lay audience. Subsequently, the experimental group received training on how to apply plain language principles to sustainability content, while the control group received training exclusively on the topic of sustainability. During a post-test session, both groups were instructed to revise a second extract of a corporate sustainability report with the same goal--i.e. making it easier to read for a lay audience--by applying what they had learned from their respective training. The texts were in English while the participants were native speakers of other languages (mainly Dutch), so writing took place in second language. It should be pointed out that, while some students decided to revise the assigned texts, the majority of them opted for rewriting the texts from scratch.
-
-
-
-
-## Model comparisons
-
-
-### Fit to data
-
-```{r predictionsplantra, fig.cap="PLanTra data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
-
-files <- list.files("../stanout/plantra", pattern = "sims", full.names = T)
-sims <- read_csv(files) %>% 
-  pivot_longer(cols = c(y_obs, y_tilde))  %>% 
-  mutate(across(name, recode_factor, 
-                y_tilde = "Simulated data",
-                y_obs = "Observed data",
-                .ordered = T)) %>% 
-  filter(name ==  "Simulated data" |
-         (name == "Observed data" & sim_idx == 1))
-
-max_iki <- 2000
-
-plot_mog <- sims %>%
-  filter(model == "mog", value < max_iki) %>% 
-  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmm <- sims %>%
-  filter(model == "lmm", value < max_iki) %>% 
-  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmgaus <- sims %>%
-  filter(model == "lmmgaus", value < max_iki) %>% 
-  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmuneqvar <- sims %>%
-  filter(model == "lmmuneqvar", value < max_iki) %>% 
-  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = 'A')
-
-grid.arrange(patchworkGrob(plots), 
-             left = "Density",
-             bottom = "Transition duration in msecs")
-```
-
-
-
-### Out-of-samples cross-validation
-
-```{r}
-files <- list.files("../stanout/plantra", pattern = "^modelcomp", full.names = T)
-table <- purrr::map_dfr(files, read_csv) %>% 
-  mutate(across(location, replace_na, "overall")) %>% 
-  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
-  mutate(across(where(is.numeric), round, 0),
-         across(where(is.numeric), format, big.mark = ","),
-         across(everything(), str_trim)) %>%
-  transmute(across(location, ~str_c("Text location: ",.)),
-            across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal normal",
-                                  mog = "Bimodal log-normal",
-                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
-            across(elpd_diff, str_c, " (", se_diff, ")"),
-            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
-  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
-  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
-  select(Model = model, 
-         ends_with("overall"), 
-         ends_with("sent"), 
-         ends_with("beforeword"), 
-         ends_with("withinword"))
-```
-
-
-```{r plantra, results='asis'}
-names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
-
-kable(table, caption = "PLanTra data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-        align =c("l", rep("r", 8))) %>%
-  kable_styling(position = "center", 
-                full_width = T, 
-                font_size = 11) %>%
-  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
-  add_header_above(c(" " = 1, 
-                     "All transitions" = 2,
-                     "Before sentence" = 2, 
-                     "Before word" = 2,
-                     "Within word" = 2)) %>%
-  column_spec(1, width = "8em")
-
-```
-
-## Posterior parameter estimates of mixture model
-
-
-```{r plantrapost, fig.cap="PLanTra. Posterior parameter distribution"}
-file <- list.files(path = "../stanout/plantra", pattern = "mog.csv$",full.names = T)
-ps <- read_csv(file) %>% 
-  mutate(across(task, factor, levels = c("pre-test", "post-test"), ordered = T)) %>% 
-  pivot_wider(names_from = param, values_from = value) %>% 
-  unnest(cols = c(beta, delta, prob)) %>% 
-  mutate(across(delta, ~.+beta),
-         across(c(delta, beta), exp),
-         across(delta, ~.-beta),
-         across(location, str_replace, " ", "\n")) %>% 
-  pivot_longer(beta:prob) %>% 
-  group_by(task, location, name) %>% 
-  summarise(across(value, list(mean = mean, 
-                               lower = lower, 
-                               upper = upper), .names = "{.fn}"))
-
-beta <- filter(ps, name == "beta") %>% 
-  mutate(name = beta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = task,
-             shape = task)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(21, 23)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "Posterior estimate with 95% PIs",
-       x = "",
-       colour = "Task",
-       shape = "Task") +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-
-delta <- filter(ps, name == "delta") %>% 
-  mutate(name = delta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = task,
-             shape = task)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(21, 23)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "",
-       x = "Transition location",
-       colour = "Task",
-       shape = "Task") +
-  theme(axis.title.y = element_blank()) +
-    guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-
-theta <- filter(ps, name == "prob") %>% 
-  mutate(name = theta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = task,
-             shape = task)) +
-  geom_point(size = 3, position = position_dodge(.25)) +
-  geom_errorbar(width = 0, position = position_dodge(.25)) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(21, 23)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
-  labs(y = "",
-       x = "",
-       colour = "Task",
-       shape = "Task") +
-  theme(axis.title.y = element_blank()) +
-    guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
-
-
-beta + delta + theta +
-  plot_layout(guides = "collect")
-
-```
-
-
-
-
-
-# LIFT
-
-## Methods
-
-LIFT (Improving Pre-university Students' Performance in Academic Synthesis Tasks with Level-up Instructions and Feedback Tool) [@nina_vandermeulen_2020_3893538].
-
-
-## Model comparisons
-
-### Fit to data
-
-```{r predictionslift, fig.cap="LIFT data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
-
-files <- list.files("../stanout/lift", pattern = "sims", full.names = T)
-sims <- read_csv(files) %>% 
-  pivot_longer(cols = c(y_obs, y_tilde))  %>% 
-  mutate(across(name, recode_factor, 
-                y_tilde = "Simulated data",
-                y_obs = "Observed data",
-                .ordered = T)) %>% 
-  filter(name ==  "Simulated data" |
-         (name == "Observed data" & sim_idx == 1))
-
-max_iki <- 2000
-
-plot_mog <- sims %>%
-  filter(model == "mog", value < max_iki) %>% 
-  mutate(across(model, recode, mog = "Bimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmm <- sims %>%
-  filter(model == "lmm", value < max_iki) %>% 
-  mutate(across(model, recode, lmm = "Unimodal log-normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmgaus <- sims %>%
-  filter(model == "lmmgaus", value < max_iki) %>% 
-  mutate(across(model, recode, lmmgaus = "Unimodal normal")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plot_lmmuneqvar <- sims %>%
-  filter(model == "lmmuneqvar", value < max_iki) %>% 
-  mutate(across(model, recode, lmmuneqvar = "Unimodal log-normal (unequal variance)")) %>% 
-  ggplot(aes(x = value, 
-             group = interaction(sim_idx,name), 
-             colour = name)) +
-  geom_density() +
-  facet_wrap(~model) +
-  scale_colour_manual(values = c("firebrick3", "black")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(colour = "") +
-  theme(axis.title = element_blank())
-
-plots <- plot_lmmgaus + plot_lmm + plot_lmmuneqvar + plot_mog +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = 'A')
-
-grid.arrange(patchworkGrob(plots), 
-             left = "Density",
-             bottom = "Transition duration in msecs")
-```
-
-
-
-
-### Out-of-samples cross-validation
-
-```{r}
-files <- list.files("../stanout/lift", pattern = "^modelcomp", full.names = T)
-table <- purrr::map_dfr(files, read_csv) %>% 
-  mutate(across(location, replace_na, "overall")) %>% 
-  select(location, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
-  mutate(across(where(is.numeric), round, 0),
-         across(where(is.numeric), format, big.mark = ","),
-         across(everything(), str_trim)) %>%
-  transmute(across(location, ~str_c("Text location: ",.)),
-            across(model, recode, lmm = "Unimodal log-normal",
-                                  lmmgaus = "Unimodal normal",
-                                  mog = "Bimodal log-normal",
-                                  lmmuneqvar = "Unimodal log-normal (unequal variance)"),
-            across(elpd_diff, str_c, " (", se_diff, ")"),
-            across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
-  mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
-  pivot_wider(names_from = location, values_from = contains("elpd")) %>% 
-  select(Model = model, 
-         ends_with("overall"), 
-         ends_with("sent"), 
-         ends_with("beforeword"), 
-         ends_with("withinword"))
-```
-
-
-```{r lift, results='asis'}
-names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"),4)
-
-kable(table, caption = "LIFT data. Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-        align =c("l", rep("r", 8))) %>%
-  kable_styling(position = "center", 
-                full_width = T, 
-                font_size = 11) %>%
-  footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
-  add_header_above(c(" " = 1, 
-                     "All transitions" = 2,
-                     "Before sentence" = 2, 
-                     "Before word" = 2,
-                     "Within word" = 2)) %>%
-  column_spec(1, width = "8em")
-
-```
-
-## Posterior parameter estimates of mixture model
-
-```{r}
-file <- list.files(path = "../stanout/lift", pattern = "mog.csv$",full.names = T)
-ps <- read_csv(file) %>% 
-  pivot_wider(names_from = param, values_from = value) %>% 
-  unnest(cols = c(beta, delta, prob)) %>% 
-  mutate(across(delta, ~.+beta),
-         across(c(delta, beta), exp),
-         across(delta, ~.-beta),
-         across(location, str_replace, " ", "\n")) %>% 
-  pivot_longer(beta:prob) %>% 
-  group_by(genre, topic, location, name) %>% 
-  summarise(across(value, list(mean = mean, 
-                               lower = lower, 
-                               upper = upper), .names = "{.fn}")) %>% 
-  ungroup() %>% 
-  mutate(group = str_c("Topic: ", topic, "; Genre: ", genre))
-```
-
-
-```{r liftpost, fig.cap="LIFT. Posterior parameter distribution"}
-posd <- position_dodge(.65)
-dotsize <- 2.5
-beta <- filter(ps, name == "beta") %>% 
-  mutate(name = beta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = group,
-             shape = group)) +
-  geom_point(size = dotsize, position = posd) +
-  geom_errorbar(width = 0, position = posd) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(1:8)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "Posterior estimate with 95% PIs",
-       x = "",
-       colour = "",
-       shape = "")
-
-delta <- filter(ps, name == "delta") %>% 
-  mutate(name = delta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = group,
-             shape = group)) +
-  geom_point(size = dotsize, position = posd) +
-  geom_errorbar(width = 0, position = posd) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(1:8)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_log10(labels = scales::comma) +
-  labs(y = "",
-       x = "Transition location",
-       colour = "",
-       shape = "") +
-  theme(axis.title.y = element_blank())
-
-theta <- filter(ps, name == "prob") %>% 
-  mutate(name = theta_label) %>% 
-  ggplot(aes(y = mean, 
-             ymin = lower, 
-             ymax = upper,
-             x = location,
-             colour = group,
-             shape = group)) +
-  geom_point(size = dotsize, position = posd) +
-  geom_errorbar(width = 0, position = posd) +
-  facet_grid(~name) +
-  scale_shape_manual(values = c(1:8)) +
-  scale_colour_viridis_d(end = .7) +
-  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
-  labs(y = "",
-       x = "",
-       colour = "",
-       shape = "") +
-  theme(axis.title.y = element_blank())
-
-beta + delta + theta +
-  plot_layout(guides = "collect")
-
-```
-
-
-# Cross-task / data set comparisons
+# Cross-data set comparisons
 
 ```{r}
 # Get the differences for tasks / across data set
@@ -1257,7 +313,6 @@ beta + delta + theta +
 # averaged across grouping variable
 
 
-# Also look at by ppt estimates?
 
 ```
 
@@ -1265,16 +320,18 @@ beta + delta + theta +
 
 
 ```{r}
-files <- str_c("../stanout/", 
-               c("lift", "spl2", "plantra", "cato", "c2l1"), 
-               "/mog.csv")
+files <- list.files(str_c("../stanout/", 
+                          c("lift", "spl2", "plantra", "cato", "c2l1")), 
+                    pattern = "mogbetaun.+.csv", 
+                    full.names = T)
+
 ps <- purrr::map_dfr(files, ~read_csv(.x) %>% 
   mutate(data = .x)) %>% 
-  mutate(across(data, str_remove_all, 
-                "\\.|\\/|stanout|\\mog.csv"),
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(data, recode_factor, 
                 "cato" = "CATO (non-dyslexic\nunmasked)",
                 "spl2" = "SPL2 (L1)", 
+#                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
                 "plantra" = "PLanTra",
                 "lift" = "LIFT",
                 "c2l1" = "C2L1",
@@ -1282,24 +339,26 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   filter(!(str_detect(data, "SPL2") & lang == "ES"),
          !(str_detect(data, "CATO") & group == "dyslexic"),
          !(str_detect(data, "CATO") & task == "masked")) %>% 
-#  filter(str_detect(data, "CATO"))
   pivot_wider(names_from = param, 
               values_from = value) %>% 
-  unnest(cols = c(beta, delta, prob)) %>% 
-  mutate(across(delta, ~.+beta),
-         across(c(delta, beta), exp),
-         across(delta, ~.-beta),
+  unnest(cols = beta:theta) %>% 
+  mutate(across(c(beta, beta2), exp),
+         delta = beta2 - beta,
          across(location, str_replace, " ", "\n")) %>% 
-  pivot_longer(beta:prob) %>% 
-  group_by(data, location, name) %>% 
+  pivot_longer(beta:theta) %>% 
   summarise(across(value, 
                    list(mean = mean, 
                         lower = lower, 
                         upper = upper),
-                   .names = "{.fn}")) %>% 
-  ungroup()
+                   .names = "{.fn}"), .by = c(data, location, name)) %>% 
+  filter(name %in% c("beta", "delta", "prob"))
 ```
 
+
+## Cross-data set visualisation
+
+
+The model estimates for the mixture-model with the highest predictive performance are shown in Figure \@ref(fig:crossstudypost). In this visualisation we ignore dataset specific conditions that are presented in detail below.
 
 ```{r crossstudypost, fig.cap="Across studies. Posterior parameter distribution"}
 posd <- position_dodge(.65)
@@ -1311,15 +370,18 @@ beta <- filter(ps, name == "beta") %>%
              ymin = lower, 
              ymax = upper,
              x = location,
-             colour = data,
              shape = data,
              group = interaction(data))) +
-  geom_line(size = .5, alpha = .35, position = posd) +
-  geom_point(size = dotsize, position = posd) +
-  geom_errorbar(width = 0, position = posd) +
+  geom_line(size = .5, 
+            alpha = .35, 
+            position = posd) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = data), 
+            size = dotsize, 
+            position = posd) +
   facet_grid(~name) +
-  scale_shape_manual(values = c(1, 4, 7, 8, 9)) +
-  scale_colour_viridis_d(end = .7) +
+  scale_shape_manual(values = c(1, 4, 7, 8, 9, 11)) +
+  scale_colour_colorblind() +
   scale_y_log10(labels = scales::comma) +
   labs(y = "Posterior estimate with 95% PIs",
        x = "",
@@ -1328,22 +390,22 @@ beta <- filter(ps, name == "beta") %>%
   guides(colour=guide_legend(nrow=2,byrow=TRUE),
          shape = guide_legend(nrow=2,byrow=TRUE))
 
-
 delta <- filter(ps, name == "delta") %>% 
   mutate(name = delta_label) %>% 
   ggplot(aes(y = mean, 
              ymin = lower, 
              ymax = upper,
              x = location,
-             colour = data,
              shape = data,
              group = interaction(data))) +
   geom_line(size = .5, alpha = .35, position = posd) +
-  geom_point(size = dotsize, position = posd) +
-  geom_errorbar(width = 0, position = posd) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = data), 
+            size = dotsize, 
+            position = posd) +
   facet_grid(~name) +
-  scale_shape_manual(values = c(1, 4, 7, 8, 9)) +
-  scale_colour_viridis_d(end = .7) +
+  scale_shape_manual(values = c(1, 4, 7, 8, 9, 11)) +
+  scale_colour_colorblind() +
   scale_y_log10(labels = scales::comma) +
   labs(y = "",
        x = "Transition location",
@@ -1360,15 +422,16 @@ theta <- filter(ps, name == "prob") %>%
              ymin = lower, 
              ymax = upper,
              x = location,
-             colour = data,
              shape = data,
              group = interaction(data))) +
   geom_line(size = .5, alpha = .35, position = posd) +
-  geom_point(size = dotsize, position = posd) +
-  geom_errorbar(width = 0, position = posd) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = data), 
+            size = dotsize, 
+            position = posd) +
   facet_grid(~name) +
-  scale_shape_manual(values = c(1, 4, 7, 8, 9)) +
-  scale_colour_viridis_d(end = .7) +
+  scale_shape_manual(values = c(1, 4, 7, 8, 9, 11)) +
+  scale_colour_colorblind() +
   scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
   labs(y = "",
        x = "",
@@ -1384,9 +447,96 @@ beta + delta + theta +
 ```
 
 
+## Effect of transition location
+
+
+It's generally believed that pausing is associated with syntactic edges such that more and longer pauses are predicted for key transitions at larger syntactic edges, i.e. before sentence > before word > within word. We have evaluated the differences between transition locations for all data sets. The results are shown in Table \@ref(tab:loceffect). 
+
+Results are largely consistent across data sets (with caveats) but differ, to some extent, from what the literature would predict. In line with the literature hesitations are more frequent before words than within words. Also hesitations are longer at before-sentence transitions compared to before-word transitions (except dataset C2L1) compared to within-word transitions (except dataset LIFT). However, our results do not support that writers pause more frequently at before-sentence locations compared to before-word locations (except for dataset SPL2; this also shows that more pauses at before-sentence locations can not be explained on the basis of multi-key combinations for sentence-initial capitalisation). Also, we observe that even fluent key-transitions are slower at before-word locations compared to within-word locations but there is generally not difference for fluent transitions for before-sentence transitions compared to before-word transitions (except for dataset SPL2).
+
+The datasets differ to the extent that sentence-initial key transitions do (PLanTra, LIFT) or do not (CATO, C2L1, SPL2) include the character following the shift key for capitalisation. In other words, the pause before sentences may sum across two key intervals, namely `_^[shift]^C` but only involves one keyintervals, namely `_^[shift]`. For the SPL2 dataset, we calculated location effects for sentence-initial transitions that do and do not involve the shift-to-key transition. The results were the same for the transition location effects. A comparison that is untangling the effects of the multi-keycombination on the mixture-model estimates can be found in Table \@ref(tab:shiftcellmeans). In short, the duration of fluent transitions and the hesitation slowdown are affected but not the hesitation probability.
+
+
+In conclusion, while pauses tend to be longer before sentences they are not more frequent than before words.
+
+```{r loceffect, results='asis'}
+files <- list.files(str_c("../stanout/", 
+                          c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1")), 
+                    pattern = "mogbetaun.+.csv", 
+                    full.names = T)
+
+ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>% 
+  mutate(data = .x)) %>% 
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(data, recode_factor, 
+                "cato" = "CATO (non-dyslexic\nunmasked)",
+                "spl2" = "SPL2 (L1)", 
+                "spl2_shift" = "SPL2 (L1; shift + C)", 
+                "plantra" = "PLanTra",
+                "lift" = "LIFT",
+                "c2l1" = "C2L1",
+                .ordered = TRUE)) %>% 
+  filter(!(str_detect(data, "SPL2") & lang == "ES"),
+         !(str_detect(data, "CATO") & group == "dyslexic"),
+         !(str_detect(data, "CATO") & task == "masked"),
+         param %in% c("beta", "delta", "theta")) %>%
+  select(param, location, data, value) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
+  pivot_wider(names_from = location, values_from = value) %>%
+  unnest(-c(data, param)) %>% 
+  mutate(diff.1 = `before sentence` - `before word`,
+         diff.2 = `before word` - `within word`) %>% 
+  summarise(across(starts_with("diff"), 
+                   list(mean = mean, lower = lower, upper = upper, BF = BF)),
+            .by = c(data, param)) 
+
+tmp <- ps_loc_diffs %>% 
+  pivot_longer(starts_with("diff"), names_to = c("diffid", ".value"), names_sep = "_") %>% 
+  mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
+         across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2))))) %>% 
+  select(-lower, -upper) %>% 
+  pivot_wider(names_from = param, values_from = c(mean, BF)) %>% 
+  mutate(across(diffid, ~recode(., diff.1 = "before sentence vs word",
+                                   diff.2 = "before vs within word"))) %>% 
+  select(data, diffid, ends_with("beta"), ends_with("delta"), ends_with("theta"))
+  
+write_csv(tmp, "tables/location_effect_alldata.csv")
+
+
+tmp %>% knitr::kable(align =c("l", "l", rep("r", 6)), 
+                     col.names = c("Data set", "Difference", rep(c("Est. with 95% PIs", "BF"), 3)),
+                     caption = "Effect of transition location on keystroke intervals. Differences between transition locations are shown on log scale (for transition durations) and logit scale for probability of hesitant transitions. 95% PIs in brackets.") %>%
+  kableExtra::collapse_rows(columns = 1) %>%
+  kable_styling(position = "center", full_width = T, font_size = 11) %>%
+  footnote("PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.", threeparttable = T) %>% 
+  add_header_above(c(" " = 2, 
+                     "Fluent transitions" = 2, 
+                     "Slowdown for hesitations" = 2, 
+                     "Probability of hesitations" = 2)) 
+
+```
+
+
+
+
+
+
 ```{r eval = F}
+
+#
+# Do I really need all this?
+#
+#
+#
+#
+
+
+
 # use posterior to calculate interactions, cell means and dataset differences
-files <- str_c("../stanout/", c("lift", "spl2", "plantra", "cato", "c2l1"), "/mog.csv")
+files <- list.files(str_c("../stanout/", 
+                          c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1")), 
+                    pattern = "mogbetaun.+.csv", 
+                    full.names = T)
 
 plantra <- read_csv(files[1], id = "data") %>% 
   pivot_wider(names_from = c(genre, topic), values_from = value) %>% 
@@ -1599,7 +749,7 @@ write_csv(ps_effects, "tables/ps_effects_acrossdata.csv")
 ```
 
 
-```{r}
+```{r eval = F}
 ps_effects <- read_csv("tables/ps_effects_acrossdata.csv")
 
 # Main effects and interaction summary
@@ -1661,7 +811,7 @@ ps_effects_summary <- ps_effects %>%
   
 ```
 
-```{r effects, results='asis'}
+```{r effects, results='asis', eval = F}
 ps_effects_summary %>%
   mutate(est_1 = "",
          est_2 = "",
@@ -1779,7 +929,7 @@ write_csv(tmp, "tables/cellmeans_transdur.csv")
 ```
 
 
-```{r cellmeans, results = 'asis'}
+```{r cellmeans, results = 'asis', eval = F}
 tmp <- read_csv("tables/cellmeans_transdur.csv") 
 
 cellmeans <- tmp %>% select(1:2, 
@@ -1846,6 +996,722 @@ table %>%
 #  column_spec(5:6, "1.75cm") %>% 
 #  column_spec(7, "1cm") 
 ```
+
+
+# Posterior by data set
+
+## C2L1
+
+The C2L1 data set comprises data Norwegian 6th graders--*N*=126, mean age 11 years 10 months--published in @ronneberg2022process. The children composed argumentative essays in Norwegian, a language with a relatively shallow orthography.
+
+```{r eval = F}
+d <- read_csv("../data/c2l1.csv") %>%
+  filter(!is.na(iki), 
+         iki > 50, 
+         iki < 30000) %>%
+  mutate(ppt = as.numeric(factor(subno)),
+         condition = factor(str_c(location, sep = "_")),
+         cond_num = as.integer(condition)) %>% 
+  select(ppt, iki, condition, cond_num) 
+
+count(d, ppt) %>% 
+  filter(n < 100)
+pull(d, ppt) %>% unique() %>% length()
+```
+
+
+TODO: might need to remove kids that don't speak Norwegian at home (see github issue).
+
+
+### Fit to data
+
+```{r predictionsc2l1, fig.cap="C2L1 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs.", eval = T}
+file <- list.files("../stanout/c2l1", 
+                   pattern = "sims", 
+                   full.names = T)
+
+plots <- get_pdens_plot(file, max_iki = 2000)
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+### Posterior parameter estimates of mixture model
+
+
+```{r c2l1post, fig.cap="C2l1. Posterior parameter distribution"}
+file <- list.files(path = "../stanout/c2l1", 
+                   pattern = "mogbetaun.*.csv$",
+                   full.names = T)
+
+ps <- read_csv(file) %>% 
+  filter(param %in% c("beta", "beta2", "prob")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, beta2, prob)) %>% 
+  mutate(across(c(beta2, beta), exp),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  select(-beta2) %>% 
+  pivot_longer(beta:delta) %>% 
+  group_by(location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}")) 
+
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location)) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.25)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = 1:4) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "",
+       shape = "") +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location)) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.25)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = 1:4) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location)) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.25)) +
+  geom_point(size = 3, position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = 1:4) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+beta + delta + theta +
+  plot_layout(guides = "collect") 
+
+```
+
+
+
+## CATO
+
+Data are published in @torrance2016adolescent. Norwegian upper
+secondary students--*N*=26, mean age = 16.9 years--with weak decoding skills and 26 age-matched controls composed expository texts by keyboard under two conditions: normally and with letters masked to prevent them reading what they were writing. 
+
+
+### Fit to data
+
+```{r predictionscato, fig.cap="CATO data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+file <- list.files("../stanout/cato", 
+                    pattern = "sims", 
+                    full.names = T)
+
+plots <- get_pdens_plot(file, max_iki = 2000)
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+
+### Posterior parameter estimates of mixture model
+
+
+```{r catopost, fig.cap="CATO. Posterior parameter distribution"}
+file <- list.files(path = "../stanout/cato", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+ps <- read_csv(file) %>% 
+  filter(param %in% c("beta", "beta2", "prob")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, beta2, prob)) %>% 
+  mutate(across(c(beta2, beta), exp),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:delta) %>% 
+  group_by(task, group, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}")) %>% 
+  mutate(task = str_c("Task: ", task, "; Group: ", group))
+
+pdodge <- position_dodge(.35)
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = task)) +
+  geom_errorbar(width = .2,
+                alpha = .75, 
+                position = pdodge) +
+  geom_point(aes(colour = task), 
+            size = 3, 
+            position = pdodge) +
+  facet_grid(~name) +
+  scale_shape_manual(values = 1:4) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "",
+       shape = "") +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = task)) +
+  geom_errorbar(width = .2, alpha = .75, 
+                position = pdodge) +
+  geom_point(aes(colour = task), 
+             size = 3, 
+             position = pdodge) +
+  facet_grid(~name) +
+  scale_shape_manual(values = 1:4) +
+  scale_colour_colorblind() +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = task)) +
+  geom_errorbar(width = .2, alpha = .75, 
+                position = pdodge) +
+  geom_point(aes(colour = task), 
+             size = 3, 
+             position = pdodge) +
+  facet_grid(~name) +
+  scale_shape_manual(values = 1:4) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = dezero_plot, 
+                     limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+beta + delta + theta +
+  plot_layout(guides = "collect") 
+
+```
+
+
+
+## PLanTra
+
+
+### Methods
+
+The PLanTra (Plain Language for Financial Content: Assessing the Impact of Training on Students' Revisions and Readers' Comprehension) data set [@rossetti2022s] involved the collection of keystroke data from 47 university students, who were randomly divided into an experimental and a control group. In a pre-test session, all students were assigned an extract of a corporate report dealing with sustainability and were instructed to revise it to make it easier to read for a lay audience. Subsequently, the experimental group received training on how to apply plain language principles to sustainability content, while the control group received training exclusively on the topic of sustainability. During a post-test session, both groups were instructed to revise a second extract of a corporate sustainability report with the same goal--i.e. making it easier to read for a lay audience--by applying what they had learned from their respective training. The texts were in English while the participants were native speakers of other languages (mainly Dutch), so writing took place in second language. It should be pointed out that, while some students decided to revise the assigned texts, the majority of them opted for rewriting the texts from scratch.
+
+
+
+### Fit to data
+
+```{r predictionsplantra, fig.cap="PLanTra data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+file <- list.files("../stanout/plantra", 
+                   pattern = "sims", 
+                   full.names = T)
+
+plots <- get_pdens_plot(file, max_iki = 2000)
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+### Posterior parameter estimates of mixture model
+
+
+```{r plantrapost, fig.cap="PLanTra. Posterior parameter distribution"}
+file <- list.files(path = "../stanout/plantra", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+ps <- read_csv(file) %>% 
+  mutate(across(task, factor, 
+                levels = c("pre-test", "post-test"), 
+                ordered = T)) %>% 
+  filter(param %in% c("beta", "beta2", "prob")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, beta2, prob)) %>% 
+  mutate(across(c(beta2, beta), exp),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:delta) %>% 
+  group_by(task, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}"))
+
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = task)) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.25)) +
+  geom_point(aes(colour = task), 
+             size = 3, 
+             position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 8)) +
+  scale_colour_colorblind() +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "Task",
+       shape = "Task") +
+  guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = task)) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.25)) +
+  geom_point(aes(colour = task), 
+             size = 3, 
+             position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 8)) +
+  scale_colour_colorblind() +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "Task",
+       shape = "Task") +
+  theme(axis.title.y = element_blank()) +
+    guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = task)) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.25)) +
+  geom_point(aes(colour = task), 
+             size = 3,
+             position = position_dodge(.25)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 8)) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "Task",
+       shape = "Task") +
+  theme(axis.title.y = element_blank()) +
+    guides(colour=guide_legend(nrow=2,byrow=TRUE),
+         shape = guide_legend(nrow=2,byrow=TRUE))
+
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+
+
+
+## LIFT
+
+### Methods
+
+LIFT (Improving Pre-university Students' Performance in Academic Synthesis Tasks with Level-up Instructions and Feedback Tool) [@nina_vandermeulen_2020_3893538].
+
+### Fit to data
+
+```{r predictionslift, fig.cap="LIFT data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+file <- list.files("../stanout/lift", 
+                    pattern = "sims", 
+                    full.names = T)
+
+plots <- get_pdens_plot(file, max_iki = 2000)
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+### Posterior parameter estimates of mixture model
+
+```{r}
+file <- list.files(path = "../stanout/lift", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+ps <- read_csv(file) %>% 
+  filter(param %in% c("beta", "beta2", "prob")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, beta2, prob)) %>% 
+  mutate(across(c(beta2, beta), exp),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(beta:delta) %>% 
+  group_by(genre, topic, location, name) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}")) %>% 
+  ungroup() %>% 
+  mutate(group = str_c("Topic: ", topic, "; Genre: ", genre))
+```
+
+
+```{r liftpost, fig.cap="LIFT. Posterior parameter distribution"}
+posd <- position_dodge(.65)
+dotsize <- 2.5
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, 
+             position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1:8)) +
+  scale_colour_colorblind() +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "",
+       shape = "")
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, 
+             position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1:8)) +
+  scale_colour_colorblind() +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank())
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, 
+             position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(1:8)) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = dezero_plot, 
+                     limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank())
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+## SPL2
+
+Data are going to be published in @torrance.
+
+### Methods
+
+Undergraduate university students--*N* = 39, 28 female, mean age = 20.6 years (SD = 1.51)--wrote two short argumentative essays, one in English (the student's first language in all cases; L1) and one in Spanish (L2) using CyWrite [@chukharev2019combined]. CyWrite provides a writing environment with basic word processing functionality (e.g., Microsoft WordPad), including text selection by mouse action, and copy-and-paste. We recorded the time of each keystroke and mouse action, and tracked writers' eye movements within their emerging text.
+
+Writing tasks: Participants were given a 40 minute time limit. They wrote essays in response to each of two prompts, with order and L1 / L2 counterbalanced across subjects.
+
+
+### Fit to data
+
+```{r predictionsspl2, fig.cap="SPL2 data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs."}
+
+file <- list.files("../stanout/spl2", pattern = "sims", full.names = T)
+
+plots <- get_pdens_plot(file, max_iki = 2000)
+
+grid.arrange(patchworkGrob(plots), 
+             left = "Density",
+             bottom = "Transition duration in msecs")
+```
+
+
+
+### Posterior parameter estimates of mixture model
+
+
+Can slowdowns for sentence-pauses be explained on the basis of a complex keystrokes that were summed across? -- No
+
+The data sets used differ to the extent that the keystroke interval before sentences does (PLanTra, LIFT) or does not (CATO, C2L1, SPL2) scope over the character following Shift. In other words, the pause before sentences sums across two key intervals in the PLanTra and LIFT data, namely `_^[shift]^C` but only involves one keyintervals, namely `_^[shift]` for the remaining data sets.
+
+For the SPL2 dataset we compared whether the different patterns for sentences pauses can be explain but the keycombination. We analysed the SPL2 data including and excluding the keystroke after shift. Model estimates are presented in Figure \ref(fig:spl2post). The results of this comparison can be found in Table \@ref(tab:shiftcellmeans). Overall, fluent transition duration and the hesitation duration were affected by whether or not the sentence-initial transition include the interval between shift and the first character but not the hesitation probability. Fluent keytransitions were substantially longer when including the interval following the shift-key. The slowdown for hesitations was affected too but the difference is numerically small. There was no conclusive evidence for an increased hesitation probability. Taken together, including the character following shift affects the duration of fluent transitions more than it affects pause duration and frequency.
+
+
+
+```{r spl2post, fig.cap="SPL2. Posterior parameter distribution"}
+file1 <- list.files(path = "../stanout/spl2", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+file2 <- list.files(path = "../stanout/spl2_shift", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+ps <- map_dfr(c(file1, file2), ~read_csv(.) %>% 
+      mutate(data = .x)) %>% 
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(data, ~recode(., spl2 = "SPL2 (_^[shift])",
+                              spl2_shift = "SPL2 (_^[shift] + C)"))) %>% 
+  filter(param %in% c("beta", "delta", "prob")) %>% 
+  mutate(across(lang, recode, "EN" = "L1", "ES" = "L2")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, delta, prob)) %>% 
+  mutate(beta2 = beta + delta,
+         across(c(beta2, beta), ~exp(.)),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  pivot_longer(c(beta, delta, prob)) %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper),
+                   .names = "{.fn}"),
+            .by = c(lang, location, name, data)) 
+
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = data,
+             group = interaction(lang, data))) +
+  geom_errorbar(width = .2, alpha = .75, 
+                position = position_dodge(.5)) +
+  geom_point(aes(colour = lang), 
+             size = 3, 
+             position = position_dodge(.5)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 8)) +
+  scale_color_colorblind() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(y = "Posterior estimate with 95% PIs",
+       x = "",
+       colour = "Language",
+       shape = "Before-sentence\ntransitions")
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = data,
+             group = interaction(lang, data))) +
+  geom_errorbar(width = .2, alpha = .75,
+                position = position_dodge(.5)) +
+  geom_point(aes(colour = lang), 
+             size = 3, 
+             position = position_dodge(.5)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 8)) +
+  scale_color_colorblind() +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "Language",
+       shape = "Before-sentence\ntransitions") +
+  theme(axis.title.y = element_blank())
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = data,
+             group = interaction(lang, data))) +
+  geom_errorbar(width = .2, alpha = .75, position = position_dodge(.5)) +
+  geom_point(aes(colour = lang), 
+             size = 3, 
+             position = position_dodge(.5)) +
+  facet_grid(~name) +
+  scale_shape_manual(values = c(21, 8)) +
+  scale_colour_colorblind() +
+#  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "Language",
+       shape = "Before-sentence\ntransitions") +
+  theme(axis.title.y = element_blank())
+
+beta + delta + theta +
+  plot_layout(guides = "collect")
+
+```
+
+
+
+```{r shiftcellmeans, results = 'asis'}
+# cell means and data set difference
+cellmeans <- ps %>% 
+  mutate(across(location, ~str_replace(., "\\n", " "))) %>% 
+  pivot_wider(names_from = name, 
+              values_from = c(mean, lower, upper)) %>% 
+  mutate(across(ends_with("prob"), ~dezero(., 2)),
+         across(c(ends_with("beta"),
+                  ends_with("delta")), 
+                ~as.character(scales::comma(round(.))))) %>% 
+  pivot_longer(-c(lang, location, data), 
+               names_to = c(".value", "param"),
+               names_sep = "_") %>% 
+  mutate(est = str_c(mean, " [", lower, ", ", upper,"]")) %>% 
+  select(-mean:-upper) %>% 
+  pivot_wider(names_from = data, 
+              values_from = est) 
+
+file1 <- list.files(path = "../stanout/spl2", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+file2 <- list.files(path = "../stanout/spl2_shift", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+tmp <- map_dfr(c(file1, file2), 
+               ~read_csv(.x) %>% 
+          mutate(data = .x)) %>% 
+  filter(param %in% c("beta", "delta", "theta")) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, value))) %>% 
+  mutate(across(lang, recode, "EN" = "L1", "ES" = "L2"),
+         across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .))) %>% 
+  pivot_wider(names_from = data, values_from = value) %>% 
+  unnest(c(spl2, spl2_shift)) %>% 
+  mutate(diff = spl2_shift - spl2) %>% 
+  summarise(across(diff, list(mean = mean, 
+                              lower = lower, 
+                              upper = upper,
+                              BF = BF), 
+                   .names = "{.fn}"),
+            .by = c(lang, location, param)) %>% 
+  mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
+         across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2)))),
+         across(param, recode, theta = "prob")) %>% 
+  left_join(cellmeans) %>% 
+  select(param, Language = lang,
+         `Transition location` = location, 
+         `_\\^[shift] + C` = ends_with(" + C)"),
+         `_\\^[shift]` = ends_with("FT])"),
+         "Difference" = mean, BF)
+      
+write_csv(tmp, "tables/shift_effect_cellmeans.csv")
+   
+
+tmp[,-1] %>% knitr::kable(align = c("l", "l", "r", "r", "r", "r"), 
+                          caption = "Mixture model estimates for key transitions. Cell means are shown for transitions that do and do not involve the transition to the character following shift in msecs for fluent key-transitions, the slowdown for long transitions and the probability of disfluent transitions. The difference for including the transition duration to the character after shift is shown on log scale (for transition durations) and logit scale for probability of disfluent transitions. 95% PIs in brackets.") %>%
+  #  cell_spec(1, 3:4) %>% 
+  kableExtra::collapse_rows(columns = 1) %>%
+  kable_styling(position = "center", full_width = T) %>%
+  footnote("PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+           threeparttable = T) %>% 
+  group_rows("Fluent transitions", 1, 6) %>%
+  group_rows("Disfluencies", 7, 12) %>%
+  group_rows("Probability of disfluencies", 13, 18) 
+
+
+```
+
+
 
 
 # References

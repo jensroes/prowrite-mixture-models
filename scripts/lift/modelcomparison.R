@@ -22,8 +22,9 @@ mcs <- mcs %>% as.data.frame() %>%
   mutate(model = recode(model, model1 = loos[1],
                                model2 = loos[2],
                                model3 = loos[3],
-                               model4 = loos[4]),
+                               model4 = loos[4],
+                               model5 = loos[5]),
          model = str_remove(model, "^loo_"));mcs
 
-file_out <- paste0("stanout/lift/modelcomparison_overall.csv")
+file_out <- paste0("stanout/lift/modelcomparison.csv")
 write_csv(mcs, file_out)

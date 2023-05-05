@@ -11,7 +11,7 @@ output:
     gallery: false
     highlight: "pygments"
     toc_depth: 3
-    use_bookdown: false
+    use_bookdown: true
 
 ---
 
@@ -25,17 +25,23 @@ library(brms)
 
 ```{r setup, include=FALSE}
 # Turn off scientific notation
-options(scipen = 999) 
+options(scipen = 999, width = 200) 
 
 # Chunk defaults
-knitr::opts_knit$set(width=90)
+knitr::opts_knit$set(width=100)
 knitr::opts_chunk$set(fig.width = 8, 
                       fig.height = 4.5,
-                      size = "small",
                       echo = TRUE,
                       comment = NA, 
                       warning = FALSE,
                       message = FALSE)
+
+# Reduce font size in chunks
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "small", paste0("\n \\", options$size,"\n\n", x, "\n\n \\small"), x)
+})
 
 # Plotting defaults
 theme_set(theme_bw() + 
@@ -62,10 +68,17 @@ library(brms)
 First we load a sample of keystroke data. Data are loaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/) using the URL as below and the `read_csv` function. For brevity we use a random subset. Data are from participants that completed an essay writing task in the context of the Prowrite project. 
 
 
-```{r}
+```{r eval = F}
 # Load data
 data <- read_csv("https://raw.githubusercontent.com/jensroes/prowrite-mixture-models/main/tutorial/data/sampledata.csv") 
 ```
+
+```{r echo = F}
+# Load data
+data <- read_csv("data/sampledata.csv") 
+```
+
+
 
 We reduced the data to three variables: a participant identifier `participant`, the inter-keystroke intervals `iki`, and the transition location `location` (levels: within-word, before-word, before-sentence).
 
@@ -82,16 +95,23 @@ count(data, participant, location)
 
 # Uni-modal mixed-effects models
 
+We start with two uni-modal models -- models that assume that the data come from a single underlying process that can be described as as Gaussian in the first example or a log-Gaussian in the second example. We will compare the models performance.
+
 ## Gaussian mixed-effects model
 
 ### Model
 
 
+We start with a Gaussian mixed-effects models similar to a standard analysis of variance. We describe the process that generates each iki $i$ as normal Gaussian distribution $\text{N}()$ characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $\text{participant}_i$. $\beta$ will be allowed to take on a different value for each transition location. Average participant-ikis are allowed to deviate from the average which is achieved by assuming a normal distribution for participant deviations distributed around 0 with a standard deviation $\sigma_\text{p}^2$.
+
 $$
-\text{iki}_i \sim \text{N}(\mu_i, \sigma_\text{e}^2)\\
-\mu_i = \beta_\text{location[i]} + u_i\\
-u \sim \text{N}(0, \sigma_u) 
+\begin{align}
+\text{iki}_i \sim & \text{N}(\mu_i, \sigma_\text{e}^2)\\
+\mu_i = & \beta_\text{location[i]} + \text{participant}_i\\
+\text{participant} \sim & \text{N}(0, \sigma_\text{p}^2) 
+\end{align}
 $$
+This model can be described in R using the following formula wrapped in the `brms` formula function `bf`.
 
 ```{r}
 formula <- bf(iki ~ 0 + location + (1|participant), family = gaussian())
@@ -100,9 +120,13 @@ formula <- bf(iki ~ 0 + location + (1|participant), family = gaussian())
 
 ### Priors
 
+`brms` is using sensible default priors for most model parameters which can be checked using `get_prior`.
+
 ```{r}
 get_prior(formula = formula, data = data)
 ```
+
+We want to make sure that `(flat)` is replaced by weakly informative priors because uninformative or flat priors are never a good idea [@mcelreath2016statistical].
 
 ```{r}
 prior <- set_prior('student_t(3, 350, 100)', class = 'b')
@@ -127,7 +151,7 @@ tibble(x = 0:1000) %>%
 
 ### Initiate sampling
 
-For the model to converge we need to run a sufficient number of iterations. 30,000 iterations, as below, are a lot but does not guarantee convergence. We need to test convergence using the model's posterior (see blow). To test whether the model has converged, we need to run the model more than one time (i.e. different chains). These can be run at the same time (in parallel) using more than one core of your computer (three cores below).^[If you want to use R to check how many cores are available on your machine, run `parallel::detectCores()` (you might need to install the package `parallel`).] There is no need to use more cores and chains and using less cores would mean that at least one process has to wait until after other processes are completed. When the model has settled on a parameter values, we should observe that all three streams (chains) overlap. Running long chains (many iterations) is useful to get more accurate parameter estimates. 
+For the model to converge we need to run a sufficient number of iterations. 10,000 iterations, as below, are a lot but does not guarantee convergence. We need to test convergence using the model's posterior (see blow). To test whether the model has converged, we need to run the model more than one time (i.e. different chains). These can be run at the same time (in parallel) using more than one core of your computer (three cores below).^[If you want to use R to check how many cores are available on your machine, run `parallel::detectCores()` (you might need to install the package `parallel`).] There is no need to use more cores and chains and using less cores would mean that at least one process has to wait until after other processes are completed. When the model has settled on a parameter values, we should observe that all three streams (chains) overlap. Running long chains (many iterations) is useful to get more accurate parameter estimates. 
 
 
 ```{r}
@@ -184,9 +208,11 @@ fixef(fit_gaus) %>% round()
 ### Model
 
 $$
-\text{iki}_i \sim \text{logN}(\mu_i, \sigma_\text{e}^2)\\
-\mu_i = \beta_\text{location[i]} + u_i\\
-u \sim \text{N}(0, \sigma_u) 
+\begin{align}
+\text{iki}_i \sim & \text{logN}(\mu_i, \sigma_\text{e}^2)\\
+\mu_i = & \beta_\text{location[i]} + \text{participant}_i\\
+\text{participant} \sim & \text{N}(0, \sigma_\text{p}^2) 
+\end{align}
 $$
 
 ```{r}
@@ -259,15 +285,66 @@ fixef(fit_lgaus) %>% round(1)
 
 
 
-## TODO Model comparison
+## Model comparison
+
+To evaluate the predictive performance of the models we can use leave-one-out cross-validation. The out-of-sample predictive performance was determined via Pareto smoothed importance-sampling [@vehtari2015pareto; @vehtari2017practical]. Cross-validation, in contrast to more conventional model-comparison metrics such as $R^2$, prevent overfitting by penalising models with more parameters [see @mcelreath2016statistical; @lambert2018student].
+
+Cross validation generally is measuring the performance of a model, meaning its ability to capture new data. Overfitting happens when a model is capturing nuances of a sample, rather than patterns one would expect to repeat in new samples. The leave-one-out information criterion (LOO-IC) is determined as follows: train a model on $N-1$ observations, predict the remaining data points from the training model, repeat process $N$ times to predict every observation from a model of th remaining data. Adding up the prediction results gives an estimate of the expected log predictive density (`elpd_loo`; $\widehat{elpd}$), i.e. an approximation of the results that would be expected for new data.
+
+The function `loo` can be used to access the expected log predictive density which uses probability calculations for approximate LOO-IC vio Pareto smoothed importance sampling [@vehtari2015pareto; @vehtari2017practical].
 
 
-ADD here info from slides on how to calculate elpd
+Approximation involved in `loo` uses the log posterior predictive densities: how likely is each data point given the distribution parameter estimates? This is shown for each data point in Figure \@ref(fig:loglik). Extremely small values indicate that an observation is very unlike for a given set of parameter values.
 
 
+```{r loglik, fig.cap="Log-posterior densities of each data point"}
+log_lik(fit_gaus) %>% 
+  as_tibble() %>% 
+  mutate(sample = 1:n()) %>%
+  pivot_longer(-sample, 
+               names_to = "obs", 
+               values_to = "loglik") %>%
+  group_by(obs) %>%
+  summarise(M = mean(loglik), var = var(loglik)) %>%
+  filter(M > -10) %>% # there are some terrible ones for this model :)
+  mutate(obs = as.numeric(str_remove(obs, "V"))) %>%
+  ggplot(aes(x = obs, y = M, ymin = M-var, ymax = M+var)) +
+  geom_pointrange(fatten = .5) +
+  labs(x = "Observations", 
+       y = "log-posterior predictive density (with variance)")
+```
+
+`elpd_loo` is the sum of the means and returns the expected log predictive density. `p_loo` is the sum of the variances and indicates the flexibility of the model fit (also used as the effective number of parameters). `looic`, or LOO-IC, corresponds to $-2 \cdot ($`elpd_loo`$-$`p_loo`$)$ (for deviance scale). This can be manually estimated
 
 
-To evaluate the predictive performance of the models we can use leave-one-out cross-validation. The out-of-sample predictive performance was determined via Pareto smoothed importance-sampling [@vehtari2015pareto; @vehtari2017practical]. Cross-validation, in contrast to more conventional model-comparison metrics such as $R^2$, prevent overfitting by penalising models with more parameters [see @mcelreath2016statistical; @lambert2018student]. Predictive quality was summarised as the sum of the expected log predictive density (`elpd_loo`; $\widehat{elpd}$). The difference in `elpd_loo` is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. 
+```{r}
+log_lik(fit_gaus) %>% 
+  as_tibble() %>% 
+  mutate(sample = 1:n()) %>%
+  pivot_longer(-sample, 
+               names_to = "obs", 
+               values_to = "loglik") %>%
+  group_by(obs) %>%
+  summarise(mean_loglik = mean(exp(loglik)),
+            var_loglik = var(loglik)) %>% 
+  ungroup() %>%
+  summarise(elpd_loo = sum(log(mean_loglik)), # sum of mean log lik
+            p_loo = sum(var_loglik), # effective number of parameters
+            looic = -2 * (elpd_loo - p_loo)) %>% # Bayesian deviance
+  pivot_longer(everything(), names_to = "Estimate") %>% 
+  mutate(across(value, round, 1))
+```
+
+
+or directly calculated using `loo`. The Pareto k diagnostic indicates that there are some observations that are very unusual under the uni-modal Gaussian model.
+
+
+```{r}
+loo(fit_gaus)
+```
+
+
+The difference in `elpd_loo` for both models can be obtained using `loo` and is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. 
 
 ```{r}
 loo_fit <- loo(fit_gaus, fit_lgaus)
@@ -278,6 +355,16 @@ loo_fit$diffs %>%
 The model comparison shows that the model `fit_lgaus` (the model with the log-Gaussian likelihood) is approximately `r round(abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2]),0)` times better than `fit_gaus` (try `abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2])`).
 
 
+Aside, `elpd_loo` and `looic` have rarely got a direct interpretation. Important is the difference between models. The size of the values is increasing as a function of the number of observations. Generally `elpd_loo` and `looic` measures how many possible futures the model can rule out. 
+
+In contrast, `loo_R2` provides a Bayesian $R^2$ that measures the variability in the data that the model can captures. This quantity is not ideal for model comparisons, as normal $R^2$, because it is subject to overfitting: models with more parameters tend to have a larger $R^2$. A larger $R^2$ means that a model captures the data well but might make predictions that do not generalise out-of-sample [see chapter 11 in @gelman2020regression; chapter 6 in @mcelreath2016statistical]. The is an example for Bayesian $R^2$ for the uni-modal log-Gaussian model.
+
+```{r}
+loo_R2(fit_lgaus)
+```
+
+
+
 
 # Bi-modal mixed-effects log-Gaussian mixture model
 
@@ -285,18 +372,78 @@ The model returns population estimates for the average typing speed of fluent ke
 
 
 $$
-\text{iki}_{i} \sim \theta_\text{location[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + u_i, \sigma_{e'_\text{location[i]}}^2) +\\
-  (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + u_i, \sigma_{e_\text{location[i]}}^2)\\
-		\text{where}\\
-		\delta \sim \text{N}(0,1)\\
-		\text{constraint: } \delta > 0
+\begin{align}
+\text{iki}_{i} \sim & \theta_\text{location[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
+		&\text{where}\\
+		&\delta \sim \text{N}(0,1)\\
+		&\text{constraint: } \delta > 0
+\end{align}
 $$
 
 
+The parameters of this equation are visualised in Figure \@ref(fig:mixturemodel). The illustrate shows the dissociation of two underlying processes that the model is looking for in the data. There are two distributions of which the left one in grey is the distribution of fluent keystroke intervals; the right distribution in green is wider and captures generally longer keystroke intervals (with some overlap between fluent and disfluent transitions). 
 
-## TODO Mixture model simulation
 
 
+```{r mixturemodel, echo = F, fig.cap="What's a mixture model for keystroke intervals? The parameters of the mixture model explained visually. Each of the three parameters is determined for each transition location."}
+
+plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
+
+ps <- read_csv("data/posterior_for_densityplot.csv") %>%
+  mutate(edit = str_to_sentence(edit)) %>%
+  filter(pos == "before word", edit == "No editing", lang == "L1") %>% 
+  select(-pos, -edit) %>%
+  pivot_wider(names_from = param, values_from = est) 
+  
+alpha <- pull(ps, beta)
+alpha2 <- pull(ps, betalong)
+theta <- pull(ps, prob)
+sigma <- pull(ps, sigma_e)
+sigmap <- pull(ps, sigmap_e)
+
+data_mm <- data.frame(x = c(0, 12))
+
+
+ggplot(data_mm, aes(x)) +
+  scale_x_continuous(labels = exp, breaks = log(c(0, 10, 100, 1000, 10000)), limits = log(c(30, 50000))) +
+  scale_y_continuous(limits = c(0, .7)) +
+  stat_function(geom = "line", fun = plot_mix_comps, colour = "#000000",
+                args = list(alpha[1], sigma[1], lam = 1 - theta[1])) +
+  stat_function(geom = "line", fun = plot_mix_comps, colour = "#009E73",
+                args = list(alpha2[1], sigmap[1], lam = theta[1])) +
+  stat_function(geom = "area", fun = plot_mix_comps, fill = "#000000",
+                show.legend = F, alpha = .25, 
+                args = list(alpha[1], sigma[1], lam = 1 - theta[1])) +
+  stat_function(geom = "area", fun = plot_mix_comps, fill = "#009E73",
+                show.legend = F, alpha = .25, 
+                args = list(alpha2[1], sigmap[1], lam = theta[1])) +
+  annotate("label", x=4,y=.6, label="beta*':'~'Quick typing'", size = 4, parse = T) +
+  annotate("label", x=7.25,y=.35, label="atop(theta*':'~'Hesitation probability', '\"Pausing\"')", parse = T, size = 4) +
+  annotate("label", x=9,y=.15, parse = T, label="delta*':'~'\"Slowdown\"'", size = 4) +
+  geom_segment(x = alpha, y = 0.05, xend = alpha2, yend = 0.05, 
+               colour = "blue", alpha = .5,
+               arrow = arrow(length = unit(0.2, "cm"), 
+                             ends = "both", 
+                             type = "closed")) +
+  geom_segment(x = alpha, y = 0, xend = alpha, yend = Inf, colour = "darkred", alpha = .5) +
+  geom_segment(x = alpha2, y = 0, xend = alpha2, yend = Inf, colour = "darkred", alpha = .5) +
+  geom_curve(x = 4, y = .57, xend = alpha - .75, yend = 0.1, 
+  arrow = arrow(length = unit(0.03, "npc"))) +
+  geom_curve(x = 7.5, y = .3, xend = alpha2 + .85, yend = 0.1,
+             curvature=-.3,
+  arrow = arrow(length = unit(0.03, "npc"))) +
+  geom_curve(x = 9, y = .125, xend = 5.75, yend = 0.0255,
+             curvature=-.3,
+   arrow = arrow(length = unit(0.03, "npc"))) +
+  labs(x = "iki [in msecs]", 
+       y = "Density",
+       caption = "see Roeser et al. (2021)") 
+
+```
+
+
+The average typing speed of fluent keystroke transitions is captured by the $\beta$ parameter. The distance between fluent transitions and disfluent transitions is captured by $\delta$ (i.e. the distance between the grey and the green distribution). The hesitation probability or the "pausing frequency" is the relative height of the grey and the green distribution and captured by $\theta$. Most keystrokes are, typically, fluent transitions and hence in the grey distribution. The frequency of the minority of disfluent transitions is captured by the height of the green distribution. As this model is bi-modal, the probability of fluent transitions is just $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent transitions was $.6$. If the pausing probability decreases to $.3$ the proportion of fluent transitions had increased to $.7$.
 
 
 
@@ -310,11 +457,9 @@ The data must be transformed into a list to feed them into Stan. The information
 data {
   int<lower=1> N;                    // number of observations
   int<lower=1> nS;                   // number of ppts
-  int<lower=1, upper=nS> ppts[N];    // ppts identifier
-  int<lower=1> nB;                   // number of bigrams
-  int<lower=1, upper=nB> bigrams[N]; // ppts identifier
+  int<lower=1, upper=nS> ppt[N];     // ppts identifier
   int<lower=1> K;                    // number of conditions
-  int condition[N];                  // condition identifiers
+  int<lower=1> condition[N];                  // condition identifiers
   vector[N] y;                       // outcome
 }
 ```
@@ -639,7 +784,8 @@ pivot_longer(posterior_in_msecs, beta:theta, names_to = "parameter") %>%
   facet_wrap(~parameter, scales = "free", labeller = label_parsed) +
   scale_fill_brewer("Transition\nlocation", palette = "Dark2") +
   scale_color_brewer("Transition\nlocation", palette = "Dark2") +
-  labs(x = "Posterior parameter estimate")
+  labs(x = "Posterior parameter estimate") +
+  theme(legend.position = "top")
 ```
 
 
@@ -770,15 +916,147 @@ rope(beta_diff_word, range = c(-50, 50))
 The ROPE contains `r round(pull(rope(beta_diff_word, range = c(-50, 50)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(beta_diff_word, range = c(-50, 50)))*100,2)`% probability that the posterior difference $\beta_\text{diff}$ is between -50 and 50 msecs which we considered negligible.
 
 
-## TODO Bayes Factor
+## Bayes Factor
 
-Add info from Savage Dickey Bayes Factor slide
+Frequentist null-hypothesis testing is based on the *p*-value. Conceptually this test is evaluates whether the data allow us to reject the null hypothesis (i.e. the true parameter value being some difference, is zero). More specifically it tests whether the probability of observing a test statistic (e.g. *t*, *F*, $\chi^2$) as or more extreme if the null hypothesis were true. Therefore, *p*-values have two possible outcomes: reject the null (i.e. $p<.05$); inconclusive evidence (i.e. $p>.05$). And that's it. It does not provide direct evidence for the alternative hypothesis; nor does it provide evidence for the null hypothesis.
+
+Bayes Factors (BFs) provide a continuum of three possible outcomes [@dienes2014using; @dienes2016bayes; @dienes2018four]: (1) there is evidence to reject the null / alternative hypothesis; (2) the evidence is inconclusive (get more data!); (3) accept the null / alternative hypothesis.
+
+For example, if our BF is the probably of the alternative hypothesis $H1$ over the null hypothesis $H_0$, values $>1$ indicate that there is more evidence for $H1$ and $<1$ indicates more evidence for $H_0$. This can be turned around by swapping nominator and denominator 
+
+$$
+\text{BF}_{10} = \frac{p(H_1 \mid y)}{p(H_0 \mid y)} 
+$$
+or by taking the inverse of $\text{BF}_{10}$, meaning $\text{BF}_{01} = \frac{1}{\text{BF}_{10}}$. 
+
+The strength of evidence for $H_0$ and $H_1$ is continuous rather than binary (i.e. evidence vs no evidence). Authors have proposed different soft thresholds of what constitutes evidence [see, e.g., @bag12; @jeffreys1961theory; @lee2014bayesian] but generally a BF larger than 3 is weak evidence, larger than 5 / 6 indicate moderate evidence and 10 / 32 is strong evidence for a statistically meaningful effect. For example BF$_{10}$=2 reflects that the alternative hypothesis is two times more likely than the null hypothesis given the evidence. BF$_{10}$=0.33 is weak evidence in favour of the null hypothesis because $\frac{1}{0.33} \approx 3$. Notably BFs can be used to obtain evidence in favour of the null [for discussion see @dienes2014using; @dienes2018four; @dienes2016bayes]. 
 
 
-## Note on using more than a single IV
+The BF can be calculated using the Savage-Dickey method [see, e.g., @dickey1970weighted; @jeffreys1961theory; @wagenmakers2010bayesian]. The BF is determined on the basis of the height of the posterior density at zero compared to the height of the prior density at zero. Important to note here is that the resulting BF is sensitive to the prior in situations when the sample is small and / or prior information play a big role. It is therefore a good idea to carefully think about the prior in advance of analysis (hence "prior") and to be mindful of the role of priors in the calculation of BFs.
+
+
+Figure \@ref(fig:sdbf) shows an example for the calculation of BFs based on a posterior with an effect difference that is distributed according to $\text{N}(2.5, 1)$ compared against three priors with a wide SD $\text{N}(0, 10)$, a SD equal to the posterior $\text{N}(0, 2.5)$, and relatively small SD $\text{N}(0, 1)$.
+
+
+```{r sdbf, fig.cap="Example for the BF calculated using the Savage-Dickey method for 3 differently wide priors.", echo=F}
+bf_labs <- function(pr, po, rd = 3) {
+  bquote(paste("BF ="~frac(.(round(pr,rd)),.(round(po,rd)))~"="~.(round(pr/po,rd))))
+}
+
+pd <- tibble(x = seq(-5, 5, by = .1),
+             Prior_1 = dnorm(x, 0, 10),
+             Prior_2 = dnorm(x, 0, 2.5),
+             Prior_3 = dnorm(x, 0, 1),
+             Posterior = dnorm(x, 2.5, 1)) %>%
+  pivot_longer(Prior_1:Posterior)
+
+data_at_zero <- filter(pd, x == 0)
+pr_1 <- filter(data_at_zero, name == "Prior_1") %>% pull(value)
+pr_2 <- filter(data_at_zero, name == "Prior_2") %>% pull(value)
+pr_3 <- filter(data_at_zero, name == "Prior_3") %>% pull(value)
+po <- filter(data_at_zero, name == "Posterior") %>% pull(value)
+
+data_at_zero <- data_at_zero %>% 
+  mutate(is_prior = as.numeric(!name == "Posterior"),
+         po = po,
+         pr = NA_real_,
+         pr = ifelse(name == "Prior_1", pr_1, pr),
+         pr = ifelse(name == "Prior_2", pr_2, pr),
+         pr = ifelse(name == "Prior_3", pr_3, pr)) %>% 
+  rowwise() %>% 
+  mutate(pr_label = list(bf_labs(pr, po, rd = 2))) %>% 
+  ungroup()
+
+data_at_zero[data_at_zero$name == "Posterior",'pr_label'] <- NA
+
+pd %>% mutate(across(name, recode_factor,
+                     Posterior = "Posterior",
+                     Prior_1 = "Prior: N(0,10)",
+                     Prior_2 = "Prior: N(0,2.5)",
+                     Prior_3 = "Prior: N(0,1)", .ordered = TRUE)) %>% 
+  ggplot(aes(x = x, y = value, colour = name)) +
+  geom_line() +
+  geom_point(data = data_at_zero, 
+             inherit.aes = F,
+             aes(x = x, y = value), 
+             size = 2) +
+  geom_label(data = data_at_zero, 
+             inherit.aes = F,
+             aes(x = x, 
+                 y = value, 
+                 label = pr_label, 
+                 alpha = is_prior),
+             size = 2.75, 
+             parse = T, 
+             nudge_y = .04, 
+             show.legend = F) +
+  ggthemes::scale_color_colorblind("") +
+  scale_y_continuous(limits = c(0, .45)) +
+  labs(y = "density", x = "difference") 
+```
+
+
+
+To calculate the BF on the basis of posterior samples, the Savage-Dickey method can be implemented like so [taken from @nicenboim2016statistical] which requires an appropriate prior distribution. We will fix the mean of the prior to 0 but allow to change the SD as function argument.
+
+```{r}
+BF <- function(posterior_difference, prior_sd = 1){
+  library(polspline)
+  fit <- logspline(posterior_difference) 
+  posterior <- dlogspline(0, fit) # Height of the posterior at 0 
+  prior <- dnorm(0, 0, prior_sd) # Height of the prior at 0
+  return(prior/posterior)
+}
+```
+
+
+For demonstration purposes we will calculate the BF with different priors SDs for the hesitation probability $\theta$, or in particular the posterior difference in hesitation $\theta_\text{diff}$ for before-sentence vs before-word transitons and before-word vs within-word transitions.
+
+First, we extract vectors of differences
+
+```{r}
+# For sentence vs word
+theta_diff_sent <- filter(posterior_diffs, parameter == "theta[diff]") %>% pull(diff_sent)
+
+# For before word vs within word
+theta_diff_word <- filter(posterior_diffs, parameter == "theta[diff]") %>% pull(diff_word)
+```
+
+and then apply the `BF` function from above first to the difference between before-sentence and before-word transitions. For interpretation it is important to remember that $\theta$ is a probability; hence the difference between two probabilities can only range between -1 and 1. In other words, a prior SD of 1 is saying that all differences are as likely as no difference (which makes very little sense here). Similar to the calculations for ROPE above, it is useful to contemplate which prior distribution appropriately reflects the null hypothesis for the scale the difference is on (e.g. probability, log msecs, msecs).
+
+```{r}
+# Prior with sd of 1
+BF(theta_diff_sent, prior_sd = 1)
+# Prior with sd of .5
+BF(theta_diff_sent, prior_sd = .5)
+# Prior with sd of .1
+BF(theta_diff_sent, prior_sd = .1)
+```
+
+
+For `brms` fits the `hypothesis` function calculates the BFs indicated as evidence ratio. For a model such as `y ~ 1 + condition`, `hypothesis` can calculate the evidence for the hypothesis that the effect for `condition` is, for example, equal to 0. `hypothesis` can then be applied to the model with a statement that describes the hypothesis that should be evaluated.
+
+
+```{r eval = F, echo = F}
+diff <- posterior_samples(fit_lgaus) %>% 
+  mutate(diff = b_locationbeforeMsentence - b_locationbeforeMword) 
+
+hypothesis(diff, "diff = 0")
+
+```
+
+
+```{r eval = F}
+hypothesis(brm_model, "conditionb = 0")
+```
+
+
+To calculate the evidence ratio, which is based on the height of prior and posterior at 0, the argument `sample_prior = TRUE` (or `sample_prior = 'yes'`) needs to be specified in `brm`. 
+  
+
+## Note on using more than a single grouping variable 
 
 The Stan code presented in this walk through can be used to estimate the posterior for two and more conditions: We can calculate the difference between conditions from the posterior as well as main effects and interactions for more complex factorial designs as any factorial design can be reduced to a single variable.^[For example, say we have a 2 $\times$ 2 factorial design with factor 1 having two levels AB and CD and factor 2 having the corresponding levels AC and BD. These two factors render four conditions A, B, C, D. From posterior samples for each level A through D we can calculate main effect 1 as $\text{ME1}=(A+B) - (C+D)$, main effect 2 as $\text{ME2}=(A+C) - (B+D)$, and their interaction as $\text{Interaction}=(A-B) - (C-D)$ (or $\text{Interaction}=(A-C) - (B-D)$) and summary statistics as shown above.]
-
 
 
 
@@ -846,7 +1124,7 @@ posterior_ppts_long_summary %>%
             shape = location)) +
   geom_pointrange(position = position_dodge(.75)) +
   labs(x = "Participant id", 
-       y = "Parameter estimates with 95% PIs") +
+       y = "Hesitation probability with 95% PIs") +
   scale_colour_brewer("Transition\nlocation", palette = "Dark2") +
   scale_shape_manual("Transition\nlocation", values = c(21, 3, 8)) +
   scale_x_continuous(breaks = 1:10) +
@@ -887,7 +1165,7 @@ posterior_ppts_long_diff_summary %>%
   facet_wrap(~difference) +
   coord_flip() +
   labs(x = "Participant id", 
-       y = "Difference between transition locations") 
+       y = "Difference in hesitation probabilities with 95% PIs") 
 ```
 
 

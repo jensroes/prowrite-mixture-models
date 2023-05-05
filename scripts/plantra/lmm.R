@@ -1,36 +1,21 @@
 # Load packages
 library(tidyverse)
 library(rstan)
+source("scripts/plantra/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 # Sampling parameters
 n_cores <- 3
 n_chain <- 3
-iterations <- 10000
-n_sample <- 50 # number of random data points
+iterations <- 20000
+n_sample <- 100 # number of random data points
+file <- "data/plantra.csv"
 
-# Load df
-d <- read_csv("data/plantra.csv") %>%
-  filter(!is.na(iki), 
-         iki > 50, 
-         iki < 30000,
-         enough_sentences) %>%
-  mutate(across(ppt, ~as.numeric(factor(.))),
-         condition = factor(str_c(location, task, sep = "_")),
-         cond_num = as.integer(condition)) %>% 
-  select(ppt, iki, condition, cond_num) 
+# Load data
+d <- get_data(file)
 
-# Sample within each category random data points
-set.seed(365)
-d <- d %>% group_by(ppt, condition) %>%
-  mutate(keep = 1:n(),
-         keep = sample(keep),
-         keep = keep <= n_sample) %>% 
-  ungroup() %>% 
-  filter(keep) %>% 
-  select(-keep)
-
+# Check counts
 count(d, ppt, condition)
 
 # Data as list
@@ -45,12 +30,9 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_mu = 5
-          , beta_sigma = .1
-          , beta_raw = rep(0, dat$K)
-          , sigma_mu = 1
-          , sigma_sigma = .1
-          , sigma_raw = rep(0.1, dat$K)
+  list(   beta_e = rep(0, dat$K)
+          , alpha = 5
+          , sigma = 1
           , sigma_u = 0.1)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
@@ -63,7 +45,7 @@ start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 lmm <- stan_model(file = "stan/lmm.stan")
 
 # Parameters to omit in output
-omit <- c("mu",  "_mu", "_raw", "_sigma", "z_u", "L_u")
+omit <- c("mu")
 
 # Fit model
 m <- sampling(lmm, 
@@ -78,9 +60,8 @@ m <- sampling(lmm,
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
               seed = 81,
-              control = list(max_treedepth = 14,
-                             adapt_delta = 0.96)
-)
+              control = list(max_treedepth = 16,
+                             adapt_delta = 0.99))
 
 # Save model
 saveRDS(m, 

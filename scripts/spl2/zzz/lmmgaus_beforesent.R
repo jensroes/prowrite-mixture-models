@@ -11,31 +11,23 @@ iterations = 10000
 
 # Load df
 d <- read_csv("data/spl2.csv") %>%
+  select(-transition_dur) %>% 
+  rename(transition_dur = transition_dur_to_mod) %>% 
   filter(!is.na(transition_dur), 
          transition_dur > 50, 
          transition_dur < 30000,
-         edit == "noedit") %>%
-  group_by(SubNo, Lang, transition_type) %>% 
+         edit == "noedit",
+         transition_type == "sentence_before") %>%
+  group_by(SubNo, Lang) %>% 
   mutate(location_count = n()) %>% 
   group_by(SubNo) %>% 
   mutate(enough_sentences = min(location_count) > 10) %>% # at least 10 sentences
   ungroup() %>%
-  filter(enough_sentences,
-         transition_type == "within_word") %>% 
+  filter(enough_sentences) %>% 
   mutate(SubNo = as.numeric(factor(SubNo)),
          condition = factor(Lang),
          cond_num = as.integer(condition)) %>% 
   select(ppt = SubNo, iki = transition_dur, condition, cond_num) 
-
-# Sample within each category 100 random data points per loc and ppt
-set.seed(365)
-d <- d %>% group_by(ppt, condition) %>%
-  mutate(keep = 1:n(),
-         keep = sample(keep),
-         keep = keep <= 100) %>% 
-  ungroup() %>% 
-  filter(keep) %>% 
-  select(-keep)
 
 count(d, ppt, condition)
 
@@ -84,16 +76,15 @@ m <- sampling(lmm,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
-              seed = 81,
-              control = list(max_treedepth = 14,
-                             adapt_delta = 0.96)
+              seed = 82,
+              control = list(max_treedepth = 16,
+                             adapt_delta = 0.99)
 )
 
 # Save model
 saveRDS(m, 
-        file = "stanout/spl2/lmmgaus_withinword.rda",
+        file = "stanout/spl2/lmmgaus_beforesent.rda",
         compress = "xz")
-
 
 # Select relevant parameters
 (param <- c("beta", "sigma", "sigma_u"))

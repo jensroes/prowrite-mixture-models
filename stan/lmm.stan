@@ -14,10 +14,8 @@ data {
 parameters {
 	real<lower=0> sigma;		// residual sd
 
-	// Parameters for non-centering
-	real beta_mu;
-	vector[K] beta_raw;			// distributions
-  real<lower =0> beta_sigma;	
+	real alpha;
+	vector[K] beta_e;
 
    // For random effects
 	vector[nS] u; //subj intercepts
@@ -25,20 +23,17 @@ parameters {
 }
 
 transformed parameters{
-  vector[K] beta = beta_mu + beta_sigma * beta_raw;
   vector[N] mu;
-
   for(n in 1:N){
-    mu[n] = beta[condition[n]] + u[subj[n]];
+    mu[n] = alpha + beta_e[condition[n]] + u[subj[n]];
   }
 }
 
 model {
   // Priors
-  beta_mu ~ normal(6, 2);
-  beta_sigma ~ cauchy(0, 2.5);
-  beta_raw ~ normal(0, 2.5);
-  sigma ~ cauchy(0, 2.5);
+  alpha ~ normal(5, 1);
+  beta_e ~ normal(0, 1);
+  sigma ~ student_t(7, 0, 2);
 	
 	// REs priors
   sigma_u ~ normal(0,2.5);
@@ -51,6 +46,7 @@ model {
 generated quantities{
 	vector[N] log_lik;
 	vector[N] y_tilde;
+	vector[K] beta = alpha + beta_e;
   for(n in 1:N){
     log_lik[n] = lognormal_lpdf(y[n] | mu[n], sigma); 
     y_tilde[n] = lognormal_rng(mu[n], sigma);

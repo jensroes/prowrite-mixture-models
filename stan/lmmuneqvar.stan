@@ -8,48 +8,29 @@ data {
   real<lower=0> y[N];  		            //outcome
   int K;                  // Number of conditions
   int<lower=1, upper=K> condition[N];  //predictor
+  int K_loc;                        // number of transition locations
+  int<lower=1, upper=K_loc> location[N];  // transition locations
   int<lower=1> nS;                  //number of subjects
   int<lower=1, upper=nS> subj[N];   //subject id
 
 }
 
 parameters {
-  
-  real beta_mu;
-  real beta_raw[K];
-  real<lower=0> beta_sigma;
-  
-  real<lower=0> sigma_mu;
-  vector[K] sigma_raw;
-  real<lower=0> sigma_sigma;
-  
+  real alpha;
+  vector[K] beta;
+  vector<lower=0>[K_loc] sigma;
+
    // For random effects
 	vector[nS] u; //subj intercepts
   real<lower=0> sigma_u;//subj sd
   
 }
 
-transformed parameters{
-  vector[N] mu;
-  vector[K] sigma = sigma_mu + sigma_sigma * sigma_raw;
-  vector[K] beta;
-
-  for(n in 1:N){
-    beta[condition[n]] = beta_mu + beta_sigma * beta_raw[condition[n]];
-    mu[n] = beta[condition[n]] + u[subj[n]];
-  }
-
-}
-
 model {
   // Priors
-  beta_mu ~ normal(6, 2);
-  beta_sigma ~ cauchy(0, 2.5);
-  beta_raw ~ normal(0, 1);
-
-  sigma_mu ~ normal(0, 2.5); 
-  sigma_raw ~ normal(0, 1);
-  sigma_sigma ~ cauchy(0, 2.5);
+  alpha ~ normal(5, 1);
+  beta ~ normal(0, 1);
+  sigma ~ student_t(7, 0, 2);
 
 	// REs priors
   sigma_u ~ normal(0,2.5);
@@ -57,17 +38,20 @@ model {
   
   // Likelihood
   for(n in 1:N){
-      y[n] ~ lognormal(mu[n], sigma[condition[n]]);
+    real mu = alpha + beta[condition[n]] + u[subj[n]];
+    y[n] ~ lognormal(mu, sigma[location[n]]);
   }
 }
 
 generated quantities {
   vector[N] log_lik;
   vector[N] y_tilde;
+  vector[K] alphabeta = alpha + beta;
 
-  for (n in 1:N) {
-    log_lik[n] = lognormal_lpdf(y[n] | mu[n], sigma[condition[n]]);
-    y_tilde[n] = lognormal_rng(mu[n], sigma[condition[n]]);
+  for(n in 1:N) {
+    real mu = alpha + beta[condition[n]] + u[subj[n]];
+    log_lik[n] = lognormal_lpdf(y[n] | mu, sigma[location[n]]);
+    y_tilde[n] = lognormal_rng(mu, sigma[location[n]]);
   }
 }
 

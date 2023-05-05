@@ -3,6 +3,9 @@ library(tidyverse)
 library(janitor)
 source("scripts/functions.R")
 
+# lift: Nina's phd; writing from sources 13-15 year old students 
+# (arg = argumentative; inf = informative) 
+
 # Get log files
 files <- list.files(path = "data/WritingPhases/LIFT_Data/data_out", 
                     pattern = "logs", 
@@ -50,18 +53,3 @@ select(lift_small, ppt, topic, genre) %>% unique() %>%
 
 write_csv(lift_small, "data/lift.csv")
 
-# lift: Nina's phd; writing from sources 13-15 year old students 
-# (arg = argumentative; inf = informative) 
-# plantra: translation and rewrite text to plain language; professional translators
-# References: Nina's phd
-# what is type ==  focus: focus is when attention switches to text
-# position NA is outside of word document
-# select(plantra, position) %>% count(position)
-# too many ppts: how can I reduce this: sample 200 obs per location per ppt is still a lot
-# -> I don't think the amount of data doesn't make it more useful: before paragraph is too low,
-# before sentence is relatively low: biggest problem is that is is unbalanced for COND (not my problem
-# but surely not great if you do p-value testing)
-# Sample subsets: what should N be for ppt? I've used 200 but that's still kind a lot
-
-# minimum number of setnece? 10 -> remove ppts
-# 100 samples for words

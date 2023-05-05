@@ -11,6 +11,8 @@ iterations = 10000
 
 # Load df
 d <- read_csv("data/spl2.csv") %>%
+  select(-transition_dur) %>% 
+  rename(transition_dur = transition_dur_to_mod) %>% 
   filter(!is.na(transition_dur), 
          transition_dur > 50, 
          transition_dur < 30000,

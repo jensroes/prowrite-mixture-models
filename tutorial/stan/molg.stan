@@ -8,8 +8,8 @@ data {
 	int<lower=1> N;          // Number of observations
   int<lower=1> nS;        //number of subjects
   int<lower=1, upper=nS> ppt[N];
-  int K;                  // Number of conditions
-  int condition[N];
+  int<lower=1> K;          // Number of conditions
+  int<lower=1> condition[N];
   vector[N] y;            //outcome: for each subject one IKI per column/bigram (in 
 }
 

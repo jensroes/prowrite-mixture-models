@@ -11,6 +11,8 @@ iterations = 10000
 
 # Load df
 d <- read_csv("data/spl2.csv") %>%
+  select(-transition_dur) %>% 
+  rename(transition_dur = transition_dur_to_mod) %>% 
   filter(!is.na(transition_dur), 
          transition_dur > 50, 
          transition_dur < 30000,
@@ -20,9 +22,10 @@ d <- read_csv("data/spl2.csv") %>%
   group_by(SubNo) %>% 
   mutate(enough_sentences = min(location_count) > 10) %>% # at least 10 sentences
   ungroup() %>%
-  filter(enough_sentences) %>% 
+  filter(enough_sentences,
+         transition_type == "word_before") %>% 
   mutate(SubNo = as.numeric(factor(SubNo)),
-         condition = factor(str_c(Lang, transition_type, sep =  "_")),
+         condition = factor(Lang),
          cond_num = as.integer(condition)) %>% 
   select(ppt = SubNo, iki = transition_dur, condition, cond_num) 
 
@@ -36,6 +39,8 @@ d <- d %>% group_by(ppt, condition) %>%
   filter(keep) %>% 
   select(-keep)
 
+count(d, ppt, condition)
+
 # Data as list
 dat <- within( list(), {
   nS <- length(unique(d$ppt))
@@ -48,37 +53,35 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_mu = 5
-          , beta_sigma = .1
+  list(   beta_mu = 250
+          , beta_sigma = 100
           , beta_raw = rep(0, dat$K)
-          , delta = rep(.1, dat$K)
-          , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
-          , theta_raw = rep(0, dat$K)
-          , theta_mu = -1
-          , theta_sigma = .1
-          , tau = .01
-          , sigma = 1
-          , sigma_diff = rep(.1, dat$K)
-          , sigma_u = 0.1)}
+          , sigma_mu = 50
+          , sigma_sigma = 10
+          , sigma_raw = rep(100, dat$K)
+          , sigma_u = 10)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
-# Stan model
+# --------------
+# Stan model  ##
+# --------------
+
 # Load model
-mog <- stan_model(file = "stan/mog.stan")
+lmm <- stan_model(file = "stan/lmmgaus.stan")
 
 # Parameters to omit in output
-omit <- c("theta", "prob_tilde", "mu",  "_mu", "_raw", "_sigma", "z_u", "theta_s", "L_u")
+omit <- c("mu",  "_mu", "_raw", "_sigma", "z_u", "L_u")
 
 # Fit model
-m <- sampling(mog, 
+m <- sampling(lmm, 
               data = dat,
               init = start_ll,
               iter = iterations,
               warmup = iterations/2,
               chains = n_chain, 
               cores = n_cores,
-              refresh = 5000,
+              refresh = 2000,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
@@ -89,40 +92,14 @@ m <- sampling(mog,
 
 # Save model
 saveRDS(m, 
-        file = "stanout/spl2/mog.rda",
+        file = "stanout/spl2/lmmgaus_beforeword.rda",
         compress = "xz")
 
-# Load model
-#m <- readRDS(file = "stanout/spl2/mog.rda")
 
 # Select relevant parameters
-param <- c("beta", "delta", "prob", "sigma", "sigma_u") 
+(param <- c("beta", "sigma", "sigma_u"))
 
 # Traceplots
-traceplot(m, param, inc_warmup = F)
-
-# Param summary
 summary(print(m, pars = param, probs = c(.025,.975)))
-
-# Extract posterior
-ps <- as.matrix(m, c("beta", "delta", "prob")) %>% as_tibble()
-
-# For cond codes
-data <- select(d, condition, cond_num) %>% unique()
-
-# Process posterior
-ps_fin <- ps %>% 
-  pivot_longer(everything()) %>% 
-  separate(name, into = c("param", "cond_num")) %>% 
-  mutate(across(cond_num, as.numeric)) %>% 
-  left_join(data, by = "cond_num") %>% select(-cond_num) %>%
-  separate(condition, into = c("lang", "pos1", "pos2"), sep = "_") %>%
-  unite(c(pos1,pos2), col = "location", sep = "_") %>% 
-  mutate(across(location, recode, 
-                sentence_before = "before sentence", 
-                word_before = "before word",
-                within_word = "within word"))
-
-# Save posterior
-write_csv(ps_fin, "stanout/spl2/mog.csv")
+traceplot(m, param, inc_warmup = F)
 

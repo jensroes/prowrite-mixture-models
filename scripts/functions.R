@@ -38,3 +38,52 @@ indicate_dels_and_inserts <- function(data){
     ungroup()
 }
 
+
+
+# Calculate Bayes Factor
+BF <- function(ps, prior_sd = 1){
+  fit_posterior <- logspline(ps) 
+  posterior <- dlogspline(0, fit_posterior) # Height of the posterior at 0 
+  prior <- dnorm(0, 0, prior_sd) # Height of the prior at 0
+  BF10 <- prior / posterior 
+  return(BF10)
+}
+
+logit <- function(p) log(p / (1-p))
+ilogit <- function(x) 1 / (1 + exp(-x))
+inv_logit <- function(logit) exp(logit) / (1 + exp(logit))
+
+se_bin <- function(x) sqrt((mean(x, na.rm = T)*(1 - mean(x, na.rm = T)))/length(x)) # se for binary data
+
+lower <- function(x) quantile(x, prob = .025)
+upper <- function(x) quantile(x, prob = .975)
+
+# Remove leading zeros and round numbers
+dezero <- function(x, dp){ # dp is decimal places
+  fmt = paste0('%.',dp,'f')
+  x = sprintf(fmt,x)
+  x = str_replace(x, '(-|^)0\\.','\\1\\.')
+  return(x)
+}
+dezero_plot <- function(x) dezero(x, 1)
+
+
+MSD <- function(M, SD, dp = 2){
+  paste0(dezero(M, dp),' (',dezero(SD, dp), ')')
+}
+
+PI_dezero <- function(est, lo, hi, dp = 2){
+  paste0(dezero(est,dp),' [', dezero(lo, dp),', ',dezero(hi, dp), ']')
+}
+
+
+PI <- function(est,lo, hi, dp = 2){
+  paste0(round(est,dp),' [', round(lo, dp),', ', round(hi, dp), ']')
+}
+
+PI_lnum <- function(est,lo, hi, dp = 2){
+  paste0(scales::comma(round(est, dp), accuracy = 1),
+         ' [', scales::comma(round(lo, dp), accuracy = 1),', ', 
+         scales::comma(round(hi, dp), accuracy = 1), ']')
+}
+

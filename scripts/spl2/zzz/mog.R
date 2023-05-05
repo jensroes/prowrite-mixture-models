@@ -11,6 +11,8 @@ iterations = 10000
 
 # Load df
 d <- read_csv("data/spl2.csv") %>%
+  select(-transition_dur) %>% 
+  rename(transition_dur = transition_dur_to_mod) %>% 
   filter(!is.na(transition_dur), 
          transition_dur > 50, 
          transition_dur < 30000,
@@ -20,10 +22,9 @@ d <- read_csv("data/spl2.csv") %>%
   group_by(SubNo) %>% 
   mutate(enough_sentences = min(location_count) > 10) %>% # at least 10 sentences
   ungroup() %>%
-  filter(enough_sentences,
-         transition_type == "word_before") %>% 
+  filter(enough_sentences) %>% 
   mutate(SubNo = as.numeric(factor(SubNo)),
-         condition = factor(Lang),
+         condition = factor(str_c(Lang, transition_type, sep =  "_")),
          cond_num = as.integer(condition)) %>% 
   select(ppt = SubNo, iki = transition_dur, condition, cond_num) 
 
@@ -37,8 +38,6 @@ d <- d %>% group_by(ppt, condition) %>%
   filter(keep) %>% 
   select(-keep)
 
-count(d, ppt, condition)
-
 # Data as list
 dat <- within( list(), {
   nS <- length(unique(d$ppt))
@@ -49,10 +48,9 @@ dat <- within( list(), {
   N <- nrow(d)
 } );str(dat)
 
-
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_mu = 6
+  list(   beta_mu = 5
           , beta_sigma = .1
           , beta_raw = rep(0, dat$K)
           , delta = rep(.1, dat$K)
@@ -67,8 +65,7 @@ start <- function(chain_id = 1){
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
-# Stan models
-
+# Stan model
 # Load model
 mog <- stan_model(file = "stan/mog.stan")
 
@@ -83,7 +80,7 @@ m <- sampling(mog,
               warmup = iterations/2,
               chains = n_chain, 
               cores = n_cores,
-              refresh = 2000,
+              refresh = 5000,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
@@ -94,19 +91,40 @@ m <- sampling(mog,
 
 # Save model
 saveRDS(m, 
-        file = "stanout/spl2/mog_beforeword.rda",
+        file = "stanout/spl2/mog.rda",
         compress = "xz")
+
+# Load model
+#m <- readRDS(file = "stanout/spl2/mog.rda")
 
 # Select relevant parameters
 param <- c("beta", "delta", "prob", "sigma", "sigma_u") 
 
 # Traceplots
-summary(print(m, pars = param, probs = c(.025,.975)))
 traceplot(m, param, inc_warmup = F)
 
+# Param summary
+summary(print(m, pars = param, probs = c(.025,.975)))
+
 # Extract posterior
-ps <- rstan::extract(m, param) %>% as_tibble()
+ps <- as.matrix(m, c("beta", "delta", "prob")) %>% as_tibble()
+
+# For cond codes
+data <- select(d, condition, cond_num) %>% unique()
+
+# Process posterior
+ps_fin <- ps %>% 
+  pivot_longer(everything()) %>% 
+  separate(name, into = c("param", "cond_num")) %>% 
+  mutate(across(cond_num, as.numeric)) %>% 
+  left_join(data, by = "cond_num") %>% select(-cond_num) %>%
+  separate(condition, into = c("lang", "pos1", "pos2"), sep = "_") %>%
+  unite(c(pos1,pos2), col = "location", sep = "_") %>% 
+  mutate(across(location, recode, 
+                sentence_before = "before sentence", 
+                word_before = "before word",
+                within_word = "within word"))
 
 # Save posterior
-write_csv(ps, "stanout/spl2/mog_beforeword.csv")
+write_csv(ps_fin, "stanout/spl2/mog.csv")
 

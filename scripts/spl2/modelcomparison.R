@@ -1,9 +1,12 @@
+# Load packages
 library(loo)
 library(tidyverse)
 
+# Get model file names
 path <- "stanout/spl2"
 (files <- list.files(path, pattern = "^.[^\\_]*.rda$", full.names = T))
 
+# Load models and extract loo 
 for(file in files){
     varname <- str_remove_all(file, ".rda|stanout/spl2/")
     m <- readRDS(file)
@@ -13,19 +16,22 @@ for(file in files){
     print(varname); rm(list = "m"); gc()
 }
 
+# Compare all models
 (loos <- ls(pattern = "loo_.*"))
 mcs <- do.call(what = loo_compare, args = lapply(loos, as.name))
 
+# Process model summary
 mcs <- mcs %>% as.data.frame() %>% 
   rownames_to_column("model") %>%
   as_tibble() %>%
   mutate(model = recode(model, model1 = loos[1],
                                model2 = loos[2],
                                model3 = loos[3],
-                               model4 = loos[4]),
+                               model4 = loos[4],
+                               model5 = loos[5]),
          model = str_remove(model, "^loo_"));mcs
 
-file_out <- paste0("stanout/spl2/modelcomparison_overall.csv")
+file_out <- paste0("stanout/spl2/modelcomparison.csv")
 write_csv(mcs, file_out)
 
 
