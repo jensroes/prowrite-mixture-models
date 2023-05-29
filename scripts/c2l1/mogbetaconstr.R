@@ -38,7 +38,7 @@ start <- function(chain_id = 1){
           , theta = rep(0, dat$K)
           , tau = .1
           , sigma = 1.25
-          , sigma_diff = rep(.1, dat$K)
+          , sigma_diff = rep(.1, dat$K_loc)
           , sigma_u = 0.41)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )

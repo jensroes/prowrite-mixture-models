@@ -1,22 +1,19 @@
 # Load packages
 library(tidyverse)
 library(rstan)
-source("scripts/plantra/get_data.R")
+source("scripts/spl2 (shift + C)/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 # Sampling parameters
-n_cores <- 3
-n_chain <- 3
-iterations <- 20000
-n_samples <- 100 # number of random data points
-file <- "data/plantra.csv"
+n_cores = 3
+n_chain = 3
+iterations = 20000
+nsamples = 100
+file = "data/spl2.csv"
 
-# Load data
-d <- get_data(file, n_samples)
-
-# Check counts
-count(d, ppt, condition)
+# Load df
+d <- get_data(file, nsamples)
 
 # Data as list
 dat <- within( list(), {
@@ -30,15 +27,19 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_e= rep(0, dat$K)
-          , alpha = 600
-          , sigma = 1850
-          , sigma_u = 165)}
+  list(   alpha = 6
+          , beta_e = rep(0, dat$K)
+          , sigma = 1
+          , sigma_u = 0.1)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
+# --------------
+# Stan model ##
+# --------------
+
 # Load model
-lmm <- stan_model(file = "stan/lmmgaus.stan")
+lmm <- stan_model(file = "stan/lmm.stan")
 
 # Parameters to omit in output
 omit <- c("mu")
@@ -61,8 +62,10 @@ m <- sampling(lmm,
 
 # Save model
 saveRDS(m, 
-        file = "stanout/plantra/lmmgaus.rda",
+        file = "stanout/spl2 (shift + C)/lmm.rda",
         compress = "xz")
+
+#m <- readRDS(file = "stanout/spl2  (shift + C)/lmm.rda")
 
 # Select relevant parameters
 (param <- c("beta", "sigma", "sigma_u"))

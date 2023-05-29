@@ -9,11 +9,11 @@ options(mc.cores = parallel::detectCores())
 n_cores <- 3
 n_chain <- 3
 iterations <- 20000
-n_sample <- 100 # number of random data points
+n_samples <- 100 # number of random data points
 file <- "data/plantra.csv"
 
 # Load data
-d <- get_data(file)
+d <- get_data(file, n_samples)
 
 # Check counts
 count(d, ppt, condition)
@@ -88,7 +88,7 @@ ps <- as.data.frame(m, c("beta", "beta2", "delta", "prob", "theta")) %>% as_tibb
 data <- select(d, starts_with("cond")) %>% unique()
 
 # Process posterior
-ps_fin <- ps %>%
+ps <- ps %>%
   pivot_longer(everything()) %>% 
   separate(name, into = c("param", "cond_num")) %>% 
   mutate(across(cond_num, as.numeric)) %>% 
@@ -96,8 +96,8 @@ ps_fin <- ps %>%
   select(-cond_num) %>%
   mutate(across(condition, as.character),
          across(condition, ~replace_na(., "overall"))) %>% 
-  separate(condition, into = c("location", "task"), sep = "_") 
+  separate(condition, into = c("location", "task"), sep = "_")
 
 # Save posterior
-write_csv(ps_fin, "stanout/plantra/mogbetaconstr.csv")
+write_csv(ps, "stanout/plantra/mogbetaconstr.csv")
 

@@ -9,11 +9,11 @@ options(mc.cores = parallel::detectCores())
 n_cores <- 3
 n_chain <- 3
 iterations <- 20000
-n_sample <- 100 # number of random data points
+n_samples <- 100 # number of random data points
 file <- "data/plantra.csv"
 
 # Load data
-d <- get_data(file)
+d <- get_data(file, n_samples)
 
 # Check counts
 count(d, ppt, condition)

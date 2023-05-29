@@ -1,7 +1,7 @@
 # Load packages
 library(tidyverse)
 library(rstan)
-source("scripts/plantra/get_data.R")
+source("scripts/gunnexp2/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
@@ -10,12 +10,12 @@ n_cores <- 3
 n_chain <- 3
 iterations <- 20000
 n_samples <- 100 # number of random data points
-file <- "data/plantra.csv"
+file <- "data/gunnexp2.csv"
 
-# Load data
+# Load df
 d <- get_data(file, n_samples)
 
-# Check counts
+# Count observations
 count(d, ppt, condition)
 
 # Data as list
@@ -32,25 +32,18 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = rep(5, dat$K)
-          , delta = rep(.1, dat$K)
-          , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
-          , theta = rep(0, dat$K)
-          , tau = .1
-          , sigma = 1.25
-          , sigma_diff = rep(.1, dat$K_loc)
-          , sigma_u = 0.41)}
+  list(    beta = rep(0, dat$K)
+          , alpha = 5
+          , sigma = rep(0.1, dat$K_loc)
+          , sigma_u = 0.4)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
 # Load model
-mog <- stan_model(file = "stan/mogbetaunconstr.stan")
-
-# Parameters to omit in output
-omit <- c("prob_tilde", "mu", "theta_s")
+lmm <- stan_model(file = "stan/lmmuneqvar.stan")
 
 # Fit model
-m <- sampling(mog, 
+m <- sampling(lmm, 
               data = dat,
               init = start_ll,
               iter = iterations,
@@ -60,41 +53,23 @@ m <- sampling(mog,
               refresh = 2000,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
-              pars = omit,
+              pars = "mu",
               seed = 81,
               control = list(max_treedepth = 16,
                              adapt_delta = 0.99))
 
 # Save model
 saveRDS(m, 
-        file = "stanout/plantra/mogbetaunconstr.rda",
+        file = "stanout/gunnexp2/lmmuneqvar.rda",
         compress = "xz")
 
-#m <- readRDS(file = "stanout/plantra/mogbetaunconstr.rda")
 
 # Select relevant parameters
-param <- c("beta", "delta", "prob", "sigma") 
+(param <- c("alphabeta", "sigma", "sigma_u"))
+
+# Posterior summary
+summary(print(m, pars = param, probs = c(.025,.975)))
 
 # Traceplots
 traceplot(m, param, inc_warmup = F)
-
-# Param summary
-summary(print(m, pars = param, probs = c(.025,.975)))
-
-# Extract posterior
-ps <- as.data.frame(m, c("beta", "delta", "theta", "beta2", "prob")) %>% as_tibble()
-
-# For cond codes
-data <- select(d, condition, cond_num) %>% unique()
-
-# Process posterior
-ps %>% 
-  pivot_longer(everything()) %>% 
-  separate(name, into = c("param", "cond_num")) %>% 
-  mutate(across(cond_num, as.numeric)) %>% 
-  left_join(data, by = "cond_num") %>% 
-  select(-cond_num) %>%
-  separate(condition, into = c("location", "task"), sep = "_") %>% 
-  # Save posterior
-  write_csv("stanout/plantra/mogbetaunconstr.csv")
 

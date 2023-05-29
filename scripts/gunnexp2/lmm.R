@@ -1,7 +1,7 @@
 # Load packages
 library(tidyverse)
 library(rstan)
-source("scripts/plantra/get_data.R")
+source("scripts/gunnexp2/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
@@ -10,12 +10,12 @@ n_cores <- 3
 n_chain <- 3
 iterations <- 20000
 n_samples <- 100 # number of random data points
-file <- "data/plantra.csv"
+file <- "data/gunnexp2.csv"
 
-# Load data
+# Load df
 d <- get_data(file, n_samples)
 
-# Check counts
+# Count observations
 count(d, ppt, condition)
 
 # Data as list
@@ -30,18 +30,15 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_e= rep(0, dat$K)
-          , alpha = 600
-          , sigma = 1850
-          , sigma_u = 165)}
+  list(   alpha = 6 
+          , beta_e = rep(0, dat$K)
+          , sigma = .7
+          , sigma_u = 0.3)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
 # Load model
-lmm <- stan_model(file = "stan/lmmgaus.stan")
-
-# Parameters to omit in output
-omit <- c("mu")
+lmm <- stan_model(file = "stan/lmm.stan")
 
 # Fit model
 m <- sampling(lmm, 
@@ -54,14 +51,14 @@ m <- sampling(lmm,
               refresh = 2000,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
-              pars = omit,
+              pars = "mu",
               seed = 81,
               control = list(max_treedepth = 16,
                              adapt_delta = 0.99))
 
 # Save model
 saveRDS(m, 
-        file = "stanout/plantra/lmmgaus.rda",
+        file = "stanout/gunnexp2/lmm.rda",
         compress = "xz")
 
 # Select relevant parameters
@@ -72,3 +69,4 @@ summary(print(m, pars = param, probs = c(.025,.975)))
 
 # Traceplots
 traceplot(m, param, inc_warmup = F)
+

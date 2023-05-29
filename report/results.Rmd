@@ -27,7 +27,6 @@ library(rmdformats)
 library(gridExtra)
 library(grid)
 library(gtable)
-library(gridExtra)
 library(scales)
 library(ggthemes)
 source("../scripts/functions.R")
@@ -139,7 +138,7 @@ $$
 		& \sigma_{e'}^2 > \sigma_{e}^2
 \end{align}
 $$
-This models takes into account two sources of participant-specific error: (1) each participant has an individual fluent typing as in the previous models; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor.
+This models takes into account two source = s of participant-specific error: (1) each participant has an individual fluent typing as in the previous models; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor.
 
 
 ## Bi-modal log-Gaussian (unconstrained)
@@ -172,9 +171,11 @@ Data were analysed in Bayesian mixed effects models [@gelman2014;@mcelreath2016s
 
 
 
-# Datasets in overview
+# Datasets 
 
-Five dataset with keystroke data from text production were used for analysis. An overview can be found in Table \@ref(tab:datasets).
+## General overview
+
+Five datasets with keystroke data from text production were used for analysis. An overview can be found in Table \@ref(tab:datasets).
 
 
 ```{r datasets, results='asis'}
@@ -195,7 +196,7 @@ tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT"),
                                  "Argumentative essays",
                                  "Text simplification",
                                  "Synthesis"),
-                n_ppt = c(126, 26*2, 39, 47, 658),
+                 `N (ppts)` = c(126, 26*2, 39, 47, 658),
 #                n_texts = c(1, 2, 2, 2, NA),
 #                n_sentences = c(),
 #                n_words = c(),
@@ -218,12 +219,328 @@ tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT"),
 ```
 
 
+
+
+##  Transition types
+
+The transition types that were analysed in this study focuses on those locations that were found, by previous research, to be psycholinguistically meaningful [e.g. @torrance; @chukharev2019combined; @torrance2016adolescent; @de2018exploring] and are detailed in Table \@ref(tab:keyloc). Keytransitions that terminated in an editing operation were excluded from the analysis. Transitions that occurred at the beginning of the text or the beginning of a paragraph were not treated as before-sentence transitions.
+
+```{r keyloc, results='asis'}
+tibble(`Transition type` = c("Within word", "Below word", "Before sentence"),
+       Description = c("Transitions between any letter",
+                       "Keypress after space followed by any letter",
+                       "Keypress following a space preceding any letter"),
+       Example = c("T^h^e c^a^t m^e^o^w^e^d. T^h^a^t[bsp][bsp]e^n i^t s^l^e^p^t.", 
+                   "The ^cat ^meowed. That[bsp][bsp]en ^it ^slept.", 
+                   "The cat meowed. ^That[bsp][bsp]en it slept.")) %>% 
+  kable(caption = "Transition location classification.") %>%
+  footnote("'^' marks transition location, [bsp] represents backspace. IKIs were timed to the shift keypress.") %>% 
+  kable_styling(position = "center", 
+                full_width = T, 
+                font_size = 12) 
+
+```
+
+
+## Data reduction
+
+```{r reductionfunctions}
+# Function to get data reduction infos
+get_lift <- function(file, n_samples, n_ppts){
+#  file <- "../data/lift.csv"
+# n_samples = 50
+#  n_ppts = 100
+  result <- list()
+  
+  d <- read_csv(file) 
+  
+  full_set <- d %>% 
+    count(ppt, topic, genre) %>% 
+    summarise(n = n(), .by = ppt) %>% 
+    mutate(has_full_set = n == 4) 
+  
+  result[[3]] <- full_set %>% count(has_full_set)
+    
+  ppt_keep <- full_set %>% 
+    filter(has_full_set) %>% 
+    pull(ppt)
+
+  result[[4]] <- d %>% 
+    filter(ppt %in% ppt_keep) %>% 
+    select(ppt, enough_sentences) %>% 
+    unique() %>% 
+    count(enough_sentences)
+
+
+  result[[1]] <- d %>%
+    filter(!is.na(iki), 
+           !is_edit,
+           ppt %in% ppt_keep,
+           enough_sentences) %>%
+    select(ppt, iki, location) %>% 
+    drop_na() %>% 
+    mutate(too_fast = iki <= 50, 
+           too_slow = iki >= 30000,
+           across(ppt, ~as.numeric(factor(.)))) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean, 
+                          se = se_bin)),
+              .by = c(ppt)) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean), 
+                     .names = "{.col}"))
+
+  # Sample within each category random data points
+  set.seed(365)
+  result[[2]] <- d %>% 
+    filter(!is.na(iki), 
+           !is_edit,
+           ppt %in% ppt_keep,
+           enough_sentences,
+           iki > 50,
+           iki < 30000) %>% 
+    mutate(keep = 1:n(),
+           keep = sample(keep),
+           keep = keep <= n_samples,
+           .by = c(ppt, location, genre, topic)) %>% 
+   summarise(across(keep, 
+             list(mean = mean, 
+                  se = se_bin)),
+              .by = c(ppt, location)) %>% 
+   summarise(across(starts_with("keep"), 
+                     list(mean = mean), 
+                     .names = "{.col}"), 
+              .by = location)
+
+   set.seed(365)
+   result[[5]] <- d %>% 
+    mutate(keep = 1:n(),
+           keep = sample(keep),
+           keep = keep <= n_samples, 
+           .by = c(ppt, location, genre, topic)) %>% 
+    filter(keep) %>% 
+    mutate(ppt_keep = ppt %in% sample(unique(ppt), n_ppts)) %>% 
+    select(ppt, ppt_keep) %>% 
+    unique() %>% 
+    count(ppt_keep)
+
+   return(result)
+}
+get_c2l1 <- function(file, n_samples){
+  #file <- "../data/c2l1.csv"
+  #n_samples <- 100
+  d <- read_csv(file) %>% 
+    filter(!is.na(iki)) %>% 
+    mutate(ppt = as.numeric(factor(subno))) %>% 
+    select(ppt, iki, location)  
+
+  result <- list()
+  
+  result[[1]] <- d %>% 
+    mutate(too_fast = iki <= 50,
+           too_slow = iki >= 30000) %>%
+    summarise(across(starts_with("too"), 
+                     list(mean = mean, se = se_bin)),
+              .by = c(ppt)) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean), 
+                     .names = "{.col}"))
+  
+  set.seed(365)
+  result[[2]] <- d %>% 
+    filter(iki > 50,
+           iki < 30000) %>% 
+    mutate(keep = 1:n(),
+           keep = sample(keep),
+           keep = keep <= n_samples,
+           .by = c(ppt, location)) %>% 
+   summarise(across(keep, 
+             list(mean = mean, se = se_bin)),
+              .by = c(ppt, location)) %>% 
+    summarise(across(starts_with("keep"), 
+                     list(mean = mean), 
+                     .names = "{.col}"), 
+              .by = location)
+
+  return(result)
+}
+get_cato <- function(file, n_samples){
+  d <- read_csv(file) %>% 
+    filter(!is.na(iki)) %>% 
+    mutate(ppt = as.numeric(factor(subno))) %>% 
+    select(ppt, iki, location, xn, dystyp)  
+
+  result <- list()
+  
+  result[[1]] <- d %>% 
+    mutate(too_fast = iki <= 50,
+           too_slow = iki >= 30000) %>%
+    summarise(across(starts_with("too"), 
+                     list(mean = mean, 
+                          se = se_bin)),
+              .by = c(ppt)) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean), 
+                     .names = "{.col}"))
+
+  set.seed(365)
+  result[[2]] <- d %>% 
+    filter(iki > 50,
+           iki < 30000) %>% 
+    mutate(keep = 1:n(),
+           keep = sample(keep),
+           keep = keep <= n_samples,
+           .by = c(ppt, location, xn, dystyp)) %>% 
+   summarise(across(keep, 
+             list(mean = mean, 
+                  se = se_bin)),
+              .by = c(ppt, location)) %>% 
+   summarise(across(starts_with("keep"), 
+                     list(mean = mean), 
+                     .names = "{.col}"), 
+              .by = location)
+
+  return(result)
+}
+get_plantra <- function(file, n_samples){
+  d <- read_csv(file) %>% 
+    filter(!is.na(iki), !is_edit) %>% 
+    mutate(ppt = as.numeric(factor(ppt))) %>% 
+    select(ppt, iki, location, task)  
+
+  result <- list()
+
+  result[[1]] <- d %>% 
+    mutate(too_fast = iki <= 50,
+           too_slow = iki >= 30000) %>%
+    summarise(across(starts_with("too"), 
+                     list(mean = mean, 
+                          se = se_bin)),
+              .by = c(ppt, task)) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean), 
+                     .names = "{.col}"))
+
+  # keep only participants that did both the pre and post task.
+  keep_ppts <- select(d, ppt, task) %>% 
+    unique() %>% 
+    count(ppt) %>% 
+    mutate(both_tasks = n == 2) 
+  
+  result[[3]] <- count(keep_ppts, both_tasks)
+  
+  keep_ppts <- keep_ppts %>% filter(both_tasks) %>% pull(ppt)
+  d <- filter(d, ppt %in% keep_ppts)
+  
+  # Filter ppts with too few sentences
+  keep_ppts <- count(d, ppt, location) %>% 
+    filter(location == "before sentence") %>% 
+    mutate(enough_sentences = n >= 10)
+
+  result[[4]] <- count(keep_ppts, enough_sentences) %>% 
+    rename(more_than_10_sentences = enough_sentences)
+
+  keep_ppts <- keep_ppts %>% 
+    filter(enough_sentences) %>% 
+    pull(ppt)
+  
+  d <- filter(d, ppt %in% keep_ppts)
+    
+  set.seed(365)
+  result[[2]] <- d %>% 
+    filter(iki > 50,
+           iki < 30000) %>% 
+    mutate(keep = 1:n(),
+           keep = sample(keep),
+           keep = keep <= n_samples,
+           .by = c(ppt, location, task)) %>% 
+   summarise(across(keep, 
+             list(mean = mean, 
+                  se = se_bin)),
+              .by = c(ppt, location)) %>% 
+   summarise(across(starts_with("keep"), 
+                     list(mean = mean), 
+                     .names = "{.col}"), 
+              .by = location)
+  return(result)
+}
+get_spl2 <- function(file, n_samples){
+  result <- list()
+#  file <- "../data/spl2.csv"
+  d <- read_csv(file) %>% 
+    select(-transition_dur) %>% 
+    rename(iki = transition_dur_to_mod,
+           location = transition_type) %>% 
+    filter(!is.na(iki), 
+           edit == "noedit") %>% 
+    select(ppt = SubNo, iki, location, Lang) %>% 
+    drop_na() 
+  
+  result[[1]] <- d %>% 
+    mutate(too_short = iki <= 50,
+           too_fast = iki >= 30000,
+           across(ppt, ~as.numeric(factor(.)))) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean, 
+                          se = se_bin)),
+              .by = c(ppt)) %>% 
+    summarise(across(starts_with("too"), 
+                     list(mean = mean), 
+                     .names = "{.col}"))
+  
+  d <- d %>% filter(iki > 50, iki < 30000)
+  
+  # Filter ppts with too few sentences
+  keep_ppts <- count(d, ppt, location) %>% 
+    filter(location == "sentence_before") %>% 
+    mutate(enough_sentences = n >= 10)
+
+  result[[3]] <- count(keep_ppts, enough_sentences) %>% 
+    rename(more_than_10_sentences = enough_sentences)
+
+  keep_ppts <- keep_ppts %>% 
+    filter(enough_sentences) %>% 
+    pull(ppt)
+  
+  d <- filter(d, ppt %in% keep_ppts)
+
+  set.seed(365)
+  result[[2]] <- d %>% 
+    mutate(keep = 1:n(),
+           keep = sample(keep),
+           keep = keep <= n_samples,
+           .by = c(ppt, location, Lang)) %>% 
+   summarise(across(keep, 
+             list(mean = mean, 
+                  se = se_bin)),
+              .by = c(ppt, location)) %>% 
+   summarise(across(starts_with("keep"), 
+                     list(mean = mean), 
+                     .names = "{.col}"), 
+              .by = location)
+  
+  return(result)
+}
+```
+
+
+```{r}
+# Get info about data reduction
+n_samples <- 100
+c2l1 <- get_c2l1("../data/c2l1.csv", n_samples = n_samples)
+cato <- get_cato("../data/cato.csv", n_samples = n_samples)
+lift <- get_lift("../data/lift.csv", n_samples = 50, n_ppts = 100)
+plantra <- get_plantra("../data/plantra.csv", n_samples = n_samples)
+spl2 <- get_spl2("../data/spl2.csv", n_samples = n_samples)
+
+```
+
+
 ```{r eval = F}
 Data reduction using random samples of subsets of participants for larger data sets
 
 Also for larger data sets, only used participants that provided a min number of sentences
 
-Locations with example from Marks 
 
 Removed transitions that were followed by an editing operation
 
@@ -231,8 +548,9 @@ Extremely short and long intervals
 
 Add a description with general data filtering and a table with how many data were removed from the analysis by study.
 
-```
+Add final sample number of ppt, and transitions by location
 
+```
 
 
 # Out-of-samples cross-validation
@@ -999,6 +1317,12 @@ table %>%
 
 
 # Posterior by data set
+
+## GUNNEXP2
+
+### Fit to data
+
+### Posterior parameter estimates of mixture model
 
 ## C2L1
 

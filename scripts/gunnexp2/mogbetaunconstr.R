@@ -1,7 +1,7 @@
 # Load packages
 library(tidyverse)
 library(rstan)
-source("scripts/plantra/get_data.R")
+source("scripts/gunnexp2/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
@@ -10,12 +10,12 @@ n_cores <- 3
 n_chain <- 3
 iterations <- 20000
 n_samples <- 100 # number of random data points
-file <- "data/plantra.csv"
+file <- "data/gunnexp2.csv"
 
-# Load data
+# Load df
 d <- get_data(file, n_samples)
 
-# Check counts
+# Count observations
 count(d, ppt, condition)
 
 # Data as list
@@ -32,7 +32,7 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = rep(5, dat$K)
+  list(   beta = rep(4, dat$K)
           , delta = rep(.1, dat$K)
           , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
           , theta = rep(0, dat$K)
@@ -61,19 +61,19 @@ m <- sampling(mog,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
-              seed = 81,
+              seed = 83,
               control = list(max_treedepth = 16,
                              adapt_delta = 0.99))
 
 # Save model
 saveRDS(m, 
-        file = "stanout/plantra/mogbetaunconstr.rda",
+        file = "stanout/gunnexp2/mogbetaunconstr.rda",
         compress = "xz")
 
-#m <- readRDS(file = "stanout/plantra/mogbetaunconstr.rda")
+#m <- readRDS(file = "stanout/cato/mogbetaunconstr.rda")
 
 # Select relevant parameters
-param <- c("beta", "delta", "prob", "sigma") 
+param <- c("beta", "delta", "prob", "sigma", "sigma_u") 
 
 # Traceplots
 traceplot(m, param, inc_warmup = F)
@@ -82,19 +82,20 @@ traceplot(m, param, inc_warmup = F)
 summary(print(m, pars = param, probs = c(.025,.975)))
 
 # Extract posterior
-ps <- as.data.frame(m, c("beta", "delta", "theta", "beta2", "prob")) %>% as_tibble()
+ps <- as.matrix(m, c("beta", "beta2", "delta", "prob", "theta")) %>% as_tibble()
 
 # For cond codes
 data <- select(d, condition, cond_num) %>% unique()
 
 # Process posterior
-ps %>% 
+ps_fin <- ps %>% 
   pivot_longer(everything()) %>% 
   separate(name, into = c("param", "cond_num")) %>% 
   mutate(across(cond_num, as.numeric)) %>% 
   left_join(data, by = "cond_num") %>% 
   select(-cond_num) %>%
-  separate(condition, into = c("location", "task"), sep = "_") %>% 
-  # Save posterior
-  write_csv("stanout/plantra/mogbetaunconstr.csv")
+  rename(location = condition)
+
+# Save posterior
+write_csv(ps_fin, "stanout/c2l1/mogbetaunconstr.csv")
 

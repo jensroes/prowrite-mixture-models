@@ -2,22 +2,27 @@
 indicate_dels_and_inserts <- function(data){
   data %>%
     # remove typing/clicking outside word document
-    filter(!(is.na(position) & !type %in% c("replacement", "insert")),
+    filter(!(is.na(position) & 
+          !type %in% c("replacement", "insert")),
            type %in% c("insert", "keyboard", "replacement")) %>%
-    select(task = folder, logguid, id, type, output, position, positionFull, doclengthFull, charProduction,
-           pauseTime, pauseLocationFull, startTime, endTime) %>%
-    group_by(task, logguid) %>%
+    select(task = folder, 
+           participant,
+           logguid,
+           logcreationdate,
+           id, type, output, position, position_full, doclength_full, 
+           char_production,
+           pause_time, pause_location_full, start_time, end_time) %>%
     mutate(arrowkeys = output %in% c("RIGHT", "LEFT", "DOWN", "UP"), 
-           leadingedge = (positionFull == doclengthFull), 
+           leadingedge = (position_full == doclength_full), 
            # Deletion
            deletion = ifelse((
              # backspace key or doclength reduced
-             output == "BACK" | lead(doclengthFull) < doclengthFull) |
+             output == "BACK" | lead(doclength_full) < doclength_full) |
                #selection + backspace
                (type == "replacement" & lead(output) == "BACK" & 
-                  positionFull == lead(positionFull) & pauseTime != 0 &
+                  position_full == lead(position_full) & pause_time != 0 &
                   # selection resulted in reduced doc length
-                  lead(doclengthFull,2) < lead(doclengthFull)), 1, 0),
+                  lead(doclength_full,2) < lead(doclength_full)), 1, 0),
            # start new deletion if position is changed during deletion
            deletion = ifelse((type == "replacement" &
                                 lag(output) == "BACK" & deletion == 1) | 
@@ -25,17 +30,18 @@ indicate_dels_and_inserts <- function(data){
                                     lag(type) == "replacement") | 
                                    (output == "BACK" & 
                                       lag(output) == "BACK")) &
-                                  abs(lag(positionFull) - positionFull) > 1),
+                                  abs(lag(position_full) - position_full) > 1),
                              lag(deletion) + 1, deletion),
            deletion = ifelse(is.na(deletion), 0, deletion),
            # Insertion
            insertion = ifelse(type == "insert" |
-                                (((lag(arrowkeys) | !(positionFull - lag(positionFull)) 
+                                (((lag(arrowkeys) | !(position_full - lag(position_full)) 
                                    %in% c(0,1)) & !lag(deletion) &
                                     type == "keyboard" &
                                     !arrowkeys & !leadingedge & !deletion)), 1, 0), 
-           insertion = ifelse(is.na(insertion), 0, insertion)) %>% 
-    ungroup()
+           insertion = ifelse(is.na(insertion), 0, insertion), 
+           .by = c(logcreationdate, task)) %>% 
+    select(-logcreationdate)
 }
 
 

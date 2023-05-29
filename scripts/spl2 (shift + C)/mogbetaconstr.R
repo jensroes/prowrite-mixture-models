@@ -1,22 +1,19 @@
 # Load packages
 library(tidyverse)
 library(rstan)
-source("scripts/plantra/get_data.R")
+source("scripts/spl2 (shift + C)/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 # Sampling parameters
-n_cores <- 3
-n_chain <- 3
-iterations <- 20000
-n_samples <- 100 # number of random data points
-file <- "data/plantra.csv"
+n_cores = 3
+n_chain = 3
+iterations = 20000
+nsamples = 100
+file = "data/spl2.csv"
 
-# Load data
-d <- get_data(file, n_samples)
-
-# Check counts
-count(d, ppt, condition)
+# Load df
+d <- get_data(file, nsamples)
 
 # Data as list
 dat <- within( list(), {
@@ -24,30 +21,30 @@ dat <- within( list(), {
   subj <- d$ppt
   K <- length(unique(d$cond_num))
   condition <- as.numeric(d$cond_num)
-  K_loc <- max(d$loc_num)
-  location <- d$loc_num
+  K_loc <- length(unique(d$loc_num))
+  location <- as.numeric(d$loc_num)
   y <- d$iki
   N <- nrow(d)
 } );str(dat)
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = rep(5, dat$K)
+  list(   beta = 4
           , delta = rep(.1, dat$K)
           , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
           , theta = rep(0, dat$K)
           , tau = .1
-          , sigma = 1.25
+          , sigma = 1
           , sigma_diff = rep(.1, dat$K_loc)
-          , sigma_u = 0.41)}
+          , sigma_u = 0.1)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
 # Load model
-mog <- stan_model(file = "stan/mogbetaunconstr.stan")
+mog <- stan_model(file = "stan/mogbetaconstr.stan")
 
 # Parameters to omit in output
-omit <- c("prob_tilde", "mu", "theta_s")
+omit <- c("prob_tilde", "theta_s")
 
 # Fit model
 m <- sampling(mog, 
@@ -57,7 +54,7 @@ m <- sampling(mog,
               warmup = iterations/2,
               chains = n_chain, 
               cores = n_cores,
-              refresh = 2000,
+              refresh = 5000,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
@@ -67,13 +64,14 @@ m <- sampling(mog,
 
 # Save model
 saveRDS(m, 
-        file = "stanout/plantra/mogbetaunconstr.rda",
+        file = "stanout/spl2 (shift + C)/mogbetaconstr.rda",
         compress = "xz")
 
-#m <- readRDS(file = "stanout/plantra/mogbetaunconstr.rda")
+# Load model
+#m <- readRDS(file = "stanout/spl2 (shift + C)/mogbetaconstr.rda")
 
 # Select relevant parameters
-param <- c("beta", "delta", "prob", "sigma") 
+param <- c("beta", "delta", "prob", "sigma", "sigma_u") 
 
 # Traceplots
 traceplot(m, param, inc_warmup = F)
@@ -82,19 +80,27 @@ traceplot(m, param, inc_warmup = F)
 summary(print(m, pars = param, probs = c(.025,.975)))
 
 # Extract posterior
-ps <- as.data.frame(m, c("beta", "delta", "theta", "beta2", "prob")) %>% as_tibble()
+ps <- as.matrix(m, c("beta", "delta", "prob", "beta2", "theta")) %>% as_tibble()
 
 # For cond codes
 data <- select(d, condition, cond_num) %>% unique()
 
 # Process posterior
-ps %>% 
+ps_fin <- ps %>% 
   pivot_longer(everything()) %>% 
   separate(name, into = c("param", "cond_num")) %>% 
   mutate(across(cond_num, as.numeric)) %>% 
   left_join(data, by = "cond_num") %>% 
   select(-cond_num) %>%
-  separate(condition, into = c("location", "task"), sep = "_") %>% 
-  # Save posterior
-  write_csv("stanout/plantra/mogbetaunconstr.csv")
+  separate(condition, into = c("lang", "pos1", "pos2"), sep = "_") %>%
+  unite(c(pos1,pos2), col = "location", sep = "_") %>% 
+  mutate(across(location, ~recode(., 
+                sentence_before = "before sentence", 
+                word_before = "before word",
+                within_word = "within word")),
+         across(lang, ~replace_na(., "overall")),
+         across(location, ~str_replace(., "NA_NA", "overall")))
+
+# Save posterior
+write_csv(ps_fin, "stanout/spl2 (shift + C)/mogbetaconstr.csv")
 

@@ -1,22 +1,19 @@
 # Load packages
 library(tidyverse)
 library(rstan)
-source("scripts/plantra/get_data.R")
+source("scripts/spl2 (shift + C)/get_data.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 # Sampling parameters
-n_cores <- 3
-n_chain <- 3
-iterations <- 20000
-n_samples <- 100 # number of random data points
-file <- "data/plantra.csv"
+n_cores = 3
+n_chain = 3
+iterations = 20000
+nsamples = 100
+file = "data/spl2.csv"
 
-# Load data
-d <- get_data(file, n_samples)
-
-# Check counts
-count(d, ppt, condition)
+# Load df
+d <- get_data(file, nsamples)
 
 # Data as list
 dat <- within( list(), {
@@ -24,21 +21,23 @@ dat <- within( list(), {
   subj <- d$ppt
   K <- length(unique(d$cond_num))
   condition <- as.numeric(d$cond_num)
+  K_loc <- length(unique(d$loc_num))
+  location <- as.numeric(d$loc_num)
   y <- d$iki
   N <- nrow(d)
 } );str(dat)
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta_e= rep(0, dat$K)
-          , alpha = 600
-          , sigma = 1850
-          , sigma_u = 165)}
+  list(   alpha = 5
+          , beta = rep(0, dat$K)
+          , sigma = rep(1, dat$K_loc)
+          , sigma_u = 0.1)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
 # Load model
-lmm <- stan_model(file = "stan/lmmgaus.stan")
+lmm <- stan_model(file = "stan/lmmuneqvar.stan")
 
 # Parameters to omit in output
 omit <- c("mu")
@@ -61,14 +60,16 @@ m <- sampling(lmm,
 
 # Save model
 saveRDS(m, 
-        file = "stanout/plantra/lmmgaus.rda",
+        file = "stanout/spl2 (shift + C)/lmmuneqvar.rda",
         compress = "xz")
 
-# Select relevant parameters
-(param <- c("beta", "sigma", "sigma_u"))
 
-# Param summary
-summary(print(m, pars = param, probs = c(.025,.975)))
+# Select relevant parameters
+(param <- c("alphabeta", "sigma", "sigma_u"))
 
 # Traceplots
 traceplot(m, param, inc_warmup = F)
+
+# Posterior summary
+summary(print(m, pars = param, probs = c(.025,.975)))
+
