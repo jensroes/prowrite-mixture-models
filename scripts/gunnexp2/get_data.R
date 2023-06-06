@@ -9,7 +9,7 @@ get_data <- function(file, n_samples){
            cond_num = as.integer(factor(condition)),  
            location = factor(location),
            loc_num = as.integer(location)) %>% 
-    select(ppt, iki, condition, topic, xn, location, cond_num, loc_num) 
+    select(ppt, iki, condition, xn, location, cond_num, loc_num) 
   
   # Sample within each category random data points
   set.seed(365)

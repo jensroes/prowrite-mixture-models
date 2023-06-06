@@ -47,7 +47,7 @@ indicate_dels_and_inserts <- function(data){
 
 
 # Calculate Bayes Factor
-BF <- function(ps, prior_sd = 1){
+BF <- function(ps, prior_sd = .25){
   fit_posterior <- logspline(ps) 
   posterior <- dlogspline(0, fit_posterior) # Height of the posterior at 0 
   prior <- dnorm(0, 0, prior_sd) # Height of the prior at 0

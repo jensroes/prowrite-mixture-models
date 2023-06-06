@@ -22,7 +22,7 @@ readRDS(files) %>%
                 `a^a` = "within word",
                 `a._^a` = "before sentence"),
          across(ppt, ~as.numeric(factor(.))),
-         condition = str_c(location, xn, topic, sep = "_")) %>% 
+         condition = str_c(location, xn, sep = "_")) %>% 
   write_csv("data/gunnexp2.csv")
 
   

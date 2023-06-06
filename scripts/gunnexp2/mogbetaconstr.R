@@ -32,7 +32,7 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = 4
+  list(   beta = 5
           , delta = rep(.1, dat$K)
           , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
           , theta = rep(0, dat$K)
@@ -70,7 +70,8 @@ saveRDS(m,
         file = "stanout/gunnexp2/mogbetaconstr.rda",
         compress = "xz")
 
-#m <- readRDS(file = "stanout/c2l1/mogbetaconstr.rda")
+
+#m <- readRDS(file = "stanout/gunnexp2/mogbetaconstr.rda")
 
 # Select relevant parameters
 param <- c("beta", "delta", "prob", "sigma", "sigma_u") 
@@ -89,16 +90,15 @@ ps <- as.data.frame(m, c("beta", "beta2", "delta", "prob", "theta")) %>% as_tibb
 data <- select(d, starts_with("cond")) %>% unique()
 
 # Process posterior
-ps_fin <- ps %>%
+ps %>%
   as_tibble() %>%
   pivot_longer(everything()) %>% 
   separate(name, into = c("param", "cond_num")) %>% 
   mutate(across(cond_num, as.numeric)) %>% 
   left_join(data, by = "cond_num") %>% 
   select(-cond_num) %>%
-  mutate(across(condition, as.character),
-         across(condition, replace_na, "overall")) %>% 
-  rename(location = condition)
-
-# Save posterior
-write_csv(ps_fin, "stanout/c2l1/mogbetaconstr.csv")
+  separate(condition, into = c("location", "xn"), sep = "_") %>% 
+  mutate(across(c("location", "xn"), 
+                ~ifelse(!is.na(.), replace_na(., "overall"),. ))) %>% 
+  # Save posterior
+  write_csv("stanout/gunnexp2/mogbetaconstr.csv")

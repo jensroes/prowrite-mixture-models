@@ -131,9 +131,10 @@ This models extends the intuition from the previous model that higher levels of 
 $$
 \begin{align}
 \text{iki}_{i} & \sim \theta_\text{location[i]} \cdot \text{LogN}(\beta + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
-  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta + \text{participant}_i, \sigma_{e}^2)\\
+  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
 \text{where: }
 		&\delta \sim \text{N}(0,1)\\
+ 	 & \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
 \text{constraint: } & \delta > 0\\
 		& \sigma_{e'}^2 > \sigma_{e}^2
 \end{align}
@@ -152,6 +153,7 @@ $$
 \text{iki}_{i} &\sim \theta_\text{location[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
   & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
 	\text{where: } & \delta \sim \text{N}(0,1)\\
+	 	 & \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
 \text{constraint: } & \delta > 0\\
 		& \sigma_{e'}^2 > \sigma_{e}^2
 \end{align}
@@ -230,11 +232,11 @@ tibble(`Transition type` = c("Within word", "Below word", "Before sentence"),
        Description = c("Transitions between any letter",
                        "Keypress after space followed by any letter",
                        "Keypress following a space preceding any letter"),
-       Example = c("T^h^e c^a^t m^e^o^w^e^d. T^h^a^t[bsp][bsp]e^n i^t s^l^e^p^t.", 
-                   "The ^cat ^meowed. That[bsp][bsp]en ^it ^slept.", 
-                   "The cat meowed. ^That[bsp][bsp]en it slept.")) %>% 
+       Example = c("T\\^h\\^e c\\^a\\^t m\\^e\\^o\\^w\\^e\\^d. T\\^h\\^a\\^t[bsp][bsp]e\\^n i\\^t s\\^l\\^e\\^p\\^t.", 
+                   "The \\^cat \\^meowed. That[bsp][bsp]en \\^it \\^slept.", 
+                   "The cat meowed. \\^That[bsp][bsp]en it slept.")) %>% 
   kable(caption = "Transition location classification.") %>%
-  footnote("'^' marks transition location, [bsp] represents backspace. IKIs were timed to the shift keypress.") %>% 
+  footnote("'\\^' marks transition location, [bsp] represents backspace. IKIs were timed to the shift keypress.") %>% 
   kable_styling(position = "center", 
                 full_width = T, 
                 font_size = 12) 
@@ -564,7 +566,7 @@ Results for all data sets are shown in Table \@ref(tab:loos). For all data sets 
 ```{r}
 files <- list.files(
   str_c("../stanout/", 
-  c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1")), 
+  c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1", "gunnexp2")), 
   pattern = "model.+.csv", 
   full.names = T)
 
@@ -582,7 +584,8 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
                 "spl2_shift" = "SPL2 (shift + C)", 
                 "plantra" = "PLanTra",
                 "lift" = "LIFT",
-                "c2l1" = "C2L1"),
+                "c2l1" = "C2L1",
+                "gunnexp2" = "GUNNEXP2"),
     across(model, recode, lmm = "Unimodal log-normal",
                           lmmgaus = "Unimodal normal",
                           mogbetaconstr = "Bimodal log-normal (constrained)",
@@ -593,22 +596,23 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
             across(elpd_loo, str_c, " (", se_elpd_loo, ")")) %>% 
   mutate(across(elpd_diff, str_replace, "0 \\(0\\)", "--")) %>% 
   pivot_wider(names_from = dataset, values_from = contains("elpd")) %>% 
-  select(Model = model, ends_with("CATO"), ends_with("C2L1"), ends_with("LIFT"), ends_with("PLanTra"), ends_with("SPL2"), ends_with("+ C)"))
+  select(Model = model, ends_with("GUNNEXP2"), ends_with("CATO"), ends_with("C2L1"), ends_with("LIFT"), ends_with("PLanTra"), ends_with("SPL2"), ends_with("+ C)"))
 
 ```
 
 
 ```{r loos, results='asis'}
-names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"), 6)
+names(table)[-1] <- rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"), 8)
 
 kable(table, 
       caption = "Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-        align =c("l", rep("r", 12))) %>%
+        align =c("l", rep("r", 14))) %>%
   kable_styling(position = "center", 
                 full_width = T, 
                 font_size = 11) %>%
   footnote("$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.") %>%
   add_header_above(c(" " = 1, 
+                     "GUNNEXP2" = 2,
                      "CATO" = 2,
                      "CL21" = 2, 
                      "LIFT" = 2,
@@ -639,7 +643,7 @@ kable(table,
 
 ```{r}
 files <- list.files(str_c("../stanout/", 
-                          c("lift", "spl2", "plantra", "cato", "c2l1")), 
+                          c("lift", "spl2", "plantra", "cato", "c2l1", "gunnexp2")), 
                     pattern = "mogbetaun.+.csv", 
                     full.names = T)
 
@@ -648,6 +652,7 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(data, recode_factor, 
                 "cato" = "CATO (non-dyslexic\nunmasked)",
+                "gunnexp2" = "GUNNEXP2 (unmasked)",
                 "spl2" = "SPL2 (L1)", 
 #                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
                 "plantra" = "PLanTra",
@@ -656,7 +661,8 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
                 .ordered = TRUE)) %>% 
   filter(!(str_detect(data, "SPL2") & lang == "ES"),
          !(str_detect(data, "CATO") & group == "dyslexic"),
-         !(str_detect(data, "CATO") & task == "masked")) %>% 
+         !(str_detect(data, "CATO") & task == "masked"),
+         !(str_detect(data, "GUNNEXP2") & xn == "masked")) %>% 
   pivot_wider(names_from = param, 
               values_from = value) %>% 
   unnest(cols = beta:theta) %>% 
@@ -668,7 +674,8 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
                    list(mean = mean, 
                         lower = lower, 
                         upper = upper),
-                   .names = "{.fn}"), .by = c(data, location, name)) %>% 
+                   .names = "{.fn}"), 
+            .by = c(data, location, name)) %>% 
   filter(name %in% c("beta", "delta", "prob"))
 ```
 
@@ -682,6 +689,7 @@ The model estimates for the mixture-model with the highest predictive performanc
 posd <- position_dodge(.65)
 dotsize <- 2.5
 grouplabel <- "Data set"
+shapes <- c(1, 4, 6, 7, 8, 9, 11)
 beta <- filter(ps, name == "beta") %>% 
   mutate(name = beta_label) %>% 
   ggplot(aes(y = mean, 
@@ -698,7 +706,7 @@ beta <- filter(ps, name == "beta") %>%
             size = dotsize, 
             position = posd) +
   facet_grid(~name) +
-  scale_shape_manual(values = c(1, 4, 7, 8, 9, 11)) +
+  scale_shape_manual(values = shapes) +
   scale_colour_colorblind() +
   scale_y_log10(labels = scales::comma) +
   labs(y = "Posterior estimate with 95% PIs",
@@ -722,7 +730,7 @@ delta <- filter(ps, name == "delta") %>%
             size = dotsize, 
             position = posd) +
   facet_grid(~name) +
-  scale_shape_manual(values = c(1, 4, 7, 8, 9, 11)) +
+  scale_shape_manual(values = shapes) +
   scale_colour_colorblind() +
   scale_y_log10(labels = scales::comma) +
   labs(y = "",
@@ -748,7 +756,7 @@ theta <- filter(ps, name == "prob") %>%
             size = dotsize, 
             position = posd) +
   facet_grid(~name) +
-  scale_shape_manual(values = c(1, 4, 7, 8, 9, 11)) +
+  scale_shape_manual(values = shapes) +
   scale_colour_colorblind() +
   scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
   labs(y = "",
@@ -779,7 +787,7 @@ In conclusion, while pauses tend to be longer before sentences they are not more
 
 ```{r loceffect, results='asis'}
 files <- list.files(str_c("../stanout/", 
-                          c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1")), 
+                          c("lift", "spl2", "spl2_shift", "gunnexp2", "plantra", "cato", "c2l1")), 
                     pattern = "mogbetaun.+.csv", 
                     full.names = T)
 
@@ -789,6 +797,7 @@ ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>%
          across(data, recode_factor, 
                 "cato" = "CATO (non-dyslexic\nunmasked)",
                 "spl2" = "SPL2 (L1)", 
+                "gunnexp2" = "GUNNEXP2 (unmasked)",
                 "spl2_shift" = "SPL2 (L1; shift + C)", 
                 "plantra" = "PLanTra",
                 "lift" = "LIFT",
@@ -797,6 +806,7 @@ ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>%
   filter(!(str_detect(data, "SPL2") & lang == "ES"),
          !(str_detect(data, "CATO") & group == "dyslexic"),
          !(str_detect(data, "CATO") & task == "masked"),
+         !(str_detect(data, "GUNNEXP2") & xn == "masked"),
          param %in% c("beta", "delta", "theta")) %>%
   select(param, location, data, value) %>% 
   mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
@@ -830,7 +840,8 @@ tmp %>% knitr::kable(align =c("l", "l", rep("r", 6)),
   add_header_above(c(" " = 2, 
                      "Fluent transitions" = 2, 
                      "Slowdown for hesitations" = 2, 
-                     "Probability of hesitations" = 2)) 
+                     "Probability of hesitations" = 2)) %>% 
+  column_spec(1, width = "3cm") 
 
 ```
 
@@ -1066,7 +1077,6 @@ write_csv(ps_effects, "tables/ps_effects_acrossdata.csv")
 
 ```
 
-
 ```{r eval = F}
 ps_effects <- read_csv("tables/ps_effects_acrossdata.csv")
 
@@ -1170,7 +1180,6 @@ ps_effects_summary %>%
 
 ```
 
-
 ```{r eval = F}
 ps_effects <- read_csv("tables/ps_effects_acrossdata.csv")
 
@@ -1245,7 +1254,6 @@ tmp <- ps_effects %>%
 
 write_csv(tmp, "tables/cellmeans_transdur.csv")
 ```
-
 
 ```{r cellmeans, results = 'asis', eval = F}
 tmp <- read_csv("tables/cellmeans_transdur.csv") 
@@ -1322,7 +1330,322 @@ table %>%
 
 ### Fit to data
 
-### Posterior parameter estimates of mixture model
+### Unconstrained mixture model
+
+#### Posterior parameter estimates
+
+```{r gunnpostun, fig.cap="GUNNEXP2 (unconstrained model). Posterior parameter distribution"}
+file <- list.files(path = "../stanout/gunnexp2", 
+                   pattern = "mogbetaun.*.csv$",
+                   full.names = T)
+
+ps <- read_csv(file) %>% 
+  filter(param %in% c("beta", "beta2", "prob")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  unnest(cols = c(beta, beta2, prob)) %>% 
+  mutate(across(c(beta2, beta), exp),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  select(-beta2) %>% 
+  pivot_longer(c(beta, prob, delta)) %>%
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}"),
+            .by = c(location, xn, name)) %>% 
+  mutate(#group = str_c("Topic: ",topic, "; ", xn))
+         group = str_c(xn))
+
+posd <- position_dodge(.35)
+dotsize <- 3
+#shapes <- 1:length(unique(ps$group))
+#shapes <- c(2, 7, 8, 9)
+shapes <- c(8, 9)
+
+beta <- filter(ps, name == "beta") %>% 
+  mutate(name = beta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) 
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) 
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) 
+
+beta + delta + theta + plot_layout(guides = "collect") 
+
+```
+
+
+#### Masking effect
+
+```{r shiftcellmeansgunn, results = 'asis'}
+# cell means and data set difference
+cellmeans <- ps %>% 
+  select(-group) %>% 
+  mutate(across(location, ~str_replace(., "\\n", " "))) %>% 
+  pivot_wider(names_from = name, 
+              values_from = c(mean, lower, upper)) %>% 
+  mutate(across(ends_with("prob"), ~dezero(., 2)),
+         across(c(ends_with("beta"),
+                  ends_with("delta")), 
+                ~as.character(scales::comma(round(.))))) %>% 
+  pivot_longer(-c(xn, location), 
+               names_to = c(".value", "param"),
+               names_sep = "_") %>% 
+  mutate(est = str_c(mean, " [", lower, ", ", upper,"]")) %>% 
+  select(-mean:-upper) %>% 
+  pivot_wider(names_from = xn, 
+              values_from = est) 
+
+
+tmp <- read_csv(file) %>% 
+  filter(param %in% c("beta", "delta", "theta")) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, value))) %>% 
+  pivot_wider(names_from = xn, values_from = value) %>% 
+  unnest(c(masked, unmasked)) %>% 
+  mutate(diff = masked - unmasked) %>% 
+  summarise(across(diff, list(mean = mean, 
+                              lower = lower, 
+                              upper = upper,
+                              BF = BF), 
+                   .names = "{.fn}"),
+            .by = c(location, param)) %>% 
+  mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
+         across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2)))),
+         across(param, recode, theta = "prob")) %>% 
+  left_join(cellmeans) %>% 
+  arrange(param, location) %>% 
+  select(param, 
+         `Transition location` = location, 
+         Unmasked = unmasked,
+         Masked = masked,
+         "Difference" = mean, BF)
+      
+write_csv(tmp, "tables/masking_effect_cellmeans.csv")
+   
+
+tmp[,-1] %>% knitr::kable(align = c("l", "r", "r", "r", "r"), 
+                          caption = "Mixture model estimates for key transitions. Cell means are shown for the masked and unmasked writing task in msecs for fluent key-transitions, the slowdown for long transitions and the probability of disfluent transitions. The effect for masking is shown on log scale (for transition durations) and logit scale for probability of disfluent transitions. 95% PIs in brackets.") %>%
+  #  cell_spec(1, 3:4) %>% 
+  kableExtra::collapse_rows(columns = 1) %>%
+  kable_styling(position = "center", full_width = T) %>%
+  footnote("PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+           threeparttable = T) %>% 
+  group_rows("Fluent transitions", 1, 3) %>%
+  group_rows("Disfluencies", 4, 6) %>%
+  group_rows("Probability of disfluencies", 7, 9) 
+
+
+```
+
+
+
+
+### Cononstrained mixture model
+
+#### Posterior parameter estimates
+
+```{r}
+file <- list.files(path = "../stanout/gunnexp2", 
+                   pattern = "mogbetac.*.csv$",
+                   full.names = T)
+
+ps_beta <- read_csv(file) %>% 
+  filter(param %in% c("beta")) %>% 
+  nest(beta = value) %>% 
+  select(beta)
+
+beta <- ps_beta %>% 
+   unnest(beta) %>% 
+   mutate(across(value, exp)) %>% 
+   summarise(across(value, list(mean = mean, 
+                                lower = lower, 
+                                upper = upper), .names = "{.fn}")) %>% 
+  mutate(across(everything(), round, 0)) %>% 
+  transmute(result = str_c(mean, " msecs, PI: (", lower, ", ", upper, ")" )) %>% 
+  pull(result)
+```
+
+
+The posterior of the constrained model is shown in Figure \@ref(fig:gunnpost) showing the posterior slowdown for disfluent keystrokes (left panel) and the probability of disfluent keystrokes (right panel). Fluent keystroke transitions are distributed around a posterior mean of `r beta`.
+
+```{r gunnpost, fig.cap="GUNNEXP2 (constrained model). Posterior parameter distribution."}
+
+ps <- read_csv(file) %>% 
+  filter(param %in% c("beta2", "prob")) %>% 
+  pivot_wider(names_from = param, values_from = value) %>% 
+  bind_cols(ps_beta) %>% 
+  unnest(cols = c(beta, beta2, prob)) %>% 
+  rename(beta = value) %>% 
+  mutate(across(c(beta2, beta), exp),
+         delta = beta2 - beta,
+         across(location, str_replace, " ", "\n")) %>% 
+  select(-beta2) %>% 
+  pivot_longer(c(beta, prob, delta)) %>%
+  filter(name != "beta") %>% 
+  summarise(across(value, list(mean = mean, 
+                               lower = lower, 
+                               upper = upper), .names = "{.fn}"),
+            .by = c(location, xn, name)) %>% 
+  mutate(#group = str_c("Topic: ",topic, "; ", xn))
+         group = str_c(xn))
+
+posd <- position_dodge(.35)
+dotsize <- 3
+#shapes <- 1:length(unique(ps$group))
+shapes <- c(8, 9)
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_y_log10(labels = scales::comma) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) 
+#  guides(colour=guide_legend(nrow=2,byrow=F),
+#         shape = guide_legend(nrow=2,byrow=F))
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = group)) +
+  geom_errorbar(width = .2, alpha = .75, position = posd) +
+  geom_point(aes(colour = group), 
+             size = dotsize, position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(y = "",
+       x = "Transition location",
+       colour = "",
+       shape = "") +
+  theme(axis.title.y = element_blank()) 
+
+delta + theta + plot_layout(guides = "collect") 
+
+```
+
+#### Masking effect
+
+```{r shiftcellmeansgunn2, results = 'asis'}
+# cell means and data set difference
+cellmeans <- ps %>% 
+  select(-group) %>% 
+  mutate(across(location, ~str_replace(., "\\n", " "))) %>% 
+  pivot_wider(names_from = name, 
+              values_from = c(mean, lower, upper)) %>% 
+  mutate(across(ends_with("prob"), ~dezero(., 2)),
+         across(ends_with("delta"), ~as.character(scales::comma(round(.))))) %>% 
+  pivot_longer(-c(xn, location), 
+               names_to = c(".value", "param"),
+               names_sep = "_") %>% 
+  mutate(est = str_c(mean, " [", lower, ", ", upper,"]")) %>% 
+  select(-mean:-upper) %>% 
+  pivot_wider(names_from = xn, 
+              values_from = est) 
+
+
+tmp <- read_csv(file) %>% 
+  filter(param %in% c("delta", "theta")) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, value))) %>% 
+  pivot_wider(names_from = xn, values_from = value) %>% 
+  unnest(c(masked, unmasked)) %>% 
+  mutate(diff = masked - unmasked) %>% 
+  summarise(across(diff, list(mean = mean, 
+                              lower = lower, 
+                              upper = upper,
+                              BF = BF), 
+                   .names = "{.fn}"),
+            .by = c(location, param)) %>% 
+  mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
+         across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2)))),
+         across(param, recode, theta = "prob")) %>% 
+  left_join(cellmeans) %>% 
+  arrange(param, location) %>% 
+  select(param, 
+         `Transition location` = location, 
+         Unmasked = unmasked,
+         Masked = masked,
+         "Difference" = mean, BF)
+      
+write_csv(tmp, "tables/masking_effect_cellmeans_constrained.csv")
+   
+
+tmp[,-1] %>% knitr::kable(align = c("l", "r", "r", "r", "r"), 
+                          caption = "Mixture model estimates for key transitions. Cell means are shown for the masked and unmasked writing task in msecs for the slowdown for long transitions and the probability of disfluent transitions. The effect for masking is shown on log scale (for transition durations) and logit scale for probability of disfluent transitions. 95% PIs in brackets.") %>%
+  #  cell_spec(1, 3:4) %>% 
+  kableExtra::collapse_rows(columns = 1) %>%
+  kable_styling(position = "center", full_width = T) %>%
+  footnote("PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.", 
+           threeparttable = T) %>% 
+  group_rows("Disfluencies", 1, 3) %>%
+  group_rows("Probability of disfluencies", 4, 6) 
+
+
+```
+
+
 
 ## C2L1
 
@@ -1380,10 +1703,10 @@ ps <- read_csv(file) %>%
          across(location, str_replace, " ", "\n")) %>% 
   select(-beta2) %>% 
   pivot_longer(beta:delta) %>% 
-  group_by(location, name) %>% 
   summarise(across(value, list(mean = mean, 
                                lower = lower, 
-                               upper = upper), .names = "{.fn}")) 
+                               upper = upper), .names = "{.fn}"),
+            .by = c(location, name)) 
 
 beta <- filter(ps, name == "beta") %>% 
   mutate(name = beta_label) %>% 

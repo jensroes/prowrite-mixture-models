@@ -57,7 +57,7 @@ m <- sampling(mog,
               warmup = iterations/2,
               chains = n_chain, 
               cores = n_cores,
-              refresh = 2000,
+              refresh = 5000,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
