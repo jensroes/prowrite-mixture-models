@@ -6,12 +6,12 @@ library(tidyverse)
 library(rstan)
 
 # Get functions
-source("scripts/c2l1/get_data.R")
+source("scripts/gunnexp2/get_data.R")
 source("scripts/get_ytilde.R")
 
 # File location and number of random samples
 n_samples <- 100 # number of random data points
-file <- "data/c2l1.csv"
+file <- "data/gunnexp2.csv"
 
 # Load df
 d <- get_data(file, n_samples) %>% 
@@ -27,7 +27,7 @@ maxiter <- 20000
 idx <- sample(maxiter, nsims)
 
 # File names
-path <- "stanout/c2l1"
+path <- "stanout/gunnexp2"
 files <- list.files(path = path, pattern = ".rda", full.names = T)
 
 # Apply get_ytilde function
@@ -41,5 +41,5 @@ allsims <- left_join(d, sims,
   rename(y_obs = iki, y_tilde = value) 
 
 # Save simulations
-write_csv(allsims, "stanout/c2l1/all_sims.csv")
+write_csv(allsims, "stanout/gunnexp2/all_sims.csv")
 

@@ -32,14 +32,14 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = 4
+  list(   beta = 5
           , delta = rep(.1, dat$K)
           , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
           , theta = rep(0, dat$K)
           , tau = .1
           , sigma = 1.25
           , sigma_diff = rep(.1, dat$K_loc)
-          , sigma_u = 0.41)}
+          , sigma_u = 0.5)}
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
@@ -61,7 +61,7 @@ m <- sampling(mog,
               save_warmup = FALSE, # Don't save the warmup
               include = FALSE, # Don't include the following parameters in the output
               pars = omit,
-              seed = 81,
+              seed = 23,
               control = list(max_treedepth = 16,
                              adapt_delta = 0.99))
 

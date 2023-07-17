@@ -29,7 +29,7 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = 4
+  list(   beta = 5
           , delta = rep(.1, dat$K)
           , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
           , theta = rep(0, dat$K)
@@ -64,7 +64,7 @@ m <- sampling(mog,
 
 # Save model
 saveRDS(m, 
-        file = "stanout/spl2 (shift + C)/mogbetaconstr.rda",
+        file = "stanout/spl2_shift/mogbetaconstr.rda",
         compress = "xz")
 
 # Load model
@@ -102,5 +102,5 @@ ps_fin <- ps %>%
          across(location, ~str_replace(., "NA_NA", "overall")))
 
 # Save posterior
-write_csv(ps_fin, "stanout/spl2 (shift + C)/mogbetaconstr.csv")
+write_csv(ps_fin, "stanout/spl2_shift/mogbetaconstr.csv")
 

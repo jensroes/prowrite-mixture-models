@@ -25,17 +25,16 @@ get_data <- function(file, n_samples){
            n >= 10) %>% 
     pull(ppt) 
 
-  d <- d %>% 
-    filter(ppt %in% keep_ppts) %>% 
+  d <- d %>% filter(ppt %in% keep_ppts) %>% 
     mutate(across(ppt, ~as.numeric(factor(.))))
   
   # Sample within each category random data points
   set.seed(365)
-  d <- d %>% 
+  d <- d %>% group_by(ppt, condition) %>%
     mutate(keep = 1:n(),
            keep = sample(keep),
-           keep = keep <= n_samples,
-           .by = c(ppt, condition)) %>% 
+           keep = keep <= n_samples) %>% 
+    ungroup() %>% 
     filter(keep) %>% 
     select(-keep)
   

@@ -27,7 +27,7 @@ maxiter <- 20000
 idx <- sample(maxiter, nsims)
 
 # File names
-(files <- list.files('stanout/spl2 (shift + C)', 
+(files <- list.files('stanout/spl2_shift', 
                      pattern = ".rda$", 
                      full.names = T))
 
@@ -40,5 +40,5 @@ allsims <- left_join(d, sims, by = c("data_idx")) %>%
   rename(y_obs = iki, y_tilde = value) 
 
 # Save simulations
-write_csv(allsims, "stanout/spl2 (shift + C)/all_sims.csv")
+write_csv(allsims, "stanout/spl2_shift/all_sims.csv")
 

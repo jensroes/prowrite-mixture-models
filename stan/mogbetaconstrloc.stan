@@ -45,7 +45,10 @@ model {
   vector[2] lp_parts;
 
   // Priors
-  beta ~ normal(4, 1);
+  beta[3] ~ normal(5, 1);
+  beta[2] ~ normal(6, 1);
+  beta[1] ~ normal(7, 1);
+  
   sigma ~ student_t(7, 0, 2);
   sigma_diff ~ normal(0, 1);
   delta ~ normal(0, 1);

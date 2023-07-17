@@ -1,13 +1,12 @@
 get_data <- function(file, n_samples, n_ppts){
-   d <- read_csv(file) 
-   
-   ppt_keep <- d %>% count(ppt, topic, genre) %>% 
+  ppt_keep <- read_csv(file) %>% 
+    count(ppt, topic, genre) %>% 
     summarise(n = n(), .by = ppt) %>% 
     filter(n == 4) %>% 
     pull(ppt)
   
   # Load df
-  d <- d %>%
+  d <- read_csv(file) %>%
     filter(!is.na(iki), 
            iki > 50, 
            iki < 30000,

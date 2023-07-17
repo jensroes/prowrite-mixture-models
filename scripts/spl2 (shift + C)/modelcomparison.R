@@ -1,11 +1,11 @@
 library(loo)
 library(tidyverse)
 
-path <- "stanout/spl2 (shift + C)"
+path <- "stanout/spl2_shift"
 (files <- list.files(path, pattern = "^.[^\\_]*.rda$", full.names = T))
 
 for(file in files){
-    varname <- str_remove_all(file, ".rda|stanout/spl2 \\(shift \\+ C\\)/")
+    varname <- str_remove_all(file, ".rda|stanout/spl2_shift/")
     m <- readRDS(file)
     log_lik <- extract_log_lik(m, merge_chains = F) 
     r_eff <- relative_eff(exp(log_lik)) 
@@ -26,7 +26,7 @@ mcs <- mcs %>% as.data.frame() %>%
                                model5 = loos[5]),
          across(model, str_remove_all, "^loo_"));mcs
 
-file_out <- paste0("stanout/spl2 (shift + C)/modelcomparison.csv")
+file_out <- paste0("stanout/spl2_shift/modelcomparison.csv")
 write_csv(mcs, file_out)
 
 

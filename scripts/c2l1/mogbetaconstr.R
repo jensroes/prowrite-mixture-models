@@ -32,7 +32,7 @@ dat <- within( list(), {
 
 # Initialise start values
 start <- function(chain_id = 1){
-  list(   beta = 4
+  list(   beta = 5
           , delta = rep(.1, dat$K)
           , theta_s = matrix(0, nrow = dat$K, ncol = dat$nS)
           , theta = rep(0, dat$K)
