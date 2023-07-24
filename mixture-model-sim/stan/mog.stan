@@ -4,34 +4,27 @@ This model is adapted from Vasishth et al. 2007
 */
 
 data {
-	int<lower=1> N;                    // Number of observations
-	real y[N];  		            //outcome
-  int K;                  // Number of conditions
-	int<lower=1, upper=K> condition[N];  //predictor
+	int<lower=1> N;        // Number of observations
+	real y[N];  		        //outcome
 }
 
 
 parameters {
 	real beta;	// distributions
-	real<lower=0> delta;			// distribution + extra component
-	real<lower=0> sigma;		// residual sd
-
+	real<lower=0> delta;	// distribution + extra component
+	real<lower=0> sigma;	// residual sd
 	real<lower=0> sigma_diff;
-	vector[K] theta;
+	real theta;  // mixing proportion
 }
 
 
 transformed parameters{
 	real<lower=0> sigmap_e = sigma + sigma_diff;
 	real<lower=0> sigma_e = sigma - sigma_diff;
-	vector[K] prob = inv_logit(theta);
-	matrix[K,2] log_theta;
-
-	log_theta[1, 1] = log_inv_logit(theta[1]);
-  log_theta[1, 2] = log1m_inv_logit(theta[1]);
-	log_theta[2, 1] = log_inv_logit(theta[2]);
-  log_theta[2, 2] = log1m_inv_logit(theta[2]);
-
+	real prob = inv_logit(theta);
+	vector[2] log_theta;
+	log_theta[1] = log_inv_logit(theta);
+  log_theta[2] = log1m_inv_logit(theta);
 }
 
 model {
@@ -40,16 +33,14 @@ model {
   // Priors
 	beta ~ normal(5, 2);
   delta ~ normal(0, 1);
-
   sigma_diff ~ normal(0, 1);
   sigma ~ student_t(7, 0, 1);
-
   theta ~ normal(0, 1);
 
   // Likelihood	
 	for(n in 1:N){
-    lp_parts[n, 1] = log_theta[condition[n],1] + lognormal_lpdf(y[n] | beta + delta, sigmap_e); 
-    lp_parts[n, 2] = log_theta[condition[n],2] + lognormal_lpdf(y[n] | beta, sigma_e);
+    lp_parts[n, 1] = log_theta[1] + lognormal_lpdf(y[n] | beta + delta, sigmap_e); 
+    lp_parts[n, 2] = log_theta[2] + lognormal_lpdf(y[n] | beta, sigma_e);
     target += log_sum_exp(lp_parts[n]); 
 	}
 }
@@ -63,9 +54,9 @@ generated quantities{
   // likelihood: 
   for(n in 1:N){
     	log_lik[n] = log_sum_exp(
-                  log_theta[condition[n],1] + lognormal_lpdf(y[n] | beta + delta, sigmap_e), 
-                  log_theta[condition[n],2] + lognormal_lpdf(y[n] | beta, sigma_e));
-    	    theta_long = bernoulli_rng(prob[condition[n]]); 
+                  log_theta[1] + lognormal_lpdf(y[n] | beta + delta, sigmap_e), 
+                  log_theta[2] + lognormal_lpdf(y[n] | beta, sigma_e));
+    	    theta_long = bernoulli_rng(prob); 
           if(theta_long) { 
               y_tilde[n] = lognormal_rng(beta + delta, sigmap_e);
           }

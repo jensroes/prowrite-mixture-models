@@ -1,48 +1,31 @@
 library(tidyverse)
 
 # Create fake data
-mog <- function (n, theta, mu1, mu2, sig1, sig2) {
-  y0 <- rlnorm(n, mean=mu1, sd = sig1)
-  y1 <- rlnorm(n, mean=mu2, sd = sig2)
-  flag <- rbinom(n, size=1, prob=theta)
-  y <- y0*(1 - flag) + y1*flag 
+mog <- function(n, theta, mu1, mu2, sig1, sig2) {
+  y0 <- rlnorm(n, mean = mu1, sd = sig1)
+  y1 <- rlnorm(n, mean = mu2, sd = sig2)
+  flag <- rbinom(n, size = 1, prob = theta)
+  y <- y0 * (1 - flag) + y1 * flag 
 }
 
 set.seed(123)
-Nsubj <- 100 # number of subjects
-K <- 50 # number of observations per subject per condition
-# assumed data were transformed to proportions
+N <- 1000 # number of subjects
 # Population parameters
-
-beta_mean <- 1000
-beta_sd <- 50
+beta <- 5
 theta <- c(.1, .4) # mixing proportion for condition 1 and 2
-delta_mean <- 50
-sigma <- log(c(2, 3)) # trial-by-trial error
-
-SubjBeta <- rnorm(Nsubj, beta_mean, beta_sd)
-SubjTheta1 <- replicate(Nsubj, mean(rbinom(100, 1, theta[1])))
-SubjTheta2 <- replicate(Nsubj, mean(rbinom(100, 1, theta[2])))
+delta <- 1
+sigma <- c(.25, .5) # trial-by-trial error
 
 # iterate over subject to generate data for each one
-data <- map_dfr(1:Nsubj, 
-                ~bind_rows(
-                  tibble(
-                  id = ., condition = 1, 
-                  value = mog(n = K, 
-                              theta = SubjTheta1[.],
-                              mu1 = log(SubjBeta[.]),
-                              mu2 = log(SubjBeta[.] + delta_mean),
+data <- map_dfr(1:2, 
+                ~tibble(
+                  condition = ., 
+                  value = mog(n = N, 
+                              theta = theta[.],
+                              mu1 = beta,
+                              mu2 = beta + delta,
                               sig1 = sigma[1],
-                              sig2 = sigma[2])),
-                  tibble(
-                  id = ., condition = 2, 
-                  value = mog(n = K, 
-                              theta = SubjTheta2[.],
-                              mu1 = log(SubjBeta[.]),
-                              mu2 = log(SubjBeta[.] + delta_mean),
-                              sig1 = sigma[1],
-                              sig2 = sigma[2]))))
+                              sig2 = sigma[2])))
 
 ggplot(data, aes(x = value, colour = factor(condition))) +
   geom_density() 

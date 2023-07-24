@@ -14,38 +14,23 @@ for(file in files){
 }
 
 (loos <- ls(pattern = "loo_.*"))
-mc_mogdata <- loo_compare(loo_mog_mogdata, loo_uvlm_mogdata)
-mc_uvlmdata <- loo_compare(loo_mog_uvlmdata, loo_uvlm_uvlmdata)
+mc_mogdata <- loo_compare(loo_mog_mogdata, loo_lm_mogdata)
+mc_lmdata <- loo_compare(loo_mog_lmdata, loo_lm_lmdata)
 
 mc1 <- mc_mogdata %>% as.data.frame() %>% 
   rownames_to_column("model") %>%
   as_tibble() %>%
-  mutate(across(model, ~recode(., 
-                        model1 = "mog",
-                        model2 = "uvlm")),
+  mutate(across(model, ~recode(., model1 = "mog", model2 = "lm")),
          across(model, ~str_remove(., "^loo_")),
          data = "mog")
 
-mc2 <- mc_uvlmdata %>% as.data.frame() %>% 
+mc2 <- mc_lmdata %>% as.data.frame() %>% 
   rownames_to_column("model") %>%
   as_tibble() %>%
-  mutate(across(model, ~recode(., 
-                               model1 = "mog",
-                               model2 = "uvlm")),
-         across(model, ~str_remove(., "^loo_")),
-         data = "uvlm")
+  mutate(across(model, ~recode(., model1 = "mog", model2 = "lm")),
+         across(model, ~str_remove(., "^loo_")), 
+         data = "lm")
 
-mcs <- bind_rows(mc1, mc2) %>% 
-  relocate(data)
-
-mcs %>% select(1:6) %>% 
-  mutate(
-    elpd_se_ratio = abs(elpd_diff / se_diff),
-    across(where(is.numeric), round, 0),
-    across(everything(), as.character),
-    across(everything(), str_replace_all, "NaN", "--"),
-    across(everything(), ~ifelse(.==0, "--", .))) %>% 
-  select(data, model, ends_with("diff"), elpd_se_ratio, ends_with("loo"))
-
-file_out <- paste0("stanout/modelcomparison.csv")
-write_csv(mcs, file_out)
+# Save result
+file_out <- "stanout/modelcomparison.csv"
+bind_rows(mc1, mc2) %>% relocate(data) %>% write_csv(file_out)

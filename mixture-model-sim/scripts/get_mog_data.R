@@ -8,26 +8,21 @@ mog <- function(n, theta, mu1, mu2, sig1, sig2) {
   y <- y0 * (1 - flag) + y1 * flag 
 }
 
-set.seed(123)
 N <- 1000 # number of subjects
 # Population parameters
 beta <- 5
-theta <- c(.1, .4) # mixing proportion for condition 1 and 2
+theta <- .35 # mixing proportion
 delta <- 1
 sigma <- c(.25, .5) # trial-by-trial error
 
-# iterate over subject to generate data for each one
-data <- map_dfr(1:2, 
-                ~tibble(
-                  condition = ., 
-                  value = mog(n = N, 
-                              theta = theta[.],
-                              mu1 = beta,
-                              mu2 = beta + delta,
-                              sig1 = sigma[1],
-                              sig2 = sigma[2])))
+# set seed
+set.seed(123)
 
-ggplot(data, aes(x = value, colour = factor(condition))) +
-  geom_density() 
-  
-write_csv(data, "data/mogdata.csv")
+# iterate over subject to generate data for each one
+tibble(value = mog(n = N, 
+                   theta = theta,
+                   mu1 = beta,
+                   mu2 = beta + delta,
+                   sig1 = sigma[1],
+                   sig2 = sigma[2])) %>% 
+  write_csv("data/mogdata.csv")

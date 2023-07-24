@@ -24,8 +24,10 @@ library(brms)
 library(polspline)
 library(patchwork)
 library(rmdformats)
+library(rmarkdown)
 library(gridExtra)
 library(grid)
+library(knitr)
 library(gtable)
 library(scales)
 library(ggthemes)
@@ -2512,7 +2514,6 @@ tmp[,-1] %>% knitr::kable(align = c("l", "l", "r", "r", "r", "r"),
 ```{r prediction, fig.cap="Fit to data. Comparison of 100 simulated (predicted) sets of data to observed data illustated by model. For illustration the x-axis was truncated at 2,000 msecs.", eval = T, fig.height=10}
 
 run <- FALSE
-
 if(run){
   file <- list.files("../stanout", pattern = "sims", full.names = T, recursive = T)
   ds <- str_remove_all(file, "\\.|\\/|stanout|all_sims.csv") %>% 
@@ -2526,12 +2527,16 @@ if(run){
     plot_layout(guides = "collect") &
   #  plot_annotation(tag_levels = 'A') & 
     theme(legend.position = 'bottom')
-  saveRDS(plots_fin, "objects/fitplots.rda", compress = "xz")
+  ggsave("objects/fitplots.pdf", plots_fin, height = 10, width = 6)
+#  saveRDS(plots_fin, "objects/fitplots.rda", compress = "xz")
 }
 
-readRDS("objects/fitplots.rda")
+
+include_graphics("objects/fitplots.pdf")
 ```
 
-
+\begin{figure}
+\includegraphics{objects/fitplots.pdf}
+\end{figure}
 
 # References

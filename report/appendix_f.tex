@@ -1,0 +1,59 @@
+\clearpage
+\makeatletter
+\efloat@restorefloats
+\makeatother
+
+
+\begin{appendix}
+\section{}
+\hypertarget{genre-effect-lift}{%
+\subsection{Genre effect (LIFT)}\label{genre-effect-lift}}
+
+From the LIFT data, we compared the difference between genres, i.e.~when
+writing an informative text as opposed to writing an argumentative text.
+The results are shown in Table \ref{tab:genreeffect}. Cellmeans and
+differences were average across writing topic. Evidence for a difference
+between genres was negligible.
+
+\begin{center}
+\begin{ThreePartTable}
+
+\begin{TableNotes}[para]
+\normalsize{\textit{Note.} PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.}
+\end{TableNotes}
+
+\footnotesize{
+
+\begin{longtable}{lrrrr}\noalign{\getlongtablewidth\global\LTcapwidth=\longtablewidth}
+\caption{\label{tab:genreeffect}Mixture model estimates for genre effect. Cell means are shown for argumentative and informative texts in msecs for key-transitions, the slowdown for long transitions and the probability of hesitant transitions. The effect for genre is shown on log scale (for transition durations) and logit scale for probability of hesitant transitions. 95\% PIs in brackets.}\\
+\toprule
+Transition location & \multicolumn{1}{c}{Argumentative} & \multicolumn{1}{c}{Informative} & \multicolumn{1}{c}{Difference} & \multicolumn{1}{c}{BF}\\
+\midrule
+\endfirsthead
+\caption*{\normalfont{Table \ref{tab:genreeffect} continued}}\\
+\toprule
+Transition location & \multicolumn{1}{c}{Argumentative} & \multicolumn{1}{c}{Informative} & \multicolumn{1}{c}{Difference} & \multicolumn{1}{c}{BF}\\
+\midrule
+\endhead
+Fluent transitions &  &  &  & \\
+\ \ \ before sentence & 164 [155, 173] & 166 [158, 175] & -0.01 [-0.15, 0.1] & 0.1\\
+\ \ \ before word & 174 [166, 181] & 171 [164, 179] & 0.01 [-0.05, 0.09] & 0.03\\
+\ \ \ within word & 140 [134, 145] & 140 [135, 146] & 0 [-0.06, 0.05] & 0.03\\
+Hesitation duration &  &  &  & \\
+\ \ \ before sentence & 495 [379, 631] & 558 [431, 707] & -0.08 [-0.41, 0.25] & 0.2\\
+\ \ \ before word & 338 [285, 399] & 327 [277, 384] & 0.01 [-0.19, 0.23] & 0.11\\
+\ \ \ within word & 165 [113, 230] & 188 [131, 258] & -0.07 [-0.42, 0.26] & 0.18\\
+Hesitation probability &  &  &  & \\
+\ \ \ before sentence & .26 [.20, .33] & .25 [.19, .32] & 0.04 [-0.5, 0.61] & 0.29\\
+\ \ \ before word & .35 [.29, .41] & .37 [.31, .43] & -0.1 [-0.53, 0.35] & 0.25\\
+\ \ \ within word & .10 [.08, .14] & .11 [.08, .14] & -0.03 [-0.62, 0.56] & 0.32\\
+\bottomrule
+\addlinespace
+\insertTableNotes
+\end{longtable}
+
+}
+
+\end{ThreePartTable}
+\end{center}
+\end{appendix}

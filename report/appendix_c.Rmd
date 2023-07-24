@@ -1,0 +1,77 @@
+## Key-combination effect (SPL2)
+
+The analysed datasets differ to the extent that keystroke intervals at before sentence location sometimes did (PLanTra, LIFT) or did not (CATO, C2L1, SPL2, GUNNEXP2) scope over the character following the shift key. In other words, the pause before sentences sumed across two key intervals in the PLanTra and LIFT data, namely `_^[shift]^C` but only involved one key interval, namely `_^[shift]` for the remaining datasets. Therefore, longer or more frequent pauses at before-sentence locations compared to before-word locations can be explained without reference to linguistic edges. Also there is a possibility that some inconsistencies in our findings can be explained on the basis of including the keystroke following shift. 
+
+Therefore we compared whether the different patterns can be explain on the basis of the additional keystroked involved in before-sentence transitions. We compared the SPL2 data including and excluding the keystroke after shift. Although we modelled all transition locations, we present only before-sentence transitions below as there was, as one would expect, no difference at word locations. The results of this comparison can be found in Table \ref{tab:shiftcellmeans}. Overall, fluent transition duration and the hesitation duration were affected by whether or not the sentence-initial transition include the character following shift. Fluent key transitions were substantially longer when including the interval following the shift key. The slowdown for hesitations was affected too but the difference is numerically small. There was no conclusive evidence for an increased hesitation probability. 
+
+```{r shiftcellmeans, results = 'asis'}
+# cell means and data set difference
+cellmeans <- ps_spl2 %>% 
+  separate(group, into = c("group", "lang"), sep = "; ") %>%
+  select(-ds, -group) %>%
+  mutate(across(lang, ~str_remove(., "Language: ")),
+         across(location, ~str_replace(., "\\n", " "))) %>% 
+  pivot_wider(names_from = name, 
+              values_from = c(mean, lower, upper)) %>% 
+  mutate(across(ends_with("prob"), ~dezero(., 2)),
+         across(c(ends_with("beta"),
+                  ends_with("delta")), 
+                ~as.character(scales::comma(round(.))))) %>% 
+  pivot_longer(-c(lang, location, data), 
+               names_to = c(".value", "param"),
+               names_sep = "_") %>% 
+  mutate(est = str_c(mean, " [", lower, ", ", upper,"]")) %>% 
+  select(-mean:-upper) %>% 
+  pivot_wider(names_from = data, 
+              values_from = est) 
+
+file1 <- list.files(path = "../stanout/spl2", 
+                    pattern = "mogbetaun.+.csv$",
+                    full.names = T)
+
+file2 <- list.files(path = "../stanout/spl2_shift", 
+                    pattern = "mogbetaun.+.csv$",
+                    full.names = T)
+
+tmp <- map_dfr(c(file1, file2), ~read_csv(.x) %>% 
+                 mutate(data = .x)) %>% 
+  filter(param %in% c("beta", "delta", "theta")) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, value))) %>% 
+  mutate(across(lang, recode, "EN" = "L1", "ES" = "L2"),
+         across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .))) %>% 
+  pivot_wider(names_from = data, values_from = value) %>% 
+  unnest(c(spl2, spl2_shift)) %>% 
+  mutate(diff = spl2_shift - spl2) %>% 
+  summarise(across(diff, list(mean = mean, 
+                              lower = lower, 
+                              upper = upper,
+                              BF = BF), 
+                   .names = "{.fn}"),
+            .by = c(lang, location, param)) %>% 
+  mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
+         across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2)))),
+         across(param, recode, theta = "prob")) %>% 
+  left_join(cellmeans) %>% 
+  arrange(param, location, lang) %>% 
+  filter(location == "before sentence") %>% 
+  select(param, 
+         Language = lang,
+         `_^[shift] + C` = ends_with(" + C)"),
+         `_^[shift]` = ends_with("FT])"),
+         "Difference" = mean, BF)
+
+write_csv(tmp, "tables/shift_effect_cellmeans.csv")
+
+apa_table(tmp[,-1],
+          align = c("l", "r", "r", "r", "r"), 
+          caption = "Mixture model estimates for key transitions. Cell means are shown for transitions that do and do not involve the transition to the character following shift in msecs for fluent key-transitions, the slowdown for long transitions and the probability of hesitant transitions. The difference for including the transition duration to the character after shift is shown on log scale (for transition durations) and logit scale for probability of hesitant transitions. 95% PIs in brackets.",
+          note = "PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.",
+          font_size = "footnotesize",
+          longtable = T,
+          stub_indents = list("Fluent transitions" = 1:2,
+                              "Hesitation duration" = 3:4,
+                              "Hesitation probability" = 5:6) )
+
+
+```
+

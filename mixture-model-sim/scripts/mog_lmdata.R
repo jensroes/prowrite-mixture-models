@@ -6,7 +6,7 @@ n_chain = n_core = 3 # number of cores/chains
 iterations = 6e3
 
 # Get some fake data (see script for parameter values)
-data <- read_csv("data/mogdata.csv")
+data <- read_csv("data/lmdata.csv")
 
 # Data as list
 dat <- within(list(), {
@@ -20,7 +20,7 @@ start <-  function(chain_id = 1){
           , delta = 1
           , theta = 0
           , sigma = .5
-          , sigma_diff = .2 ) }
+          , sigma_diff = .1 ) }
 
 start_ll <- lapply(1:n_chain, function(id) start(chain_id = id) )
 
@@ -41,22 +41,16 @@ m <- stan(fit = mog,
                         adapt_delta = 0.99))
 
 # Save posterior samples
-saveRDS(m,
-        file="stanout/mog_mogdata.rda",
-        compress="xz")
+saveRDS(m, file="stanout/mog_lmdata.rda", compress="xz")
 
-# Select relevant parameters
-param <- c("beta", "delta", "prob", "sigma_e", "sigmap_e") 
-
-# Traceplot and summary
+param <- c("beta", "delta", "prob", "sigma_e", "sigmap_e")
 traceplot(m, param)
 summary(m, param, prob = c(.025, .975))$summary %>% round(2)
 
 # Get posterior
-#m <- readRDS("stanout/mog_mogdata.rda")
+#m <- readRDS("stanout/mog_lmdata.rda")
 
 # Extract posterior
 as.data.frame(m, param) %>% 
   pivot_longer(everything()) %>% 
-  # Save posterior
-  write_csv("stanout/mog_mogdata.csv")
+  write_csv("stanout/mog_lmdata.csv")

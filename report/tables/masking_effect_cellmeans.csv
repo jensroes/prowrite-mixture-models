@@ -1,10 +1,28 @@
-param,Transition location,Unmasked,Masked,Difference,BF
-beta,before sentence,"220 [195, 248]","250 [224, 279]","0.13 [0.02, 0.23]",1.01
-beta,before word,"177 [165, 189]","185 [173, 198]","0.05 [0.03, 0.07]",70.05
-beta,within word,"140 [131, 150]","146 [137, 156]","0.04 [0.03, 0.06]",> 100
-delta,before sentence,"1,602 [1,336, 1,908]","2,310 [1,968, 2,703]","0.21 [0.05, 0.38]",1.97
-delta,before word,"401 [355, 451]","472 [415, 535]","0.08 [-0.02, 0.18]",0.18
-delta,within word,"173 [129, 227]","172 [124, 230]","-0.03 [-0.24, 0.19]",0.11
-prob,before sentence,".69 [.61, .77]",".69 [.62, .76]","0 [-0.45, 0.45]",0.23
-prob,before word,".38 [.32, .44]",".32 [.27, .38]","-0.24 [-0.57, 0.09]",0.46
-prob,within word,".08 [.06, .10]",".06 [.05, .09]","-0.22 [-0.65, 0.21]",0.36
+param,Transition location,Dataset,Group,Unmasked,Masked,Difference,BF
+beta,before sentence,CATO,dyslexic,"282 [240, 329]","285 [228, 354]","0.01 [-0.23, 0.25]",0.12
+beta,before sentence,CATO,non dyslexic,"207 [176, 243]","263 [230, 300]","0.24 [0.07, 0.41]",4.24
+beta,before sentence,GUNNEXP2,non dyslexic,"220 [195, 248]","250 [224, 279]","0.13 [0.02, 0.23]",1.01
+beta,before word,CATO,dyslexic,"259 [238, 281]","267 [246, 289]","0.03 [-0.01, 0.07]",0.07
+beta,before word,CATO,non dyslexic,"214 [197, 231]","229 [211, 247]","0.07 [0.03, 0.1]",13.25
+beta,before word,GUNNEXP2,non dyslexic,"177 [165, 189]","185 [173, 198]","0.05 [0.03, 0.07]",70.05
+beta,within word,CATO,dyslexic,"188 [173, 202]","198 [183, 214]","0.06 [0.03, 0.08]",13.22
+beta,within word,CATO,non dyslexic,"151 [140, 163]","163 [151, 176]","0.08 [0.05, 0.1]",> 100
+beta,within word,GUNNEXP2,non dyslexic,"140 [131, 150]","146 [137, 156]","0.04 [0.03, 0.06]",> 100
+delta,before sentence,CATO,dyslexic,"2,986 [2,070, 4,118]","2,161 [1,515, 2,987]","-0.3 [-0.72, 0.13]",0.57
+delta,before sentence,CATO,non dyslexic,"1,767 [1,244, 2,415]","1,954 [1,417, 2,612]","-0.12 [-0.5, 0.26]",0.24
+delta,before sentence,GUNNEXP2,non dyslexic,"1,602 [1,336, 1,908]","2,310 [1,968, 2,703]","0.21 [0.05, 0.38]",1.97
+delta,before word,CATO,dyslexic,"536 [469, 610]","531 [462, 608]","-0.03 [-0.13, 0.07]",0.06
+delta,before word,CATO,non dyslexic,"402 [344, 468]","452 [377, 538]","0.03 [-0.09, 0.16]",0.07
+delta,before word,GUNNEXP2,non dyslexic,"401 [355, 451]","472 [415, 535]","0.08 [-0.02, 0.18]",0.18
+delta,within word,CATO,dyslexic,"188 [140, 245]","153 [113, 201]","-0.12 [-0.3, 0.05]",0.23
+delta,within word,CATO,non dyslexic,"157 [107, 222]","168 [107, 250]","-0.01 [-0.27, 0.27]",0.14
+delta,within word,GUNNEXP2,non dyslexic,"173 [129, 227]","172 [124, 230]","-0.03 [-0.24, 0.19]",0.11
+prob,before sentence,CATO,dyslexic,".50 [.33, .67]",".66 [.47, .82]","0.16 [-0.08, 0.4]",0.3
+prob,before sentence,CATO,non dyslexic,".51 [.34, .69]",".52 [.34, .69]","0 [-0.24, 0.25]",0.12
+prob,before sentence,GUNNEXP2,non dyslexic,".69 [.61, .77]",".69 [.62, .76]","0 [-0.45, 0.45]",0.23
+prob,before word,CATO,dyslexic,".55 [.44, .66]",".45 [.35, .56]","-0.1 [-0.25, 0.05]",0.19
+prob,before word,CATO,non dyslexic,".41 [.31, .52]",".31 [.22, .40]","-0.1 [-0.24, 0.03]",0.23
+prob,before word,GUNNEXP2,non dyslexic,".38 [.32, .44]",".32 [.27, .38]","-0.24 [-0.57, 0.09]",0.46
+prob,within word,CATO,dyslexic,".15 [.09, .21]",".17 [.11, .25]","0.03 [-0.06, 0.12]",0.05
+prob,within word,CATO,non dyslexic,".10 [.06, .15]",".08 [.05, .13]","-0.02 [-0.08, 0.04]",0.04
+prob,within word,GUNNEXP2,non dyslexic,".08 [.06, .10]",".06 [.05, .09]","-0.22 [-0.65, 0.21]",0.36

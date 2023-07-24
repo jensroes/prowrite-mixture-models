@@ -12,13 +12,15 @@ data <- read_csv("data/mogdata.csv")
 dat <- within(list(), {
     N <- nrow(data)
     y <- data$value
-  }); str(dat)
+    K <- max(data$condition)
+    condition <- data$condition # or whatever grouping variable
+  }  ); str(dat)
 
 # Initialise start values
 start <-  function(chain_id = 1){
     list(   beta = 5
           , delta = 1
-          , theta = 0
+          , theta = c(-.5, -.5)
           , sigma = .5
           , sigma_diff = .2 ) }
 
@@ -45,15 +47,15 @@ saveRDS(m,
         file="stanout/mog_mogdata.rda",
         compress="xz")
 
-# Select relevant parameters
-param <- c("beta", "delta", "prob", "sigma_e", "sigmap_e") 
-
-# Traceplot and summary
+param <- c("beta", "delta", "prob", "sigma")
 traceplot(m, param)
 summary(m, param, prob = c(.025, .975))$summary %>% round(2)
 
 # Get posterior
-#m <- readRDS("stanout/mog_mogdata.rda")
+m <- readRDS("stanout/mog_mogdata.rda")
+
+# Select relevant parameters
+param <- c("beta", "delta", "prob", "sigma_e", "sigmap_e") 
 
 # Extract posterior
 as.data.frame(m, param) %>% 
