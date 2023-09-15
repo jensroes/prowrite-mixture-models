@@ -51,7 +51,7 @@ output            :
         - "appendix_e.tex"
         - "appendix_g.tex"
         - "appendix_f.tex"
-        - "appendix_g.tex"
+        - "appendix_h.tex"
 
 figsintext        : yes
 figurelist        : no
@@ -847,14 +847,7 @@ The classical serial view [@flower1980ynamics] characterizes writing as a sequen
 Patters observed in the parameter estimates are generally similar across data sets (with caveats). Under the cascading view of writing, key-transitions that directly precede sentences or words are not necessarily associated with a pause but writers might plan in parallel to writing. On the basis of parameter estimates of the bi-modal mixture model we tested to what extent larger linguistic edges are associated with the preparation of upcoming planning unit. We found that in 4 of 6 data sets, pauses were as likely to occur before sentences as words, in experienced and novice writers, while mid-word pauses were rare. Also, with few exceptions, pauses at before-sentence locations were associated were longer compared to pauses at before-word transitions (which were longer than the few mid-word pauses). In other words, when writers pause, the duration of their pause generally suggest that larger linguistic edges are associated with higher-level processing. However, the pausing probability results can only be explained by the cascading view of writing, not by the serial view. This is because the hesitation probability results suggest that writers often do not pause before sentences; indeed,  they frequently plan the next sentence in parallel production resulting in roughly identical hesitation probabilities at before-sentence and before-word locations.
 
 
-Interestingly even the youngest sample in our data pool (C2L1)
-
-
-showed evidence that pauses at before sentence locations were not obligatory and similar to pauses before words. This is interesting because previous research suggested that encoding of subsequent planning units is more separated -- and therefore operates in a serial fashion -- in inexperienced writers [@olive2014toward].
-
-
-
-
+Interestingly even the youngest sample in our data pool (C2L1) showed evidence of parallel planning. For example, @olive2014toward described a cascading model that is operating in a serial fashion for inexperienced or struggling writers. This is because of task demands reduce the ability to plan in parallel to processing which leads to a separation of planning units that therefore operate in a serial fashion. However, the results presented in this paper suggest that pausing behaviour in young writers largely mirror results from more experienced writers with the notable exception that pause durations are similar before words and sentence indicating a tendency to prepare utterances in small lexically-based planning units possibly smaller than the clause. The main differences for the young writers was their fluent writing execution is substantially slower compared to more experienced writers in the sample. Also for L2 writers (PlanTra, SPL2) we observe pausing patterns that do not resemble a serialised writing process.
 
 
 
@@ -863,10 +856,10 @@ We did observe four difference between data sets that are worth highlighting. Th
 First, key-transitions of the youngest sample (C2L1) were substantially longer compared to all other datasets with a larger slowdown before words. Yet the overall pausing probability showed a patterns comparable to most other data sets. In particular, a larger pause probability was observed for transitions before sentences / words compared to mid-word transitions. The second and third exceptions concern the GUNNEXP2 and SPL2 data sets:  pauses were more likely to occur at before-sentence transitions compared to before-word transitions while in the remaining data sets hesitations were equally probably at before-word and before-sentence locations (compared to mid-word locations). **TODO: I don't have an explanation for this.** Also, fluent transitions were longer at before-sentence locations compared to before-word locations while in the remaining data sets fluent key-transitions were always shorter at mid-word compared to before-words transitions. This shows a general tendency to slow down tying at sentence boundaries for the GUNNEXP2 and SPL2 samples which was pronounced in the other data sets. Fourth, pauses were longer before sentence compared to before words compared to mid-word paues with two exceptions: (1) no difference was found for before-sentence compared to before-word transitions in C2L1 possibly due to a a word-level planning strategy in this sample of young writers as inexperienced writers tend to use a more localised strategy for text production. (2) pause durations did not vary by transition location in the LIFT data set although the posterior showed the same general patterns as observed in most data sets. The absence of a difference could be explained as specific to the synthesis writing task [**REFERENCE**]. 
 
 
+A possible concern with our results -- substantially better predictive performance for bi-modal mixture models -- is that, in principle, as the mixture model has more parameters it might always lead to a better fit. We addressed this concern by using cross-validation techniques for model comparison which is preventing overfitting models. In addition we used a simulation approach to compare a uni-modal model and a bi-modal mixture model. We simulated two data sets that were either based on a uni-modal or bi-modal random data generating process. In other words, this approach allows us to test the predictive performance of our models in a context where we know the true underlying data generating process -- uni-modal vs bi-modal -- and we can test whether these models can successfully uncover the true parameter value. Modelling details can be found in Appendix \ref{simulation}. As might be expected, we found, that the bi-modal mixture was successful at uncovering the parameter values of the data generated with a bi-modal mixture models; we observed the same for the uni-modal model of the data generated with a uni-modal process. Parameters were not successfully uncovered when we switched model type and data set. Importantly though, cross-validation did not show a higher predictive performance for the mixture model, compared to the uni-modal model,  when applied to the uni-modal data (but for the bi-modal data). Therefore we can rule out the possibility that the overwhelming statistical support for bi-modal models can be explained in terms of model overfitting. 
 
 
-Using cross-validation and a simulation we ruled out that the overwhelming statistical support for bi-modal models can be explained in terms of model overfitting. Modelling details can be found in Appendix \ref{simulation}.
-
+Throughout this paper we assumed that hesitations are indicators of planning upcoming ideas and encoding of linguistic units. Alternatively at least some if not all pauses in the writing process might be the result of reading or looking back into previously produced text. There is a limited amount of work that has used eye tracking to investiatge regressive eye movement behaviour during writing [@alamargot2010using; @beers2010adolescent; @chukharev2019combined; @de2018exploring; @torrancea; @van2010reading]. There are at least three reasons why writers look back into their text: (1) reading is necessary for revision (i.e. writers must check if writing goals have been met); (2) using text to cue or reinstating ideas after interruption of writing process; (3) error evaluation: e.g. spelling, grammar. We removed transitions that terminated in an editing operation so the pauses we detected are unlikely to reflect revisions. However, frequencies of lookback during writing follow a similar pattern as the one we observed for pausing: @torrance2016reading reported that lookbacks appear with a frequency of 45% before sentences, 12% before words and 5% within words of which 36% were associated with sustained reading but mostly less patterned forward and backward saccades between words ["hopping", see also @chukharev2019combined]. This is except, look backs are more frequent before sentences compared to words while we found that pause frequencies appear equally often before sentences and words. Finally two of the data sets in our poor (CATO, GUNNEXP2) included a manipulation where the produced text was masked (or not). In a reanalysis we found no substantial differences in pausing behaviour for the masked condition; see Appendix \ref{masking-effect-cato-gunnexp2}. In other words, even though reading is likely be explain some proportion of our results it is overall rare, certainly in samples of university students.  
 
 
 
@@ -879,50 +872,31 @@ A practical advantage of our mixture model approach [also @roeser2021modelling] 
 
 <!-- 
 
-All plantra results are L2 but not the other studies
-
-to what extent do pauses reflect reading behaviour?
-
+~~~~~
 Say how the results don't contradic the reported studies but speaks better to their conclusions 
 but the modelling frameword doesn't require us to impose pause thresholds
+~~~~~
 
-
-(2) dichotomising latencies into pauses and non-pauses discards much of the information that is captured within a keystroke log. 
-
-One strategy for handling the complex distribution of latency from spontaneous text production is to avoid reporting central tendency altogether and to just count latencies that exceed a specific threshold – traditionally set at 2 seconds. This practice, inherited from early research in speech production (see Rochester, 1973 for a review) has been widely adopted by writing researchers, with studies dating back to at least the mid 1990s (Foulin, 1995, 1998). Pause counting has two disadvantages. First, researchers have to make an a priori decision about where to set the pause threshold. Current understanding of the processes that underlie text production does not provide a strong theoretical basis on which to make this decision. So while a 2 s threshold undoubtedly captures an interesting distinction – processing that occurs the range zero to 2 s is very likely to be qualitatively different from processing that takes more than 2 s. However the same could be argued for any threshold between perhaps 250 ms and 10 that a researcher might care to choose (Chenu et al., 2014). Moreover, as we have already discussed, interpretation of latencies depends on location within the text. A sentence-initial pause of 2 s has a very different interpretation from a 2 s pause that occurs before or within a word. A second disadvantage of pause counting is that dichotomizing latencies discards much of the information that is captured within a keystroke log or digitized handwriting trace. We therefore require statistical methods that model the variance across the full range keystroke latencies (or similar measures from handwriting).
-
-
-
+~~~~
+Move from results to discussion?
 Open: to what extent are even short latencies longer at sentences. This is obvious for when multiple keystrokes are summed across at sentences boundaries as there are typically three key transitions necessary to start a sentence: (1) .^_ , (2) _^[shift], (3) [shift]^C
 We believe the second one is the linguistically meaningful one
 I think give Davids papers as examples, if he uses sums instead of means (other studies?)
 
-I just read the abstract of the first one, but the neural oscillations that they describe are occur every 153 ms (6.5 hz). Which is kind of the magic number for the short-duration IKI component.
+~~~
+
+
+neural oscillationsoccur every 153 ms (6.5 hz). Which is kind of the magic number for the short-duration IKI component.
 
 Duprez, J., Stokkermans, M., Drijvers, L., & Cohen, M. X. (2021). Synchronization between keyboard typing and neural oscillations. Journal of Cognitive Neuroscience, 33(5), 887–901. https://doi.org/10.1162/jocn_a_01692
 
 González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized samples of keystroke dynamics features for free-text inputs. Data in Brief, 48, 109125. https://doi.org/10.1016/J.DIB.2023.109125
 
-
+~~~~
 I think the serial account isn't all inconsistent with the mixture model. I don't think the serial account says that pauses must occure on linguistic edges but between bursts which can in principlpe happen anywhere (but why would they be random). Obviously the problem here is that one needs to postulate what a pause is instead of leaving it to the model to work out. The serial account and the cascading account make very similar predictions for inexperienced writers.
 
+Maybe distinguih between a strong version of serial model and a weak version that is basically a chunky cacading model
 
-To what extent do pauses reflect reading back. Cite literature from Marks first SPL2 draft on reading during writing.
-
-- Reading is necessary for revision: check if writing goals have been met.
-- Planning what to say next: reinstating ideas after interruption of writing process.
-- Error evaluation: e.g. spelling, grammar
-
-
-- we removed transitions that terminate in editiing so lookbacks are not associaed with revisions.
-
-- Adults writing argumentative essays
-- @torrance2016reading: 
-  - before sentences 45% lookbacks
-  - before words 12% lookbacks
-  - within word 5% lookbacks 
-- 36% sustained reading but mostly less patterned forward and backward saccades between words ["hopping", see also @chukharev2019combined]
-- Limited work: @alamargot2010using; @beers2010adolescent; @de2018exploring; @van2010reading
 
 -->
 
