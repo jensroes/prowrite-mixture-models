@@ -1,5 +1,5 @@
 ---
-title             : "Modelling writing hesitations in text writing as finite mixture process"
+title             : "Ideas cascading into keystrokes -- modelling writing hesitations as finite mixture process"
 shorttitle        : "Modelling writing hesitations"
 
 csl               : "apa.csl" 
@@ -28,7 +28,7 @@ affiliation:
     institution   : "Department of English, Iowa State University, Iowa"
 
 
-abstract: |
+abstract: Classical serial models view the writing process as a chain of pauses and writing burst. In contrast, parallel cascading models of writing assume that planning is not complete at production onset and operates in parallel to writing execution. We implemented these two view in Bayesian statistical models and applied our models to key-stroke logs of 6 data sets from free text production. We reanalysed keystroke intervals at before-sentence transitions, before word transitions and within word transitions. Model comparisons demonstrated strong evidence in favour of the statistical implementation of the cascading view of the serial models across all data sets. Further we found that although pause durations are consistently longer for larger linguistic edges, the pause frequencies are not, but largely identical for before sentence and before word transition locations. Our results cannot be explain by the serial but are in line with the cascading view of writing.   
 
 
 keywords: "Keystroke modelling; finite mixture models; Bayesian models; text composition"
@@ -51,6 +51,7 @@ output            :
         - "appendix_e.tex"
         - "appendix_g.tex"
         - "appendix_f.tex"
+        - "appendix_g.tex"
 
 figsintext        : yes
 figurelist        : no
@@ -122,114 +123,188 @@ theme_set(theme_few(base_size = 12) +
 
 options(scipen = 999)
 
-beta_label <- "Short key transition\nduration (in msecs)"
-delta_label <- "Slowdown for hesitant key\ntransitions (in secs)"
+beta_label <- "Short transition\nduration (in msecs)"
+delta_label <- "Slowdown for hesitant\ntransitions (in secs)"
 theta_label <- "Probability of hesitant\ntransitions"
 ```
 
 
 
-# Introduction
+
+Translating ideas into language involves a cascade of processes starting with a communicative intention, over the generation of an message, deciding with which part of the message to start the utterance, retrieving appropriate lexical materials and ordering them in an appropriate syntactic order before retrieving orthographic and / or phonological codes that are finally submitted to the motor programs that allow us to articulate language in speech, keyboard tying, handwriting, and signing [@bock2014syntactically; @wheeldon_konopka_2023; @van1991handwriting; @olive2014toward].
+
+Writing is arguably more demanding than spoken language, because, among other reasons, writing requires spelling and we typically do not move our fingers or our pen as quickly as we articulate language sounds in speech. Consequently in writing more than in speech, we have to mentally buffer our linguistic plan before we can express it in language. Written communication is also less time constrained: speaking underlies fluency requirements and therefore has stronger pressure to plan information ahead of speaking [@roeser2018advance; @torrance2012written]. This is because in spoken production there is a pressure for fluency whereas hesitations in written output have no communicational implications for the reader [e.g. @Clark2002]. Indeed writers can pause when -- even in the middle of a word -- and for how long they want (within reason) without compromising communication. Written text production -- for example argumentative texts -- is therefore a combination for relatively fluent production bursts followed by pauses [@chenoweth2001fluency]. 
+
+The study reported in this paper presents a comparison of two theories of how cognitive planning processes are coordinated in writing using implementations in statistical models. On the basis of those statistical models applied to 6 datasets, we revisit the often reported finding that edges of larger linguistic units are associated with longer pauses [@conijn2019understanding; @matsuhashi1981pausing; @flower1981pregnant; @wen06]. For example, sentence boundaries are generally thought of as involving longer pauses, compared to word boundaries, because participants engage in higher-level planning [@baaijen2012keystroke; @roeser2018advance; @medimorec2017disfluency; @medimorec2017pauses]. The same is generally observed for spoken utterances [@lee13; @meyer1996; @wheeldon2013] with some exceptions [@gri01]. We first discuss pause patterns in text production and introduce two possible cognitive frameworks in which these can be interpreted. Pause-patterns at linguistic edges are important, as they are symptomatic for the two cognitive theories of writing we discuss in the following.
+
+<!-- a statistical framework for the analysis of keystroke data that captures not just the multilevel-structure of the data but also presents a principled way to capture the probabilistic nature of pauses in text composition. Hesitations are probabilistic in the sense that we cannot be predicted their occurrence deterministically. In principle we can produce several words and even sentences without pausing. However, hesitations are more of less likely to occur in certain contexts, for example, at sentence boundaries.  -->
+
+Written text production is the result of a cascade of processes that starts with an communicative idea on the top forming a semantic representation, which is then fed into a grammatical encoder that is responsible for the retrieval of lexical names and, depending on theoretical viewpoint [@bock2014syntactically; @wheeldon_konopka_2023], the generation of syntactic representations, and finally flow from orthographic retrieval into motor plans for executing finger movements [@van1991handwriting; @olive2014toward]. The intervals between adjacent keystrokes during typing vary as a function of various factors. Explaining the factors that influence the duration of inter-keystroke intervals (IKI) requires a theory of how the various processes that transform intent into keypresses are structured. Processing may be serial. This means that the processing cascade operates on one unit at a time. Processing of the next unit can only start when the previous unit was fully processed from communicative intention to completion of the written output. Therefore longer IKIs represent periods when the writer is planning what to write next. The subsequent burst of fluent output is then the result this planning [@hayes2012evidence; @matsuhashi1981pausing; @alves2015progress; @schilperoord2002cognitive; @kaufer1986composing]. This is particularly reflected in the model proposed by @flower1980ynamics that characterises the writing process as a sequence of generating ideas, planning the text, translating the ideas into language, executing hand-writing or typing, and revising the texts [also @chenoweth2001fluency; @chenoweth2003inner].
+
+
+This serial account is consistent with the finding that average IKI duration immediately before sentence-initial keystrokes are longer than before words and these are, in turn, longer than between mid-word key presses [@torrance2016adolescent; @wen02; @mohsen2021second]. However this account is not consistent with what we know about writing. Consider these two observations: 
+
+First, utterances are not fully formed at production onset. Instead, syntax and lexical content and even details of the message itself are planned as the emergent result of in real-time process. This is well known for spoken production [e.g. @bock2014syntactically]. For writing, there is evidence that the time to keystroke / pen onset increases when a sentence starts with a more complex sentence-initial phrases [@not10; dam09; @roeser2018advance]. For example, in @roeser2018advance participants described moving arrays of images in simple utterances such as *A and the B moved above the C* that either started with a conjoined noun phrase (i.e. *A and the B moved*) or a simple noun (i.e., *A moved above the B and the C*). Importantly while the overall complexity of the utterance (in terms of length, number of phrases and noun) was held constant, sentences that started with a conjoined noun phrase increased the time to typing onset. This is not what one would expect if writers plan sentences (or even phrases) in full before production onset. In fact, eye movement data reported in @torrance2012written and @roeser2018advance demonstrate that writers do not plan the lexical form of the utterance beyond the first noun before production onset [similar to speech @gri01; @griffin2003reversed], although there was evidence that lexical pre-planning of the second noun (i.e. *the B*) was more likely for conjoined noun phrases.
+
+
+Second, even though average sentence-initial IKIs tends to be longer, they still tend to be very rapid. For example, @medimorec2017pauses found that, in undergraduate students writing on familiar topics 71% of sentence-initial IKIs were less than 1 sec in duration. Also @ronneberg2022process reported that sentence-initial hesitations are rare, with over 50% of sentences preceded by very short pauses (around 430 msecs) and a mean of 1.2 seconds for the remainder of pauses. For comparison, this is less than mean written naming response latency for single objects [@torrance2018timed] and short sentences when describing arrays of images [@roeser2018advance] in a similar population. Despite the fact that writers can in principle pause when they want to, written composition is often remarkably fluent. The finding that sentence-initial IKIs are longer before words, maps onto a theory that assumes that planning a sentence requires the writer to pause and think before pressing the sentence-initial key. 
+
+
+If utterances are not planned in full prior to writing onset, how is it possible that at least for reasonably competent writers producing composition often occurs remarkably fluently, with very few hesitations. The two examples above and similar findings point towards much of the mental activity associated with composition, including the relatively complex processing required to plan sentences, occurring as a result of a cascade of processes that occur partly in parallel and largely without executive control. Consistent with general trends in language processing theory [@dell2007case; @bock2014syntactically; @chang2006], several researchers have argued that the processes associated with written production run at least in part in parallel [@bonin2012evidence; @crump2010hierarchical; @olive2014toward; @van1991handwriting; @roux2013interaction]. @van1991handwriting, for example, argued for a cascade of modular processes, each responsible for a specific transformation (semantic, syntactic, and so forth), with processing occurring as soon as information from the immediately upstream process becomes available [@christiansen2016now]. Buffers provide transient storage at each processing level to accommodate unsynchronised output rates: when lower level processes lag behind higher level processes, buffers allow our fingers to catch up with thought and language related processes. In other words, when writers move from one sentence to another without hesitation this is due to planning the next sentence, to some extent, while completing output of the previous sentence.
+
+
+This cascaded account of the composition process gives a rather different understanding of inter-keystroke intervals. IKIs result from one of two data-generating processes. When upstream processes output at a rate equal to or faster than can be used for finger movement planning then IKIs are determined just by time needed for executing finger movements (i.e. just by processing below the last buffer in the processing cascade). However if one or more upstream processes provide output more slowly then IKIs become dependent directly on upstream processing times and not on finger movement. IKIs therefore form two distributions, one associated with rapid, fluent output, and another that forms as a result of delays caused by some combination of processing at the semantic, syntactic, lexical, or orthographic levels [@roeser2021modelling].
+
+
+For example, @roeser2021modelling demonstrated -- using a similar approach as used in the present paper -- how this mixture of distributions that results from the same underlying data generating process can be implemented using Bayesian statistical mixture modelling. In particular they analysed a large sample of copy-task data using commonly used statistical models and compared their out-of-samples predictive performance to a mixture model approach. Not only did they find substantially stronger performance for their mixture model approach but they also demonstrated that mixture models allowed them to capture the process that generates IKIs in a copy-task context in three parameters: (1) the average speed of fluent key transitions, (2) the slowdown for hesitant key presses, and (3) the probability of hesitant as opposed to fluent transitions. As argued by the authors, copy-typing underlies a similar cascade of processes as free text composition. Instead of context generation and grammatical encoding, copy-typing involves a mixture of visual encoding of the target string and mental buffering prior to the activation of motor codes. For similar approaches see  @almond2012preliminary, @baaijen2012keystroke, @chenu2014interword, @guo2018modeling, @hall2022constructing, @li2021identifying, and @waes2019.
+
+The cascading account provides an explanation for why writers sometimes pause before onsetting a sentence (or word) but often are not. This is not because in some cases sentences are not planned, or planning was postponed until after sentence onset, but that this planning was completed in parallel with previous output. 
+
+Hesitations in writing have potential disadvantages. Writers can, as we have noted, pause at any point without this affecting the eventual communicative effect of their text. However language processing is subject to what @christiansen2016now describe as a fundamental "now-or-never" bottleneck. Buffering is transient and as a consequence of written (and spoken) production are just-in-time systems: Production must flow down the cascade of processes from message to finger movements without significant interruptions. If there is delay -- if, for example, a writer struggles to retrieve the right word or its spelling -- there is a risk that output from upstream processes, and particularly the chain of ideas that the writer wanted to communicate, will be lost. @ronneberg2022process coined this possibility the "process-disruption hypothesis".
+
+
+In the study that is presented in this paper we test using Bayesian statistical hierarchical models of keystroke intervals -- similar to @roeser2021modelling -- whether the cascading view of writing generalises to contexts in which participants compose texts. On the basis of these statistical models of text composition, we appraise to what extent linguistic edges (sentence and word boundaries) are associated with different pausing behaviours as frequently suggested in the literature [@ailhaud2018variations; @ailhaud2016developmental; @conijn2019understanding; @chukharev2019combined; @torrance2016adolescent; @wen02; @mohsen2021second].
+
+
+Data form spontaneous text production [see @gernsbacher1995coherence] are an ideal test case for our modelling approach for the following three reasons: First, text production such as essay, argumentative, and narrative writing in response to a writing brief or topic statement is a natural environment for text production. Therefore our models have real-world relevance for educators, for example, to evaluate to what extent a student is using a desirable composition strategy [@dux2022automating;@dux2021effect;@vandermeulen2023writing]. 
+
+Second, since the emergence of software such as InputLog [@leijten2013keystroke] recording keystroke data during free text composition has become widely used among writing researchers and led to a rapidly expanding timecourse literature with a focus on the orchestration of subprocesses; with a recent special issue in Reading and Writing [@conijn2021timecourse]. Social Science Citation Index reports 40 journal papers that describe research exploring composition processes using keystroke logging methods in 2022, compared to 26 in 2017 to 2019, and 7 in 2014 to 2016. These data are therefore important for contemporary theories of writing and freely available for modelling and machine learning [@conijn2019understanding; @conijn2020keys].
+
+Third, data from spontaneous text production allow us to address questions about sentence production in context that would not be possible with data from, for example, picture description experiments [@not10; @dam09; @roeser2018advance] or copy tasks [@roeser2021modelling; @waes2019; @van2019multilingual]. In text composition, content generation is not artificially constrained to individual sentence units (or less) by one or more images -- as in sentence-elicitation studies -- and linguistic form is not constraint to a sequence of words -- as in copy tasks. Instead text composition provides data from both inter and intra-sentence transitions. Also, pauses do not reflect visual encoding of the stimulus (although possibly looking back during writing which we will return to in the discussion). 
+
+The hypotheses are as follows: if the preparation of the upcoming production unit happens entirely at the corresponding linguistic edge as predicted by the serial account, and not in parallel to production, key-transition intervals can statistically be modelled as a function of the associated transition location. In other words, we expect IKIs to be proportionally longer at before-sentence locations compared to before-word location compared to within-word locations. This is because transitions before larger linguistic units are associated with processing that involves higher levels of representation. The cascading view, in contrast, assumes that although IKIs at larger linguistic edges might be longer, it is in principle possible that writers do not pause but plan in parallel to writing. In other words, statistical models of the pause-and-burst view of written production do not capture that planning can operate, to some extent, in parallel to the output of the written production. Therefore, a statistical model that captures writing as a cascade of processes must account for the possibility that hesitations occure probabilistic across the entire text although some linguistic locations such as larger linguistic edges are associated with a higher pausing probability. We hypothesize that the statistical model of the parallel cascading view provides a better out-of-sample generalization than the implementation of the serial model of writing in the context of unconstrained text composition.
+
+
 
 # Methods
 
+We (re)analysed keystroke data of 6 experiments in which participants composed text in a series of 5 Bayesian models. The first three models map onto the serial account of writing hesitations and bridge between commonly used statistical models for the analysis of inter-keystroke intervals (IKI) as unimodal models. In particular we used a Gaussian distribution, a log-normal model, and an unequal variance model that takes into consideration that longer latencies -- those associated with larger linguistic edges -- are known to be associated with a larger variance component [@wagenmakers2007linear; @wing1973response; @schoner2002timing]. 
+
+The remaining two models are implementations of the cascading view following the bimodal mixture-model approach presented in @roeser2021modelling. Importantly these two models assume that IKIs result from a mixture of two processes: (1) uninhibited activation flow into motor programmes and (2) interruptions at higher levels cause delays in the information flow. Importantly these two models assume that hesitations are not sufficiently determined by transition location -- as the serial account does -- but also transition locations are associated with different probabilities that hesitation may occur. This view was implemented as a constrained and an unconstrained model. 
+
+
+
 ## Statistical models
 
-The models presented in the following can be divided into two general groups. The first three models are largely akin to models typically used in the literature. By this we mean models that assume a uni-modal process that generates keystroke data as is incorporated in statistical models such as analysis of variance and linear mixed-effects models. Second, the last two models model keystroke intervals as a combination of two weighted processes of which one presents a smooth information flow from mind into finger; the other component is more important as it represents moments at which the information flow was interrupted leading to longer latencies. The latter two models map directly on the idea of a cascading model of writing.
+We are using the Bayesian framework [e.g. @farrell2018computational; @gelman2014; @lee2014bayesian] to implement 5 statistical models of writing and to evaluate which -- the serial or the cascading view -- captures more successfully the data that arise during keyboard typing. In other words, we use statistical models to map between the data and the theoretically assumed process that generates the data to then compare the predictive power of those models. The models presented in this section build on one another so that later model include assumptions of earlier models.
 
-### Unimodal Gaussian
 
-We start with a Gaussian mixed-effects models similar to a standard analysis of variance. We describe the process that generates each iki $i$ as normal Gaussian distribution $\text{N}()$ characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $\text{participant}_i$. $\beta$ will be allowed to take on a different value for each transition location. Average participant-ikis are allowed to deviate from the average which is achieved by assuming a normal distribution for participant deviations distributed around 0 with a standard deviation $\sigma_\text{p}^2$.
+### Serial model of writing
+
+#### Unimodal Gaussian
+
+Under the serial view, all planning must be completed priors to the production onset of the corresponding planning unit. The resulting IKI is sometimes faster or slower depending on, among others, psycholinguistic factors. For example, the interval before a word is shorter for easily retrievable high-frequency words, or longer for low frequency words, shorter for words with fewer graphes, syllables, and morphemes. There are word-specific factors that influence the IKI that precedes a word but these are beyond the scope of our analysis. We will capture the variability associated with word-features by assuming that before-word IKIs can be described as coming from a distribution that is normal (Gaussian) with two parameters, an unknown mean $\mu$, that describes the average IKI associated with word-level planning, and a standard deviation $\sigma_\text{e}^2$, that captures the variability associated with factors that we did not further specify in the model. This can be expressed as $\text{iki}_\text{before word} \sim \text{N}(\mu, \sigma_\text{e}^2)$. Of importance is the estimated posterior value of $\mu$ as this value captures that time it takes to mentally plan a word.
+
+We can extend this simple model of word-planning to other linguistic location. We introduce earlier that larger linguistic edges are associated with planning on higher levels. For example, at sentence boundaries, planning needs to happen for word-level properties -- which was captured above as average IKI $\mu$ -- but also higher linguistic planning such as clause-level meaning, and dependencies of the sentence-initial noun [@roeser2018advance; @not07]. Regression formulas can, and commonly are, used to decompose $\mu$ and capture that there is a change in the outcome variable associated with another factors. We can decompose $\mu$ as $\mu = \alpha + \beta \cdot \text{x}_\text{sentence[0,1]}$ so that when $\text{x}_\text{sentence}$ takes on the value 0, the equation reduces to $\mu = \alpha$ which is the average IKI for word boundaries. However when $\text{x}_\text{sentence}$ takes on the value 1, the average IKI for word boundaries $\alpha$ is incremented by a sentence-related slowdown of $\beta$ msecs. Therefore the value of the $\beta$ parameter represents the additional cognitive demand associated with sentence-initial planning. The application of such a statistical model to the data will then provide us with an estimate of the parameter value that can be used for statistical inference (e.g. whether there is a statistically meaningful difference between IKI associated with words and sentences).
+
+For computational ease, we implemented the differences associated with transition locations as $\beta_\text{location}$ in equation \ref{eq:unimodgaus} where $\text{location}$ is taking on an index for each transition location. Therefore, the model will return one $\beta$ per transition location that capture the posterior distribution of average IKIs. Also the decomposition of $\mu$ allows us to address the fact that some writers are faster than other writers by introducing a parameter for what is typically called random intercepts $u_\text{participant}$. The random intercepts term $u_\text{participant}$ is constrained so that the value it takes on comes from a normal distribution with a mean of 0 and a standard deviation of $\sigma_\text{p}^2$. This value is therefore the difference between the overall posterior estimate and estimate average IKI of a particular participant (i.e. a positive value indicates that a participant is slower than average, a negative value indicates that a participant is faster than average).
+
+The final model is shown in equation \ref{eq:unimodgaus} and represents a Gaussian mixed effects model. 
+
 
 \begin{equation}
 \begin{aligned}
 (\#eq:unimodgaus)
-\text{iki}_i & \sim \text{N}(\mu_i, \sigma_\text{e}^2)\\
-\text{where: } & \mu_i = \beta_\text{location[i]} + \text{participant}_i\\
-& \text{participant} \sim \text{N}(0, \sigma_\text{p}^2)\\
+\text{iki}_i \sim\text{ } & \text{N}(\mu_i, \sigma_\text{e}^2)\\
+\text{where: } & \mu_i = \beta_\text{location[i]} + u_\text{participant[i]}\\
+& u_\text{participant} \sim \text{N}(0, \sigma_\text{p}^2)\\
 \text{constraint: } & \sigma_\text{e}^2, \sigma_\text{p}^2>0
 \end{aligned}
 \end{equation}
 
-### Unimodal log-Gaussian
+Note aside that standard-deviation parameters were constrained to be positive because standard deviations can never be negative. 
 
-This model is largely identical to the previous model, except we use a log-normal distribution instead of a normal distribution. The advantage of using a log-normal distribution is two-fold: (1) the log-normal distribution has a lower bound of zero. For our data we generally consider negative ikis as mistakes which occasionally occur when the next key was pressed before the current key. Other than that keystroke intervals are constrained by a persons ability to move their fingers and keyboard polling. (2) the log-scale is known to be a better match for data from human behaviour, in particular motor responses. In particular, a normal distribution assumes that units are linearly scaled. For example, a 50 msecs difference is the same between 100 msecs and 150 msecs than it is between 5 secs and 5 secs 50 msecs (i.e. 5,050 msecs). This is not necessarily plausible for keystroke data. We would assume that differences that are due to motor activity (typing a high frequency bigram vs a low frequency bigram) are smaller than difference that are due to high levels of cognitive activity (retrieving a word in your L1 or L2). Log-normal distributions are a natural way of scaling units so that a 50 msecs difference on the lower end of the iki scale (motor activity) is more meaningful than a 50 msecs difference on the upper end of the iki scale (retrieving words, planning sentences).
 
-The model can be described like this:
+#### Unimodal log-Gaussian
+
+The previous model assumes that the data-generating process is a Gaussian distribution. The next model is largely identical to the previous model but instead of assuming a Gaussian, we assume that the data come from a log-normal (log-Gaussian) distribution. There are, at least, two arguments for using a log-Gaussian distribution: (1) log-Gaussians are zero-bound; in contrast to Gaussians, a log-Gaussian does not allow negative values. IKIs, as the distance between two subsequent key-down events, must be positive. The lower bound is delimited by a person's ability to move their fingers and keyboard polling. (2) the log-scale is known to be a better match for data from human behaviour and motor responses. In particular, a Gaussian distribution assumes that units are scaled linearly. For example, a difference of 25 msecs is the same between 100 and 125 msecs as between 5 secs and 5,025 msecs. This does not necessarily map onto the psychological interpretation for short and long keyintervals. For example effects that result on the motor level within words (e.g. typing a high vs a low frequency bigram) are smaller than differences that are due to high levels of processing (retrieving a word in an L1 or L2). In other words, although an effect of 25 msecs is large in the context overall fast keyintervals, it is small in the context of overall slow intervals. Log-Gaussian distributions are a natural way of translating a linear scale to an exponential scale so that a 25 msecs difference on the lower end of the IKI scale (motor activity) is more meaningful than a 25 msecs difference on the upper end of the IKI scale (retrieving words, planning sentences).
+
+The model can be described as in equation \ref{eq:unimodloggaus} in which the distribution $\text{N}()$ was replaced by $\text{logN}()$.
 
 \begin{equation}
 \begin{aligned}
 (\#eq:unimodloggaus)
-\text{iki}_i & \sim \text{logN}(\mu_i, \sigma_\text{e}^2) \\
+\text{iki}_i \sim\text{ } & \text{logN}(\mu_i, \sigma_\text{e}^2) \\
 \text{where: } &
-\mu_i = \beta_\text{location[i]} + \text{participant}_i\\
-& \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
+\mu_i = \beta_\text{location[i]} + u_\text{participant[i]}\\
+& u_\text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
 \text{constraint: } & \sigma_\text{e}^2, \sigma_\text{p}^2>0
 \end{aligned}
 \end{equation}
 
-### Unimodal unequal-variance log-Gaussian
+#### Unimodal unequal-variance log-Gaussian
+
+The third model representing the serial view of writing is an unimodal unequal-variance model that, except for the unequal-variance assumption is identical to the model presented in the previous section. The previous models modelled IKIs as a function of transition location so that the estimated average IKI depends on the position of an IKI in the text. The variance associated with the estimated IKIs for each transition location was assumed to be identical (equal variance). This assumption is however not in line with what we know about data from human behaviour. Longer latencies are known to be associated with a larger variances for both response-time data in particular [@wagenmakers2007linear] and human motor behaviour in general [@wing1973response;@schoner2002timing]. For IKIs pauses at larger linguistic edges are plausibly associated with a larger variance because of the larger number of associated processes. Therefore, in equation \ref{eq:unimoduv}, we introduce the assumption that standard deviation $\sigma_{e_\text{location}}^2)$ varies as a function of transition location. 
 
 \begin{equation}
 \begin{aligned}
 (\#eq:unimoduv)
-\text{iki}_i & \sim \text{logN}(\mu_i, \sigma_{e_\text{location[i]}}^2) \\
-\text{where: } & \mu_i = \beta_\text{location[i]} + \text{participant}_i\\
- & \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
+\text{iki}_i \sim\text{ } & \text{logN}(\mu_i, \sigma_{e_\text{location[i]}}^2) \\
+\text{where: } & \mu_i = \beta_\text{location[i]} + u_\text{participant[i]}\\
+ & u_\text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
  \text{constraint: } & \sigma_\text{e}^2, \sigma_\text{p}^2>0
 \end{aligned}
 \end{equation}
 
-### Bimodal log-Gaussian (constrained)
 
-This models extends the intuition from the previous model that higher levels of activation lead to longer pauses. Instead of assuming that there is one process that underlies the generation of ikis, we assume there are two. (1) activation can flow into keystrokes without interrupts. These fluent keystroke transitions are merely limited by a person's ability to move their finger and will be captured but the parameter $\beta$. In principle, there are no differences for fluent key-transitions between transition location. The next model with loosen this assumption (hence, "unconstrained model"). (2) difficulty in the activation flow leads to pauses when fingers have to catch-up with cognitive activity, when spelling, words, or contents couldn't be retrieved in time. The size of these pauses will depend on the reason for delays which is typically associated with transition locations (contents are typically planned before sentences, words are retrieved before they are typed and spelling difficulty typically occurs when typing a word). Pauses will be captured by two model parameters: (1) the slowdown for these hesitant transitions will be captured by $\delta$ which is the deviation compared to normal typing intervals (constrained to be positive). (2) the frequency of hesitant transitions will be captured by $\theta$ for each level of a categorical predictor. 
+### Parallel cascading model of writing
+
+The following two models are are extensions of the models introduced for the serial view. Crucially, the cascading view allows planning to happen in parallel to production. Therefore, we will reduce the constrain of the serial models that requires all planning to be completed before writing onset. This is done by assuming that IKIs come from a weighted combination of two distributions.
+
+
+#### Bimodal log-Gaussian (constrained)
+
+This model extends the assumption of the previous model that processing that involves higher levels of activation lead to longer pauses. Instead of assuming that there is one process that is shifted for IKIs of larger linguistic edges, we introduce the assumption that pauses at larger linguistic edges are more likely but not obligatory. This is achieved by modelling IKIs as coming from a weighted mixture of two distributions associated with two different states: 
+
+1. Activation can flow into keystrokes without interruption. These fluent keystroke transitions are merely constrained by a person's ability to move their finger and will be captured by the $\beta$ parameter in equation \ref{eq:bimodcon}. Note that $\beta$ in both log-Gaussian distributions in equation \ref{eq:bimodcon} refers to the same unknown parameter. 
+
+2. Interruptions in the activation flow leads to pauses when fingers have to catch-up with cognitive activity, when words or their spelling could not be retrieved in time. The slowdown for these hesitant transitions is captured by $\delta$ in the first line of equation \ref{eq:bimodcon}. The magnitude of the slowdown is associated with transition location. This is because delays at larger linguistic units are likely to be associated with higher level planning.  By constraining $\delta$ to be positive, it captures how much longer hesitant IKIs in addition to $\beta$. 
+
 
 \begin{equation}
 \begin{aligned}
 (\#eq:bimodcon)
-\text{iki}_{i} & \sim \theta_\text{location[i]} \cdot \text{LogN}(\beta + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
-  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
-\text{where: } & \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
+\text{iki}_{i} \sim\text{ } & \theta_\text{location[i], participant[i]} \cdot \text{LogN}(\beta + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i], participant[i]}) \cdot \text{LogN}(\beta + u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
+\text{where: } & u_\text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
 \text{constraint: } & \delta, \sigma_{e}^2, \sigma_\text{e'}^2, \sigma_\text{p}^2>0\\
-		& \sigma_{e'}^2 > \sigma_{e}^2
+		& \sigma_{e'}^2 > \sigma_{e}^2\\
+		& 0 > \theta > 1
 \end{aligned}
 \end{equation}
 
-```{r}
-#		<!-- &\delta \sim \text{N}(0,1)\\ -->
 
-```
+The first line of equation \ref{eq:bimodcon} represents the distribution of hesitant key transitions, and the second line represents fluent key transitions. Each of these two distributions is associated with the mixing weight $\theta$ which is a proportion that is constrained to be larger than 0 and smaller than 1. $\theta$ is here parametrised to represent the probability that an IKI is associated with the distribution of long IKIs. This probability is inversely related to the mixing weight of the distribution of short IKIs by $1-\theta$. In other words, a larger weight of one distribution inevitably means a lower weight for the other distribution. The weights of both distributions must sum to 1. We will call this parameter the probability of hesitant transitions.
+
+The probability of hesitant transitions is assumed to vary as a function of both transition location and participants. In line with the literature discussed in the introduction, we assume that pauses are more likely at larger linguistic edges. As pausing is subject to individual differences and writing style (skills), we also assume that some participants pause more at certain transition locations and other participants pause less. This is akin to what is known as a random by-participant slopes model. 
+
+Lastly, we carried over the unequal variance assumption and let the standard deviations $\sigma_{e'}^2$ and $\sigma_{e}^2$ vary by transition location. In addition we constrained the variances so that $\sigma_{e'}$ associated with the distribution of typing disfluencies is larger than the variance associated with fluent transitions $\sigma_e$ [see @vasishth2017; @vasishth2017feature]. This was achieved by introducing a parameter $\sigma_\text{diff}$. The consequence is that fluent transitions are assumed to come from a narrower distribution than hesitant transitions.
 
 
-This models takes into account two source = s of participant-specific error: (1) each participant has an individual fluent typing as in the previous models; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor.
 
+#### Bimodal log-Gaussian (unconstrained)
 
-### Bimodal log-Gaussian (unconstrained)
+In principle, we do not need to assume that the size of a fluent key-transition varies by transition location. In other words, the parameter $\beta$ is the same for before-sentence, before-word, and within-word transitions. This is what we called a constrained model. However, letter bigrams (or trigrams) may be executed faster than transitions between between space and a letter (REFERECE?) or complex keystrokes that comprise space and shift-letter combinations for upper case characters before sentences (we will address the latter possibility in the results section). This is because bigrams / trigrams might be stored, retrieved and executed as motor codes but not transitions outside of words. Also, because of the necessarily larger number of within-word transitions, as opposed to before-word and sentence transitions, the posterior of the constrained model is dominated by within-word transition data. We therefore also implemented an unconstrained model that assumes that the size of fluent transitions varies across transition locations.
 
-This model is identical to the previous model with one exception. The distribution of fluent keystroke transitions captured by $\beta$ was fixed to be the same across transition locations is the previous model. In other words, the mean $\beta$ and it's standard deviation $\sigma_{e}^2$ was the same for before-sentence, before-word, and within-word transitions. This means, because of the naturally larger number of within-word transitions, the posterior is dominated by within-word transitions. 
-
-In this model we will loosen this constraint and allow $\beta$ and $\sigma_{e}^2$ to vary by transition-location.
+In this model we assume that $\beta$ varies by transition-location as illustrated in equation \ref{eq:bimoduncon}.
 
 \begin{equation}
 \begin{aligned}
 (\#eq:bimoduncon)
-\text{iki}_{i} &\sim \theta_\text{location[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
-  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
-	\text{where: }  & \text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
+\text{iki}_{i} \sim\text{ } & \theta_\text{location[i], participant[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i], participant[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
+	\text{where: }  & u_\text{participant} \sim \text{N}(0, \sigma_\text{p}^2) \\
 \text{constraint: } & \delta, \sigma_{e}^2, \sigma_\text{e'}^2, \sigma_\text{p}^2>0\\
 		& \sigma_{e'}^2 > \sigma_{e}^2
 \end{aligned}
 \end{equation}
 
-```{r}
-#<!-- & \delta \sim \text{N}(0,1)\\ -->
 
-```
-	
+
 
 ## Data sets
 
-Five datasets with keystroke data from text production were used for analysis. An overview can be found in Table \ref{tab:datasets}.
+Five datasets with keystroke data from free text production were used for analysis. An overview can be found in Table \ref{tab:datasets}; details will be presented below.
 
 \blandscape
 ```{r datasets, results='asis'}
@@ -237,8 +312,8 @@ tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT", "GUNNEXP2"),
                 Source = c("Rønneberg et al. (2022)",
                            "Torrance et al. (2016)",
                            "Torrance et al. (n.d.)",
-                           "Rossetti and Van Waes (2022)",
-                           "Vandermeulen et al. (2020)", 
+                           "Rossetti and Van Waes (2022b)",
+                           "Vandermeulen, Steendam, et al. (2020)", 
                            "Torrance and Ofstad (n.d)"),
                 Keylogger = c("EyeWrite", 
                            "EyeWrite", 
@@ -281,49 +356,39 @@ tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT", "GUNNEXP2"),
 
 
 
-### GUNNEXP2
-
-TODO: Mark, can you add information here? I've added a provisional bib entry that needs changing or we just say "unpublished"
-
-
-
-The GUNNEXP2 dataset published in @torranceb includes keystroke data from a text composition task performed by Norwegian undergraduate students (mean age: XXX). In this dataset participants wrote text either in a masked condition in which the produced text was replaced by 'x's or in an unmasked condition in which the students composed text as normal. Keystroke data were captured using EyeWrite [@sim07; XXXX].
-
-
-
 ### C2L1
 
-TODO: Mark, can you add information here?
+TODO: Mark, can you add information here if needed? I was thinking about adding the aim of the study but it feels unnessary.
 
-TODO: might need to remove kids that don't speak Norwegian at home (see github issue)?
+TODO: might need to remove kids that don't speak Norwegian at home (see github issue)? I don't think that's necessary though.
 
-The C2L1 data set comprises data Norwegian 6th graders -- *N*=126, mean age 11 years 10 months -- published in @ronneberg2022process. The children composed argumentative essays in Norwegian, a language with a relatively shallow orthography. Keystroke data were captured using EyeWrite [@sim07; XXXX].
-
-
+The C2L1 data set comprises data Norwegian 6th graders -- *N* = 126, mean age 11 years 10 months -- published in @ronneberg2022process. The children composed argumentative essays in Norwegian, a language with a relatively shallow orthography. Keystroke data were captured using EyeWrite [@sim07; @torrance201203].
 
 
 ### CATO
 
 TODO: Mark, can you add information here?
 
-Data are published in @torrance2016adolescent. Norwegian upper secondary students--*N*=26, mean age = 16.9 years--with weak decoding skills and 26 age-matched controls composed expository texts by keyboard under two conditions: normally and with letters masked to prevent them reading what they were writing. Keystroke data were captured using EyeWrite [@sim07; XXXX].
+Data are published in @torrance2016adolescent. Norwegian upper secondary students -- *N* = 26, mean age = 16.9 years -- with weak decoding skills and 26 age-matched controls composed expository texts by keyboard under two conditions: normally and with letters masked to prevent them reading what they were writing. Keystroke data were captured using EyeWrite [@sim07; @torrance201203].
+
+
+### GUNNEXP2
+
+TODO: Mark, can you add information here? I've added a provisional bib entry that needs changing or we just say "unpublished". I could also just use Escop as reference (also for SPL2; maybe my SIG Writing talk). Was the sample Norwegian?
+
+The GUNNEXP2 dataset published in @torranceb includes keystroke data from a text composition task performed by Norwegian undergraduate students (mean age: XXX). In this dataset participants wrote texts either in a masked condition in which the produced text was replaced by 'x's or in an unmasked condition in which the students composed text as normal. Keystroke data were captured using EyeWrite [@sim07; @torrance201203].
+
+### LIFT
+
+The LIFT data are published in @vandermeulen2020 and described in @vandermeulen2020mapping. The primary aim of this data set was to create a national baseline on synthesis writing in Dutch secondary education, including student's text quality, writing process, and perspectives on writing. Within this national survey, a representative sample of Dutch students (*N* = 658, mean age = 16.95 years, 428 females and 230 males) in the three highest grades of pre-university education (grades 10, 11, and 12) in the Netherlands was collected from 43 schools. The students first received instruction on synthesis writing, after which they were asked to conduct two synthesis tasks, with small breaks in between, thereafter students had a longer lunch break, followed by a survey on writing perspectives and again two synthesis tasks with a small break in between. In the four tasks, students were asked to write two argumentative and two informative texts on laptop, about each of four topics (food additives, self-driving cars, the human-wildlife conflict in Africa, and the pay gap), with order randomized per school. The students received 50 minutes for each tasks. Not all students conducted all four tasks, resulting in a final sample of 2310 synthesis texts. During the synthesis tasks keystroke data were captured using InputLog [@leijten2013keystroke; @van2019multilingual; @waes2019]. 
+
 
 
 ### PLanTra
 
-TODO: Rianne, can you add information here?
+<!-- It should be pointed out that, while some students decided to revise the assigned texts, the majority of them opted for rewriting the texts from scratch. -->
 
-
-The PLanTra (Plain Language for Financial Content: Assessing the Impact of Training on Students' Revisions and Readers' Comprehension) data set [@rossetti2022s] involved the collection of keystroke data from 47 university students, who were randomly divided into an experimental and a control group. In a pre-test session, all students were assigned an extract of a corporate report dealing with sustainability and were instructed to revise it to make it easier to read for a lay audience. Subsequently, the experimental group received training on how to apply plain language principles to sustainability content, while the control group received training exclusively on the topic of sustainability. During a post-test session, both groups were instructed to revise a second extract of a corporate sustainability report with the same goal--i.e. making it easier to read for a lay audience--by applying what they had learned from their respective training. The texts were in English while the participants were native speakers of other languages (mainly Dutch), so writing took place in second language. It should be pointed out that, while some students decided to revise the assigned texts, the majority of them opted for rewriting the texts from scratch. Keystroke data were captured using InputLog [@leijten2013keystroke; @van2019multilingual; @waes2019].
-
-
-
-
-### LIFT
-
-TODO: Rianne, can you add information here?
-
-The LIFT (Improving Pre-university Students' Performance in Academic Synthesis Tasks with Level-up Instructions and Feedback Tool) data are published in @vandermeulen2020. Students produced text for 4 topics in two different writing genres (levels: argumentative text, informative text). Keystroke data were captured using InputLog [@leijten2013keystroke; @van2019multilingual; @waes2019].
+The PLanTra (Plain Language Training for business content) data are published in @rossetti2022text and described in @rossetti2022s. The primary aim of the project was to investigate the impact of plain language instruction on business students' strategies to simplify business texts as well as on the comprehensibility of the produced texts. A total of *N* = 47 graduate students (mean age = 23 years, 38 females and 9 males, 45 native Dutch speakers) of the master Business and Economics participated. The study adopted a pre-test post-test design. As pre-test, participants were asked to rewrite a given text (extract of a corporate report on sustainability), to make it more engaging and easier to read for a lay audience. Thereafter the experimental group received online instruction on how to apply plain language principles to sustainability content, while the control group received online instruction exclusively on the topic of sustainability. Participants were asked to spend at least 45 minutes on the instruction module. As post-test, participants were asked 2-3 days later to simplify another extract of a corporate report on sustainability. Both reports were written in English (second language) and similar in length (274-278 words) and readability. Participants received as much time as needed for each task. During the task, keystroke data were captured using InputLog [@leijten2013keystroke; @van2019multilingual; @waes2019]. 
 
 
 
@@ -332,7 +397,7 @@ The LIFT (Improving Pre-university Students' Performance in Academic Synthesis T
 TODO: Mark, can you add information here?
 
 
-The SPL2 dataset is published in @torrancea. The data come from a textcomposition task of undergraduate university students -- *N* = 39, 28 female, mean age = 20.6 years (SD = 1.51) -- who wrote two short argumentative essays, one in English (the student's first language in all cases; L1) and one in Spanish (L2) using CyWrite [@chukharev2019combined]. CyWrite provides a writing environment with basic word processing functionality (e.g., Microsoft WordPad), including text selection by mouse action, and copy-and-paste. We recorded the time of each keystroke and mouse action, and tracked writers' eye movements within their emerging text. Participants were given a 40 minute time limit. They wrote essays in response to each of two prompts, with order and L1 / L2 counterbalanced across subjects.
+The SPL2 dataset is published in @torrancea. The data come from a text composition task of undergraduate university students -- *N* = 39, 28 female, mean age = 20.6 years (SD = 1.51) -- who wrote two short argumentative essays, one in English (the student's first language in all cases; L1) and one in Spanish (L2) using CyWrite [@chukharev2019combined]. Participants wrote essays in response to each of two prompts, with order and L1 / L2 counterbalanced across subjects.
 
 
 
@@ -340,21 +405,17 @@ The SPL2 dataset is published in @torrancea. The data come from a textcompositio
 
 ### Bayesian modelling
 
-We reanalysed keystroke data from 6 datasets in Bayesian implementations of 5 statistical models. 
-Bayesian models, as used in this paper, are ideal for the estimation of parameter values: Bayesian parameter estimates are expresses the uncertainty associated with parameter values as probability distribution [@farrell2018computational; @gelman2014; @lee2014bayesian]. To achieve this, Bayesian models require the explicit inclusion of prior information, i.e. existing knowledge about parameter values, for regulating the parameter space. For small data sets priors influence the inferred parameter estimates (known as posterior); for larger data sets weakly informative and vague priors are quickly overcome by the data [i.e. automatic Ockham's razor, @jefferys1992ockham]. In other words the choice of priors values has less impact on the posterior. In the present paper, we use weakly informative priors to aid model convergence by constraining the parameter space [see e.g. @lambert2018student; @mcelreath2016statistical]. The predictive performance (i.e. fit) of these models is compared in the Results section using leave-one-out cross-validation.
-
-Keystroke data from text composition tasks were modelled in a series of five models. An overview of all models can be found in Table \ref{tab:models}.
-
+We reanalysed keystroke data from 6 datasets in a series of 5 Bayesian models. An overview of all models can be found in Table \ref{tab:models}.
 
 ```{r models, results = 'asis'}
 models <- tibble(Models = paste0("M",1:5),
        Type = c("LMM", "LMM", "LMM", "MoG", "MoG"),
        `Eq.` = str_c("\ \\ref{eq:", c("unimodgaus", "unimodloggaus", "unimoduv", "bimodcon", "bimoduncon"), "} "),
        Description = c("Gaussian distribution",
-                       "Log-normal distribution",
-                       "Log-normal distribution and unequal variances",
-                       "Fluent transition are not allowed to vary by transition location",
-                       "Fluent transition are allowed to vary by transition location")) 
+                       "Log-Gaussian distribution",
+                       "Log-Gaussian distribution with unequal variances",
+                       "Fluent transition do not vary by transition location",
+                       "Fluent transition vary by transition location")) 
 
 apa_table(models, 
           align = c(rep("l", 2), "r", "p{9cm}"), 
@@ -364,17 +425,18 @@ apa_table(models,
           note = "LMM = Unimodal mixed-effects models; MoG = bimodal mixture of log-Gaussians") 
 ```
 
+Bayesian models, as used in this paper, are ideal for the estimation of parameter values. This is because Bayesian parameter estimates are expresses as probability distributions of the uncertainty associated with parameter value estimates [@farrell2018computational; @gelman2014; @lee2014bayesian]. To achieve this, Bayesian models require the explicit inclusion of prior information, i.e. existing knowledge about parameter values. For small data sets priors influence the inferred parameter value estimates (known as the posterior); for larger data sets weakly informative and vague priors are quickly overcome by the data [i.e. automatic Ockham's razor, @jefferys1992ockham]. In other words the choice of priors values has less impact on the posterior. In the present paper, we use weakly informative priors to aid model convergence by constraining the parameter space [see e.g. @lambert2018student; @mcelreath2016statistical]. Also, as the sample size of the reanalysed datasets is large, our weakly informative priors will not affect the posterior in any meaningful way. 
 
-For all models we modelled transition locations (levels: before sentence, before word, within word) was included as predictor in all models. Also, we included the dataset specific experimental conditions as fixed effects and included random intercepts for participants as described in the equations above. We used normal and log-normal probability function in line with typically treatments fouund in the literature. Stan code for mixture models was based on @roeser2021modelling  [see also @vasishth2017; @vasishth2017feature]. 
+For all models we included transition location (levels: before sentence, before word, within word) as predictor; for the parameters associated with transition location see equations \ref{eq:unimodgaus} -- \ref{eq:bimoduncon}. Also, we included dataset-specific experimental manipulations as fixed effects for the same model parameters as transition location. Stan code for mixture models was based on @roeser2021modelling [see also @vasishth2017; @vasishth2017feature] and can be found on OSF (ADD URL HERE); also for a tutorial how to fit Bayesian mixture models see ADD URL HERE.
 
-Data were analysed in Bayesian mixed effects models [@gelman2014;@mcelreath2016statistical]. The R [@R-base] package rstan [@rstan] was used to interface with the probabilistic programming language Stan [@carpenter2016stan] which was used to implement all models. Models were fitted with weakly informative priors [see @mcelreath2016statistical], and run with 20,000 iterations on 3 chains with a warm-up of 10,000 iterations and no thinning. Model convergence was confirmed by the Rubin-Gelman statistic ($\hat{R}$ = 1) [@gelman1992] and inspection of the Markov chain Monte Carlo chains.
+Data were analysed in Bayesian mixed effects models [@gelman2014; @mcelreath2016statistical]. The R [@R-base] package rstan [@rstan] was used to interface with the probabilistic programming language Stan [@carpenter2016stan] which was used to implement all models. Models were run with 20,000 iterations on 3 chains with a warm-up of 10,000 iterations and no thinning. Model convergence was confirmed by the Rubin-Gelman statistic ($\hat{R}$ = 1) [@gelman1992] and inspection of the Markov chain Monte Carlo chains. The predictive performance of our models was compared using leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical; @sivula2020uncertainty].
 
 
 ### Transition types
 
-The transition types that were analysed in this study focuses on those locations that were found, by previous research, to be psycholinguistically meaningful [e.g. @torrancea; @chukharev2019combined; @torrance2016adolescent; @de2018exploring] and are detailed in Table \ref{tab:keyloc}. Keytransitions that terminated in an editing operation were excluded from the analysis. Transitions that occurred at the beginning of the text or the beginning of a paragraph were not treated as before-sentence transitions.
+The transition types that were analysed in this study focus on those locations that were found, by previous research, to be psycholinguistically meaningful [e.g. @torrancea; @chukharev2019combined; @torrance2016adolescent; @de2018exploring] and are detailed in Table \ref{tab:keyloc}. In particular we analysed the key-transitions that resulted in the insertion of a character that started a new sentence as before-sentence transition; transitions that started a new word other than those at the beginning of a sentence were treated as before-word transition; all transitions within a word but not the key-transition between the last letter of a word and the subsequent space or punctuation mark were treated as within-word transitions. At before-sentence locations, IKIs were timed to the shift keypress for most data sets (CATO, C2L1, SPL2, GUNNEXP2) but included the transition to the following sentence-initial letters in some data sets (PLanTra, LIFT); we will return to this issue in the Results section. Transitions that occurred at the beginning of the text or the beginning of a paragraph were not treated as before-sentence transitions and were removed from the analysis.
 
-```{r keyloc, results='asis'}
+```{r keyloc, results='asis', fig.pos="b"}
 
 table <- tibble(`Transition type` = c("Within word", "Below word", "Before sentence"),
        Description = c("Transitions between any letter",
@@ -388,12 +450,9 @@ apa_table(table, caption = "Transition location classification.",
             align = c("p{3cm}", "p{3cm}", "p{8cm}"), 
             escape = FALSE, 
             font_size = "footnotesize",
-            note = "$'^{\\wedge}$' marks transition location; [bsp] represents backspace. At before-sentence locations, IKIs were timed to the shift keypress.")
+            note = "$'^{\\wedge}$' marks transition location; [bsp] represents backspace.")
 
 ```
-
-
-
 
 
 ### Data reduction
@@ -411,14 +470,11 @@ spl2 <- get_spl2("../data/spl2.csv", n_samples = n_samples)
 gunnexp2 <- get_gunnexp2("../data/gunnexp2.csv", n_samples = n_samples)
 ```
 
+For all datasets we only used transitions that were not followed by an editing operation. Transitions that occurred at the beginning of the text or the beginning of a paragraph were removed. We removed participants that did not complete all conditions in studies with within-participant factors (reducing the number of participants to 343 in the LIFT data set, and 41 participants in the PLanTra data set). We removed participants that produced less than 10 sentences (LIFT: 109 participants; PLanTra: 3 participants; SPL2: 1 participant). 
 
-For all datasets we only used transitions that were not followed by an editing operation.
+We further removed keystroke intervals that are extremely short ($\le$ 50 msecs) or extremely long ($\ge$ 30 secs); the percentage of remove keystroke data can be found in Table \ref{tab:datareduction}. From the remaining data we randomly sampled `r n_samples` observations per participant, per condition, and per transition location, with the exception of the LIFT data set. This was done for computational reasons to reduce the time the Bayesian models need to complete sampling. For the LIFT data set we reduced the number of participants to 100 which is substantially more than most of the other data sets in our data pool. Because the LIFT data set included the large number of writing tasks as fixed effect, we sampled 50 observations per condition, location and participant to not exceed our computational resources. The percentage of keystroke data that went into the final analysis can be found, by transition location, in Table \ref{tab:datareduction}.
 
-We removed participants that did not complete all conditions in studies with within-participant factors (reducing the number of participants to 343 in the LIFT data set, and 41 participants in the PLanTra data set). We removed participants that produced less than 10 sentences (LIFT: 109 participants; PLanTra: 3 participants; SPL2: 1 participant)
 
-We removed keystroke intervals that are extremely short ($\le$ 50 msecs) or extremely long ($\ge$ 30 secs). The percentage of remove keystroke data can be found in Table \ref{tab:datareduction}.
-
-From the remaining data we randomly sampled `r n_samples` observations per participant, per condition, and per transition location, with the exception of the LIFT data set. This was done for computational reasons to reduce the time the Bayesian models need to complete. For the LIFT data set we reduced the number of participants to 100 which is substantially more than most of the other data sets in our analysis. Because we included the large number of writing tasks in the LIFT data set as fixed effect, we sampled 50 observations per condition, location and participant. The percentage of keystroke data that went into the final analysis can be found, by transition location, in Table \ref{tab:datareduction}.
 
 
 ```{r datareduction, results='asis'}
@@ -444,18 +500,22 @@ random_sample <-
     mutate(across(where(is.numeric), ~round(.*100, 1))) %>%
     unite("keep", starts_with("keep"), sep = " (") %>% 
     mutate(across(c(keep), ~str_c(., ")"))) %>%
-  pivot_wider(names_from = location, values_from = keep)
+  pivot_wider(names_from = location, values_from = keep) %>% 
+  relocate(`within word`)
 
 datareduction <- left_join(extrem_values, random_sample, by = "ds") %>% 
   relocate(ds) %>% 
-  mutate(across(ds, ~recode(., 
-                "cato" = "CATO",
-                "spl2" = "SPL2", 
-                "spl2_shift" = "SPL2 (shift + C)", 
-                "plantra" = "PLanTra",
-                "lift" = "LIFT",
+  mutate(across(ds, ~recode_factor(., 
                 "c2l1" = "C2L1",
-                "gunnexp2" = "GUNNEXP2"))) %>% 
+                "cato" = "CATO",
+                "gunnexp2" = "GUNNEXP2",
+                "lift" = "LIFT",
+                "plantra" = "PLanTra",
+#                "spl2_shift" = "SPL2 (shift + C)", 
+                "spl2" = "SPL2",
+                .ordered = T
+                ))) %>% 
+  arrange(ds) %>% 
   rename(`Dataset` = ds)
 
 apa_table(datareduction, 
@@ -477,11 +537,9 @@ apa_table(datareduction,
 
 ## Out-of-samples cross-validation
 
-To compare the out-of-sample predictive performance of the models we used Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and its  difference $\Delta\widehat{elpd}$ between models. The advantage of using leave-one-out cross-validation is that models with more parameters are penalised to prevent overfit.
+To compare the out-of-sample predictive performance of our models we used Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and compared via its difference $\Delta\widehat{elpd}$ between models. Similar to other cross-validation techniques, the advantage of using leave-one-out cross-validation is that more complicated models -- models with more parameters -- are penalised to prevent overfit.
 
-Results for all data sets are shown in Table \ref{tab:loos}. For all data sets we found the same pattern. The mixture of log-normal distribution models provided a substantially better fit than any of the uni-modal distribution models. The unconstrained version of the mixture of log-normal distributions rendered a higher predictive performance than the constrained version that does not allow the distribution of short keystroke-intervals to vary across transition locations. 
-
-We also evaluated to what extent model predictions fit observed data. These comparisons can be found in Appendix \ref{fit-to-data} and echo the findings reported in the model comparisons in Table \ref{tab:loos}.
+Model comparison results for all data sets are shown in Table \ref{tab:loos}. For all data sets we found the same pattern. Both bi-modal mixture models provided a substantially better fit than any of the uni-modal distribution models. The unconstrained version of the mixture model rendered a higher predictive performance than the constrained version which does not allow the distribution of short keystroke-intervals to vary across transition locations (and data set specific manipulations). Among the uni-modal models we found higher predictive performance for the unequal variance model compared to the log-Gaussian model. The weakest model was the uni-modal Gaussian model.
 
 
 ```{r}
@@ -515,8 +573,8 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
                mogbetaconstr = "M4",
                mogbetacontr = "M4",
                mogbetaunconstr = "M5"),
-    across(model, ~recode(., lmm = "Unimodal log-normal",
-                          lmmgaus = "Unimodal normal",
+    across(model, ~recode(., lmm = "Unimodal log-Gaussian",
+                          lmmgaus = "Unimodal Gaussian",
                           mogbetaconstr = "Bimodal (constrained)",
                           mogbetacontr = "Bimodal (constrained)",
                           mogbetaunconstr = "Bimodal (unconstrained)",
@@ -532,7 +590,7 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
 names(table)[-1] <- c("Model", "Description", rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"), 1))
 
 apa_table(table[,-1], 
-      caption = "Model comparisons. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
+      caption = "Model comparisons. The top row of each dataset shows the models with the highest predictive performance. Standard error is shown in parentheses.",
       align =c("p{3.5cm}", "p{6cm}", rep("r", 2)), 
       escape = FALSE,
       longtable = T,
@@ -550,6 +608,9 @@ apa_table(table[,-1],
 ```
 
 
+We also evaluated to what extent model predictions fit observed data. These comparisons can be found in Appendix \ref{fit-to-data} and echo the findings reported in the model comparisons in Table \ref{tab:loos}. Model predictions fit the data well in the case of bi-modal mixture models and poorest for the uni-modal Gaussian model.
+
+
 ## Cross-data set comparisons
 
 
@@ -565,9 +626,9 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   mutate(data = .x)) %>% 
   mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(data, ~recode_factor(., 
-                "cato" = "CATO (non-dyslexic\nunmasked)",
-                "gunnexp2" = "GUNNEXP2 (unmasked)",
-                "spl2" = "SPL2 (L1)", 
+                "cato" = "CATO",# (non-dyslexic, unmasked)",
+                "gunnexp2" = "GUNNEXP2",# (unmasked)",
+                "spl2" = "SPL2", # (L1)", 
 #                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
                 "plantra" = "PLanTra",
                 "lift" = "LIFT",
@@ -594,20 +655,21 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
 ```
 
 
-As detailed above the mixture model captures the writing process in three conceptually important parameter values: (1) the transition duration associated with fluent writing (which we indicated as $\beta$), (2) the size of the slowdown for hesitant transitions (indicated as $\delta$), and (3) the mixing proportion which represents the probability of hesitant transition durations (indicated as $\theta$). 
+As demonstrated in the model comparisons, the unconstrained bi-modal mixture-model captures the writing-process data better than uni-modal models. Conclusions about the the writing process are captured by the model parameters and the posterior parameter value estimates. There are three conceptually important parameters: (1) the average duration of fluent transitions (which was indicated as $\beta$ in equation \ref{eq:bimoduncon}), (2) the magnitude of the slowdown for hesitant transitions (represented as $\delta$), and (3) the probability of hesitant transition duration (represented as $\theta$). 
 
-We present the mixture-model estimates for each of the three parameter values in Figure \ref{fig:crossstudypost}. Although models were fitted with all dataset-specific condition, we aggregated across conditions^[We aggregated across pre-post test for the PLanTra dataset as well as genre and topic of the LIFT data set. We demonstrate in Appendix \ref{pre-post-test-plantra} and \ref{genre-effect-lift} respectively that there is negligible evidence for differences between these conditions], and removed conditions that might conflate comparisons^[We removed masked writing condition in the GUNNEXP2 and CATO, the dyslexic group in the CATO dataset, and L2 writing in the SPL2 data. Appendix \ref{masking-effect-cato-gunnexp2} and \ref{l2-effect-spl2} demonstrate that evidence for differences in parameter values for the involved manipulations.]. For posteriors of all conditions within dataset see Appendix \ref{posterior-parameter-estimates}. The posterior of the remaining conditions allows us to compare differences between transition locations within dataset associated with each of the three mixture-model parameters. 
+We present the mixture-model posterior estimates for each of the three parameter values in the three facets of Figure \ref{fig:crossstudypost}. Although models were fitted with all data set-specific condition, we aggregated the posterior across conditions^[We aggregated across pre-post test for the PLanTra dataset as well as genre and topic of the LIFT data set. We demonstrate in Appendix \ref{pre-post-test-plantra} and \ref{genre-effect-lift} respectively that there is negligible evidence of differences between these conditions.], and removed conditions that might conflate comparisons^[We removed the masked writing condition in the GUNNEXP2 and CATO, the dyslexic group in the CATO data set, and L2 writing in the SPL2 data set. Appendix \ref{masking-effect-cato-gunnexp2} and \ref{l2-effect-spl2} demonstrate that there is evidence for differences in parameter values for these manipulations.]. For posteriors of all conditions within data sets see Appendix \ref{posterior-parameter-estimates}. The resulting posterior allows us to examine differences between transition locations for each data set associated with each of the three mixture-model parameters. 
 
 
 
-```{r crossstudypost, fig.cap="Estimates across studies. Posterior parameter distribution represented as estimate and 95\\% probability interval (PI)."}
+```{r crossstudypost, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GUNNEXP2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group. Axes for transitions durations are log-scaled for visability."}
 
-posd <- position_dodge(.65)
-dotsize <- 2.5
-grouplabel <- "Data set"
+posd <- position_dodge(.5)
+dotsize <- 2.75
+grouplabel <- "Data set:"
 shapes <- c(1, 4, 6, 7, 8, 9, 11)
 width <- 0
-linewidth <- .75
+linewidth <- .35
+nrow <- 1
 beta <- filter(ps, name == "beta") %>% 
   mutate(name = beta_label) %>% 
   ggplot(aes(y = mean, 
@@ -617,7 +679,7 @@ beta <- filter(ps, name == "beta") %>%
              shape = data,
              group = interaction(data))) +
   geom_line(linewidth = linewidth, 
-            alpha = .35, 
+            alpha = .75, 
             position = posd) +
   geom_errorbar(width = width, alpha = .75, position = posd) +
   geom_point(aes(colour = data), 
@@ -626,12 +688,12 @@ beta <- filter(ps, name == "beta") %>%
   facet_grid(~name) +
   scale_shape_manual(values = shapes) +
   scale_colour_colorblind() +
-  scale_y_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma, breaks = c(50, 150, 200, 300, 400, 500)) +
   theme(axis.title = element_blank()) +
   labs(colour = grouplabel,
        shape = grouplabel) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
 
 delta <- filter(ps, name == "delta") %>% 
   mutate(name = delta_label,
@@ -642,7 +704,7 @@ delta <- filter(ps, name == "delta") %>%
              x = location,
              shape = data,
              group = interaction(data))) +
-  geom_line(linewidth = linewidth, alpha = .35, position = posd) +
+  geom_line(linewidth = linewidth, alpha = .75, position = posd) +
   geom_errorbar(width = width, alpha = .75, position = posd) +
   geom_point(aes(colour = data), 
             size = dotsize, 
@@ -654,8 +716,8 @@ delta <- filter(ps, name == "delta") %>%
   labs(colour = grouplabel,
        shape = grouplabel) +
   theme(axis.title = element_blank()) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
 
 
 theta <- filter(ps, name == "prob") %>% 
@@ -666,7 +728,7 @@ theta <- filter(ps, name == "prob") %>%
              x = location,
              shape = data,
              group = interaction(data))) +
-  geom_line(linewidth = linewidth, alpha = .35, position = posd) +
+  geom_line(linewidth = linewidth, alpha = .75, position = posd) +
   geom_errorbar(width = width, alpha = .75, position = posd) +
   geom_point(aes(colour = data), 
             size = dotsize, 
@@ -678,11 +740,10 @@ theta <- filter(ps, name == "prob") %>%
   labs(colour = grouplabel,
        shape = grouplabel) +
   theme(axis.title = element_blank()) +
-  guides(colour=guide_legend(nrow=2,byrow=TRUE),
-         shape = guide_legend(nrow=2,byrow=TRUE))
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
 
-plot <- beta + delta + theta +
-  plot_layout(guides = "collect")
+plot <- beta + delta + theta + plot_layout(guides = "collect")
 
 grid.arrange(patchworkGrob(plot), 
              left = "Posterior estimate with 95% PIs",
@@ -690,17 +751,18 @@ grid.arrange(patchworkGrob(plot),
 
 ```
 
-Figure \ref{fig:crossstudypost} shows largely the same patterns for keystroke interval estimates by transition location across datasets for all three mixture model parameters. keystroke transitions were substantially longer for the C2L1 data presumably reflecting that the sample of in this dataset was the youngest. Pause durations and frequencies were relatively similar across datasets.
+In the following we evaluate differences between transition locations for all three mixture model parameters. Figure \ref{fig:crossstudypost} shows largely the same patterns (with caveats) for keystroke interval estimates by transition location across data sets for all three mixture model parameters. We evaluated the evidence for differences between transition locations for all data sets: Results are shown in Table \ref{tab:loceffect}. We found that hesitations appear more frequently at before-word transitions than within words across data sets. Also hesitations are longer at before-sentence transitions compared to before-word transitions (except data set C2L1) compared to within-word transitions (except data set LIFT). Further, we observed that fluent key-transitions are slower at before-word and before-sentence locations compared to within-word locations but there is generally not difference for fluent transitions for before-sentence transitions compared to before-word transitions (except for data sets SPL2 and GUNNEXP2).
 
-In the following we will evaluate differences between transition locations for all three mixture model parameters. This is interesting because it is generally believed that pausing behaviour is associated with syntactic edges such that more and longer pauses are predicted for key transitions at larger syntactic edges following the pattern before-sentence $>$ before-word $>$ within-word. We evaluated the differences between transition locations for all data sets. The results are shown in Table \ref{tab:loceffect}. 
 
-Comparing transition locations rendered patterns that are largely consistent across data sets (with caveats). We found that hesitations appear more frequently at before-word transitions than within words across datasets. Also hesitations are longer at before-sentence transitions compared to before-word transitions (except dataset C2L1) compared to within-word transitions (except dataset LIFT). However, for most dataset there is negligble evidence for the idea that writers pause more frequently at before-sentence locations compared to before-word locations (except for datasets SPL2 and GUNNEXP2). In fact, the dataset LIFT showed less pausing before sentences compared to before words. Also, we observe that even fluent key-transitions are slower at before-word locations compared to within-word locations but there is generally not difference for fluent transitions for before-sentence transitions compared to before-word transitions (except for datasets SPL2 and GUNNEXP2). Hesitation durations tend to be longer at before-sentence locations compared to before-word locations (except for datasets C2L1 and LIFT) and longer for before-word locations compared to within-word locations (except for the LIFT dataset).
+Hesitation duration tends to be longer at before-sentence locations compared to before-word locations (except for data sets C2L1 and LIFT) and longer for before-word locations compared to within-word locations (except for the LIFT data set). However, for most data set there is negligible evidence for the idea that writers pause more frequently at before-sentence locations compared to before-word locations (except for data sets SPL2 and GUNNEXP2). This is interesting because it is generally believed that pausing behaviour is associated with syntactic edges such that more and longer pauses are predicted for key transitions at larger syntactic edges following the pattern before-sentence $>$ before-word $>$ within-word. In fact, the data set LIFT showed less pausing before sentences compared to before words. 
 
 In brief, while keystroke transitions and pauses tend to be longer and more frequent at before-word locations compared to within-word transitions, it is not clear in which contexts keystroke transitions are before-sentence locations are slower, and their hesitations are longer and more frequent. 
 
-The inconsistencies for before-sentence transitions could, to some extent, be explained on the basis that datasets differ as to whether before-sentence transitions should be analysed as complex key combination. In particular, some data include the character key following the shift key at before sentence location (PLanTra, LIFT) but others did not (CATO, C2L1, SPL2, GUNNEXP2) scope over the character following the shift key. Notice though that for the datasets PLanTra and LIFT, there were no consistent differences between before-sentence and before-word transitions (except for longer hesitations in the PLanTra dataset). 
+Outstanding are the overall substantially longer fluent transitions for the C2L1 data. This is presumably reflecting that the population that this sample is from was the youngest among our data sets presumably involving the least experienced writers in our data pool. Hesitation duration and frequencies were similar to the other data sets.
 
-We test to what extent this difference may affect the modelling results for the SPL2 dataset. The results are shown in Appendix \ref{key-combination-effect-spl2}. We found that including the character following the shift key substantially extends both the transition duration and the hesitation duration but not the hesitation frequency. However, this is in conflict with the absence of differences in datasets that included the character following shift at before-sentence transitions. In other words, it is unlikely that patterns in our results can be explained on the basis of complex key combinations at before-sentence locations.
+There are some inconsistencies for fluent before-sentence transitions compared to before-word transitions. Some data sets show before-sentence slowdowns for fluent transition compared to words. These inconsistencies could, to some extent, be explained on the basis that data sets differ as to whether before-sentence transitions involve complex key combination involve the mean or sum of transitions between space, shift and / or the sentence-initial letters. In particular, some data include the character key following the shift key at before sentence location (PLanTra, LIFT) but others did not scope over the character following the shift key (CATO, C2L1, SPL2, GUNNEXP2). Notice though that for the data sets PLanTra and LIFT, there was no evidence for a consistent differences between before-sentence and before-word transitions (except for longer hesitations in the PLanTra dataset). 
+
+To address this finding, and inconsistency in how before-sentence transitions were timed, we test to what extent this difference affected the modelling results for the SPL2 data set. The results are shown in Appendix \ref{key-combination-effect-spl2}. We found that including the character following the shift key substantially extends both the transition duration and the hesitation duration but not the hesitation frequency. However, this conflicts with the absence of differences in data sets that included the character following shift at before-sentence transitions (PLanTra, LIFT). In other words, it is unlikely that patterns in our results can be explained on the basis of how before-keystroke transitions were operationalised (complex key-combinations at before-sentence locations).
 
 Further comparisons can be found in the Appendix: L2 effect (SPL2) in Appendix \ref{l2-effect-spl2}; masking effect (CATO, GUNNEXP2) in Appendix \ref{masking-effect-cato-gunnexp2}; pre-post test effect (PLanTra) in Appendix \ref{pre-post-test-plantra}; genre effect (LIFT) in Appendix \ref{genre-effect-lift}. 
 
@@ -776,170 +838,98 @@ apa_table(tmp[,-1],
 ```
 \elandscape
 
-## Simulation
-
-A possible concern with the results -- substantially better predictive performance for mixture models -- is that, in principle, as the mixture model has more parameters it might always lead to a better fit. We addressed this concern before by using cross-validation techniques for model comparison which is preventing overfitting models.
-
-To address this concern we repeated a comparison for an unimodal model and a mixture model for two sets of simulated data. For each dataset we simulated 1,000 observations.
-
-These two datasets differ with regards to their underlying data generating process. The first set of data has as underlying data generating process a mixture model with two mixture components similar to the process described above. This process and the corresponding Bayesian model is summarised in equation \ref{eq:simmog}.
-
-\begin{equation}
-\begin{aligned}
-(\#eq:simmog)
-\text{y}_i \sim\text{ } & \theta \cdot \text{logN}(\beta + \delta, \sigma^2_1) +\\
-& (1 - \theta) \cdot \text{logN}(\beta, \sigma^2_2)\\
-\text{constraint: } & \delta, \sigma_\text{2}^2, \sigma_\text{1}^2>0\\
-		& \sigma_{1}^2 > \sigma_{2}^2
-\end{aligned}
-\end{equation}
-
-This model is largely identical with the models before but reduced to its main parameters. There are two log-normal distributions with a mixing proportion $\theta$ of which the distribution of shorter values has a mean of $\beta$ and a standard deviation $\sigma^2_2$; the second distribution of longer values is constrained to have a mean that is larger by a factor of $\delta$ and has a larger standard deviation $\sigma^2_1$.
-
-The second dataset was generated with an unimodal model as data generating process. The model and its corresponding Bayesian model is summarised in equation \ref{eq:simuv}.
-
-\begin{equation}
-\begin{aligned}
-(\#eq:simuv)
-\text{y}_i \sim\text{ }& \text{logN}(\beta, \sigma^2)
-\end{aligned}
-\end{equation}
-
-Again, this model is a simplified version of the unimodal models used in the main analysis. The model assumes a log-normal distribution with a mean parameter $\beta$ and a standard deviation $\sigma^2$.
-
-The parameter values used for each of the two data simulations can be found in Table \ref{tab:simparam}. The simulated data are visualised in Figure \ref{fig:simdata}. The data are simulated to be similarly distributed to keystroke transitions.
-
-```{r simdata, fig.cap= "Data simulated with a bimodal process (left) and a unimodal process (right).", fig.height=3.5, fig.width=5}
-files <- list.files("../mixture-model-sim/data", full.names = T)
-
-map_dfr(files, ~read_csv(.) %>% 
-        mutate(Dataset = str_remove_all(.x, "../mixture-model-sim/data|/|.csv" ))) %>%
-  mutate(across(Dataset, ~recode(., mogdata = "bimodal", lmdata = "unimodal"))) %>% 
-  ggplot(aes(x = value, colour = Dataset, fill = Dataset)) +
-  geom_density(alpha = .25) +
-  scale_colour_colorblind() + 
-  scale_fill_colorblind() +
-  scale_x_continuous(labels = ~format(., big.mark = ",")) +
-  labs(colour = "Data process", 
-       fill = "Data process", 
-       x = "Simulated data", 
-       y = "Density")
-```
-
-We run 4 models, 2 on each of the two datasets: 2 mixture models, one for the data generated with a bimodal mixture process and one for the data generated with the unimodal process. We repeated the same using an unimodal model. Models were run with 3 chains, with each 6,000 iterations of which 3,000 were warmup. Estimates with 95% probability intervals are shown in Table \ref{tab:simparam}. The parameters are shown by data generating process along with with true parameter values. Parameter estimates are shown for the dataset generated with a unimodal process and the dataest generated with a bimodal process. The Bayesian models uncovered the model parameters of the dataset with the matching data generating process successfully, as shown in Table \ref{tab:simparam}, but less so when the model was applied to data generated with the incorrect underlying process.
-
-```{r}
-mog1 <- read_csv("../mixture-model-sim/stanout/mog_mogdata.csv") %>% 
-  mutate(data = "mog")
-mog2 <- read_csv("../mixture-model-sim/stanout/mog_lmdata.csv") %>% 
-  mutate(data = "lm")
-lm1 <- read_csv("../mixture-model-sim/stanout/lm_lmdata.csv") %>% 
-  mutate(data = "lm")
-lm2 <- read_csv("../mixture-model-sim/stanout/lm_mogdata.csv") %>% 
-  mutate(data = "mog")
-
-mog_sim <- bind_rows(mog1, mog2) %>% 
-  summarise(across(value, list(est = mean,
-                               lo = lower,
-                               up = upper),
-                   .names = "{.fn}"),
-            .by = c(name, data)) %>% 
-  mutate(across(where(is.numeric), ~round(., 2)),
-         across(where(is.numeric), ~ifelse(str_detect(name, "prob"), dezero(., 2), .)),
-         across(est, ~str_c(., " [", lo, ", ", up, "]")),
-         across(name, ~str_c("\\", .)),
-         across(name, ~str_replace(., "a_e", "a^2_1")),
-         across(name, ~str_replace(., "ap_e", "a^2_2"))) %>%
-  select(-lo, -up) %>% 
-  pivot_wider(names_from = data, values_from = est) %>% 
-  mutate(true = c(5, 1, .35, .25, .5),
-         across(true, ~ifelse(str_detect(name, "prob"), dezero(., 2), .)),
-         across(name, ~str_replace(., "prob", "theta"))) %>% 
-  relocate(name, true) %>% 
-  unite("name", name:true, sep = " = ")
-
-lm_sim <- bind_rows(lm1, lm2) %>% 
-  summarise(across(value, list(est = mean,
-                               lo = lower,
-                               up = upper),
-                   .names = "{.fn}"),
-            .by = c(name, data)) %>% 
-  mutate(across(where(is.numeric), ~round(., 2)),
-         across(est, ~str_c(., " [", lo, ", ", up, "]")),
-         across(name, ~str_c("\\", .)),
-         across(name, ~str_replace(., "a_e", "a^2_1")),
-         across(name, ~str_replace(., "ap_e", "a^2_2"))) %>% 
-  select(-lo, -up) %>%
-  pivot_wider(names_from = data, values_from = est) %>% 
-  mutate(true = as.character(c(5, .25))) %>% 
-  relocate(name, true) %>% 
-  unite("name", name:true, sep = " = ")
-
-```
-
-
-
-
-```{r simparam, results='asis'}
-table <- bind_rows(mog_sim %>% mutate(model = "mog"),
-                   lm_sim %>% mutate(model = "lm")) %>% 
-  relocate(model) %>% 
-  mutate(across(name, ~str_c("$", ., "$")))
-
-names(table) <- c("Model", "Parameter with true value", "Bimodal data", "Unimodal data")
-
-apa_table(table[,-1], 
-          escape = FALSE,
-      col_spanners = list("Estimate with 95\\% PI" = 2:3),
-      caption = "Uncovered parameter estimates with 95\\% probability interval (PI) and true parameter values for each simulated data set and by model and their respective parameters.",
-      align = c("l", rep("r", 2)),
-      stub_indents = list(`Bimodal mixture process` = 1:5, 
-                          `Unimodal process` = 6:7))
-
-
-```
-
-We used LOO-CV to compare the fit of the two models for each data set. The model comparisons can be found for each data generating process in Table \ref{tab:loossim}. The results rules out the possibility that the mixture model does always lead to higher predictive performance. Indeed, the mixture model showed a slightly lower predictive performance for the data that were generated with a unimodal process. However, for the data generated with a bimodal process, the mixture model shows a substantially higher predictive performance. 
-
-In fact, the ratio of $\Delta\widehat{elpd}$ and its standard error, as metric for the strength of evidence [@sivula2020uncertainty], shows that the mixture model performs 11.6 times better than the unimodal model for the data generated with a bimodal process. In comparison, for the unimodal data, the unimodal model performs only 0.77 times better than the bimodal mixture model. Thus, even though the mixture model does not necessarily perform better for non-bimodal data, it also does not necessarily perform worse. 
-
-
-```{r loossim, results='asis'}
-table <- read_csv("../mixture-model-sim/stanout/modelcomparison.csv") %>% 
-  select(1:6) %>% 
-  mutate(
-#    elpd_se_ratio = abs(elpd_diff / se_diff),
-    across(ends_with("diff"), ~round(., 1)),
-    across(ends_with("loo"), ~round(., 0)),
-    across(where(is.numeric), ~format(., big.mark = ",")),
-    across(everything(), ~as.character(.)),
-    across(everything(), ~str_trim(.)),
-    across(everything(), ~str_replace_all(., "NaN", "--")),
-    across(elpd_diff, ~str_c(., " (", se_diff, ")")),
-    across(elpd_loo, ~str_c(., " (", se_elpd_loo, ")")),
-    across(elpd_diff, ~str_replace_all(., "0.0 \\(0.0\\)", "--")),
-    across(c(data, model), ~recode(., mog = "Bimodal mixture model",
-                                      lm = "Unimodal model"))) %>% 
-  select(data, model, starts_with("elpd")) 
-
-names(table) <- c("Data", "Model", "$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$")
-
-apa_table(table[,-1], 
-          escape = FALSE,
-      caption ="Model comparisons by data set. The top row shows the models with the highest predictive performance. Standard error is shown in parentheses.",
-     note = "$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.",
-      align =c("l", rep("r", 2)),
-      stub_indents = list(`Data: Bimodal mixture process` = 1:2, 
-                          `Data: Unimodal process` = 3:4))
-
-
-
-```
 
 
 # Discussion
 
+The classical serial view [@flower1980ynamics] characterizes writing as a sequence planning and execution cycles that results in a writing process that consists of bursts interrupted by pauses. Our cascading model of writing, in contrast, captures that planning, at least in competent writers can occur in parallel to production. We used Bayesian statistical models, in particular uni-modal and bi-modal hierarchical models, to directly compare the serial and the cascading model of writing, respectively. On the basis of 6 data sets with key data from free text production tasks, we presented compelling and consistent statistical evidence in favour of the cascading view. 
 
+Patters observed in the parameter estimates are generally similar across data sets (with caveats). Under the cascading view of writing, key-transitions that directly precede sentences or words are not necessarily associated with a pause but writers might plan in parallel to writing. On the basis of parameter estimates of the bi-modal mixture model we tested to what extent larger linguistic edges are associated with the preparation of upcoming planning unit. We found that in 4 of 6 data sets, pauses were as likely to occur before sentences as words, in experienced and novice writers, while mid-word pauses were rare. Also, with few exceptions, pauses at before-sentence locations were associated were longer compared to pauses at before-word transitions (which were longer than the few mid-word pauses). In other words, when writers pause, the duration of their pause generally suggest that larger linguistic edges are associated with higher-level processing. However, the pausing probability results can only be explained by the cascading view of writing, not by the serial view. This is because the hesitation probability results suggest that writers often do not pause before sentences; indeed,  they frequently plan the next sentence in parallel production resulting in roughly identical hesitation probabilities at before-sentence and before-word locations.
+
+
+Interestingly even the youngest sample in our data pool (C2L1)
+
+
+showed evidence that pauses at before sentence locations were not obligatory and similar to pauses before words. This is interesting because previous research suggested that encoding of subsequent planning units is more separated -- and therefore operates in a serial fashion -- in inexperienced writers [@olive2014toward].
+
+
+
+
+
+
+
+We did observe four difference between data sets that are worth highlighting. These can largely be explained on the basis of difference in sample population (writing competence / experience) and text genre [see also @conijn2019understanding]: 
+
+First, key-transitions of the youngest sample (C2L1) were substantially longer compared to all other datasets with a larger slowdown before words. Yet the overall pausing probability showed a patterns comparable to most other data sets. In particular, a larger pause probability was observed for transitions before sentences / words compared to mid-word transitions. The second and third exceptions concern the GUNNEXP2 and SPL2 data sets:  pauses were more likely to occur at before-sentence transitions compared to before-word transitions while in the remaining data sets hesitations were equally probably at before-word and before-sentence locations (compared to mid-word locations). **TODO: I don't have an explanation for this.** Also, fluent transitions were longer at before-sentence locations compared to before-word locations while in the remaining data sets fluent key-transitions were always shorter at mid-word compared to before-words transitions. This shows a general tendency to slow down tying at sentence boundaries for the GUNNEXP2 and SPL2 samples which was pronounced in the other data sets. Fourth, pauses were longer before sentence compared to before words compared to mid-word paues with two exceptions: (1) no difference was found for before-sentence compared to before-word transitions in C2L1 possibly due to a a word-level planning strategy in this sample of young writers as inexperienced writers tend to use a more localised strategy for text production. (2) pause durations did not vary by transition location in the LIFT data set although the posterior showed the same general patterns as observed in most data sets. The absence of a difference could be explained as specific to the synthesis writing task [**REFERENCE**]. 
+
+
+
+
+Using cross-validation and a simulation we ruled out that the overwhelming statistical support for bi-modal models can be explained in terms of model overfitting. Modelling details can be found in Appendix \ref{simulation}.
+
+
+
+
+
+A practical advantage of our mixture model approach [also @roeser2021modelling] is that we are not required to stipulate interval thresholds as plausible candidate for lower pause bound to handle the complex distribution of latency from spontaneous text production. Such threshold are widely used by writing researchers, a strategy that was inherited from early research in speech production [for review see @rochester1973significance], with studies dating back to at least the mid 1990s [@foulin1998extent]. There is one central problems with this approach: A threshold requires a definition of what passes as a pause [@wen06;@van2016keystroke], i.e. a pause criterion threshold often set to 2 secs [@chanquoy1996writing; @kaufer1986composing; @sullivan2002self; @wen02] or some other lower bound [@chukharev2014pauses; @connelly2012predicting; @leijten2013keystroke]. Even if these thresholds were adjusted relative to factors such as writing medium, experience of writer, and text location of pause [see e.g. @wen06] they would be arbitrary. For example, a sentence-initial pause of 2 s has a very different interpretation from a 2 s pause that occurs before or within a word. Our current understanding of the processes that underlie text production does not provide a strong theoretical basis on which to make this decision. So while a 2 secs threshold undoubtedly captures an interesting distinction -- processing that occurs the range zero to 2 secs is very likely to be qualitatively different from processing that takes more than 2 secs. However the same could be argued for any threshold between perhaps 250 msecs and 10 secs that a researcher might care to choose [@chenu2014interword]. Mixture models provide a principled statistical framework that allows the researcher to model behavioural data that come from a combination of cognitive processes without imposing threshold values [ see also @almond2012preliminary; @baaijen2012keystroke; @hall2022constructing; @li2021identifying].
+
+
+
+
+
+<!-- 
+
+All plantra results are L2 but not the other studies
+
+to what extent do pauses reflect reading behaviour?
+
+Say how the results don't contradic the reported studies but speaks better to their conclusions 
+but the modelling frameword doesn't require us to impose pause thresholds
+
+
+(2) dichotomising latencies into pauses and non-pauses discards much of the information that is captured within a keystroke log. 
+
+One strategy for handling the complex distribution of latency from spontaneous text production is to avoid reporting central tendency altogether and to just count latencies that exceed a specific threshold – traditionally set at 2 seconds. This practice, inherited from early research in speech production (see Rochester, 1973 for a review) has been widely adopted by writing researchers, with studies dating back to at least the mid 1990s (Foulin, 1995, 1998). Pause counting has two disadvantages. First, researchers have to make an a priori decision about where to set the pause threshold. Current understanding of the processes that underlie text production does not provide a strong theoretical basis on which to make this decision. So while a 2 s threshold undoubtedly captures an interesting distinction – processing that occurs the range zero to 2 s is very likely to be qualitatively different from processing that takes more than 2 s. However the same could be argued for any threshold between perhaps 250 ms and 10 that a researcher might care to choose (Chenu et al., 2014). Moreover, as we have already discussed, interpretation of latencies depends on location within the text. A sentence-initial pause of 2 s has a very different interpretation from a 2 s pause that occurs before or within a word. A second disadvantage of pause counting is that dichotomizing latencies discards much of the information that is captured within a keystroke log or digitized handwriting trace. We therefore require statistical methods that model the variance across the full range keystroke latencies (or similar measures from handwriting).
+
+
+
+Open: to what extent are even short latencies longer at sentences. This is obvious for when multiple keystrokes are summed across at sentences boundaries as there are typically three key transitions necessary to start a sentence: (1) .^_ , (2) _^[shift], (3) [shift]^C
+We believe the second one is the linguistically meaningful one
+I think give Davids papers as examples, if he uses sums instead of means (other studies?)
+
+I just read the abstract of the first one, but the neural oscillations that they describe are occur every 153 ms (6.5 hz). Which is kind of the magic number for the short-duration IKI component.
+
+Duprez, J., Stokkermans, M., Drijvers, L., & Cohen, M. X. (2021). Synchronization between keyboard typing and neural oscillations. Journal of Cognitive Neuroscience, 33(5), 887–901. https://doi.org/10.1162/jocn_a_01692
+
+González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized samples of keystroke dynamics features for free-text inputs. Data in Brief, 48, 109125. https://doi.org/10.1016/J.DIB.2023.109125
+
+
+I think the serial account isn't all inconsistent with the mixture model. I don't think the serial account says that pauses must occure on linguistic edges but between bursts which can in principlpe happen anywhere (but why would they be random). Obviously the problem here is that one needs to postulate what a pause is instead of leaving it to the model to work out. The serial account and the cascading account make very similar predictions for inexperienced writers.
+
+
+To what extent do pauses reflect reading back. Cite literature from Marks first SPL2 draft on reading during writing.
+
+- Reading is necessary for revision: check if writing goals have been met.
+- Planning what to say next: reinstating ideas after interruption of writing process.
+- Error evaluation: e.g. spelling, grammar
+
+
+- we removed transitions that terminate in editiing so lookbacks are not associaed with revisions.
+
+- Adults writing argumentative essays
+- @torrance2016reading: 
+  - before sentences 45% lookbacks
+  - before words 12% lookbacks
+  - within word 5% lookbacks 
+- 36% sustained reading but mostly less patterned forward and backward saccades between words ["hopping", see also @chukharev2019combined]
+- Limited work: @alamargot2010using; @beers2010adolescent; @de2018exploring; @van2010reading
+
+-->
+
+
+# Conclusion
+
+In contrast to the serial pause-and-burst view, the cascading view emphasis that writers do not necessarily pause to plan the upcoming language unit but plan in parallel to writing execution. Using the Bayesian framework we implemented models of both the serial model of writing and the cascading view. Model comparisons and the inspection of posterior parameter estimates supported with a cascading view of writing but provided strong evidence against the serial view. This pattern was found to be largely consistent different levels of writing experience and languages (e.g. young / L2 writers, students) and writing tasks (e.g. essays, syntheses) included in our data pool. 
 
 
 # References
@@ -965,6 +955,7 @@ render_appendix("appendix_d.Rmd")
 render_appendix("appendix_e.Rmd")
 render_appendix("appendix_g.Rmd")
 render_appendix("appendix_f.Rmd")
+render_appendix("appendix_h.Rmd")
 ```
 
 
