@@ -1,5 +1,7 @@
 get_pdens_plot <- function(file, max_iki, ds){
+#  file <- "stanout/c2l1/all_sims.csv"
   sims <- read_csv(file) %>% 
+    filter(sim_idx <= 50) %>% 
     pivot_longer(cols = c(y_obs, y_tilde)) %>% 
     mutate(across(name, recode_factor, 
                   y_tilde = "Simulated data",
@@ -9,11 +11,11 @@ get_pdens_plot <- function(file, max_iki, ds){
           (name == "Observed data" & sim_idx == 1),
            value < max_iki) %>% 
     mutate(across(model, ~case_when(
-      str_detect(., "mogbetacon.+") ~ "Bimodal (constrained)",
-      . == "mogbetaunconstr" ~ "Bimodal (unconstrained)",
-      . == "lmmuneqvar" ~ "Unimodal (unequal variance)",
-      . == "lmm" ~ "Unimodal log-normal",
-      . == "lmmgaus" ~ "Unimodal normal")),
+      str_detect(., "mogbetacon.+") ~ "Two log-Gaussians (constrained)",
+      . == "mogbetaunconstr" ~ "Two log-Gaussians (unconstrained)",
+      . == "lmmuneqvar" ~ "Single log-Gaussian (unequal variance)",
+      . == "lmm" ~ "Single log-Gaussian",
+      . == "lmmgaus" ~ "Single Gaussian")),
       across(model, ~str_wrap(., 20)),
       across(model, ~factor(., levels = sort(unique(model))[c(5, 4, 3, 1, 2)], ordered = T)))
   

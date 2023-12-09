@@ -1,0 +1,15 @@
+data,diffid,mean_delta,BF_delta,mean_theta,BF_theta
+*C2L1*,before sentence vs word,"0.24 [0.02, 0.48]",1.11,"0.44 [-0.56, 1.66]",0.68
+*C2L1*,before vs within word,"-0.03 [-0.14, 0.09]",0.07,"3.95 [3.54, 4.38]",> 100
+"*CATO* (non-dyslexic
+unmasked)",before sentence vs word,"1.27 [0.98, 1.55]",> 100,"-0.36 [-1.41, 0.69]",0.67
+"*CATO* (non-dyslexic
+unmasked)",before vs within word,"-0.1 [-0.38, 0.21]",0.2,"4.05 [3.2, 4.91]",> 100
+*GUNNEXP2* (unmasked),before sentence vs word,"0.9 [0.76, 1.04]",> 100,"2.15 [1.6, 2.75]",> 100
+*GUNNEXP2* (unmasked),before vs within word,"0.44 [0.17, 0.69]",26.78,"2.76 [2.24, 3.28]",> 100
+*LIFT*,before sentence vs word,"0.21 [-0.05, 0.48]",0.5,"-0.53 [-1.04, 0.08]",1.61
+*LIFT*,before vs within word,"0.17 [-0.32, 0.53]",0.41,"2.48 [1.81, 3.22]",> 100
+*PLanTra*,before sentence vs word,"0.57 [0.4, 0.74]",> 100,"0.16 [-0.25, 0.57]",0.28
+*PLanTra*,before vs within word,"0.36 [0.16, 0.56]",55.53,"2.3 [1.9, 2.7]",> 100
+*SPL2* (L1),before sentence vs word,"1.17 [1.02, 1.3]",> 100,"1.23 [0.59, 1.88]",> 100
+*SPL2* (L1),before vs within word,"0.48 [0.16, 0.76]",9.07,"3.3 [2.56, 4.08]",> 100

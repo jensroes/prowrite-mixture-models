@@ -68,7 +68,7 @@ saveRDS(m,
         compress = "xz")
 
 # Load model
-#m <- readRDS(file = "stanout/spl2 (shift + C)/mogbetaconstr.rda")
+#m <- readRDS(file = "stanout/spl2_shift/mogbetaconstr.rda")
 
 # Select relevant parameters
 param <- c("beta", "delta", "prob", "sigma", "sigma_u") 
@@ -103,4 +103,9 @@ ps_fin <- ps %>%
 
 # Save posterior
 write_csv(ps_fin, "stanout/spl2_shift/mogbetaconstr.csv")
+
+
+read_csv( "stanout/spl2_shift/mogbetaconstr.csv") %>% 
+  summarise(across(value, list(mean = mean)), .by = c(lang, param, location)) %>% 
+  filter(param == "prob")
 

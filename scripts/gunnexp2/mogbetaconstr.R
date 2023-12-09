@@ -97,8 +97,8 @@ ps %>%
   mutate(across(cond_num, as.numeric)) %>% 
   left_join(data, by = "cond_num") %>% 
   select(-cond_num) %>%
+  mutate(across(condition, as.character),
+         across(condition, ~replace_na(., "overall"))) %>% 
   separate(condition, into = c("location", "xn"), sep = "_") %>% 
-  mutate(across(c("location", "xn"), 
-                ~ifelse(!is.na(.), replace_na(., "overall"),. ))) %>% 
   # Save posterior
   write_csv("stanout/gunnexp2/mogbetaconstr.csv")

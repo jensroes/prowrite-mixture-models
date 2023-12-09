@@ -93,3 +93,4 @@ PI_lnum <- function(est,lo, hi, dp = 2){
          scales::comma(round(hi, dp), accuracy = 1), ']')
 }
 
+plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
