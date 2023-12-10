@@ -1,11 +1,11 @@
 library(loo)
 library(tidyverse)
 
-path <- "stanout/plantra"
+path <- "stanout/spl2_shift"
 (files <- list.files(path, pattern = "^.[^\\_]*.rda$", full.names = T))
 
 for(file in files){
-    varname <- str_remove_all(file, ".rda|stanout/plantra/")
+    varname <- str_remove_all(file, ".rda|stanout/spl2_shift/")
     m <- readRDS(file)
     log_lik <- extract_log_lik(m, merge_chains = F) 
     r_eff <- relative_eff(exp(log_lik)) 
@@ -28,4 +28,9 @@ mcs <- map_dfr(.x = list(mc1, mc2, mc3, mc4), ~as.data.frame(.x) %>%
 
 glimpse(mcs)
 
-write_csv(mcs, "stanout/plantra/modelcomparison.csv")
+write_csv(mcs, "stanout/spl2_shift/modelcomparison.csv")
+
+
+
+
+

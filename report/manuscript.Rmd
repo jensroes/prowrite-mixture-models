@@ -451,9 +451,7 @@ For all models we included transition location (levels: before sentence, before 
 
 ## Model comparisons
 
-To compare the out-of-sample predictive performance of our models we used Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and compared via its difference $\Delta\widehat{elpd}$ between models. Similar to other cross-validation techniques, the advantage of using leave-one-out cross-validation is that more complicated models -- models with more parameters -- are penalised to prevent overfit.
-
-Model comparison results for all data sets are shown in Table \ref{tab:loos}. For all data sets we found the same pattern. Both two-distributions mixture models provided a substantially better fit than any of the single distribution models. The unconstrained version of the mixture model rendered a higher predictive performance than the constrained version which does not allow the distribution of short keystroke-intervals to vary across transition locations (and data set specific manipulations). Among the single distribution models we found higher predictive performance for the unequal variance model compared to the log-Gaussian model. The weakest model was the single distribution Gaussian model.
+To compare the out-of-sample predictive performance of our models we used Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and compared via its difference $\Delta\widehat{elpd}$ between models. We also summarise the comparison between models as the absolute value of the ratio of the difference $\Delta\widehat{elpd}$ and its standard error -- $\mid\frac{\Delta\widehat{elpd}}{\text{SE}}\mid$, hence the *z*-score of the difference between models [@sivula2020uncertainty]. Similar to other cross-validation techniques, the advantage of using leave-one-out cross-validation is that more complicated models -- models with more parameters -- are penalised to prevent overfit.
 
 
 
@@ -466,13 +464,16 @@ files <- list.files(
 
 table <- purrr::map_dfr(files, ~read_csv(.) %>% 
                           mutate(dataset = .x)) %>% 
-  select(dataset, model, elpd_diff, se_diff, elpd_loo, se_elpd_loo) %>%
+  select(dataset, model, contains("elpd_diff"), se_diff) %>%
+  arrange(dataset, desc(elpd_diff)) %>% 
   mutate(across(dataset, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(where(is.numeric), ~round(., 0)),
          across(where(is.numeric), ~format(., big.mark = ",")),
          across(everything(), ~str_trim(.))) %>%
   filter(dataset != "spl2_shift") %>% 
   transmute(
+    Comparison = model,
+    elpd_diff_ratio,
      across(dataset, ~recode(., 
                 "cato" = "CATO",
                 "spl2" = "SPL2", 
@@ -481,30 +482,33 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
                 "lift" = "LIFT",
                 "c2l1" = "C2L1",
                 "gunnexp2" = "GUNNEXP2")),
-    m = recode(model, 
-               lmmgaus = "M1",
-               lmm = "M2",
-               lmmuneqvar = "M3",
-               mogbetaconstr = "M4",
-               mogbetacontr = "M4",
-               mogbetaunconstr = "M5"),
-    across(model, ~recode(., lmm = "Single distribution log-Gaussian",
-                          lmmgaus = "Single distribution Gaussian",
-                          mogbetaconstr = "Two distributions mixture of log-Gaussians (constrained)",
-                          mogbetacontr = "Two distributions mixture of log-Gaussians (constrained)",
-                          mogbetaunconstr = "Two distributions mixture of log-Gaussians (unconstrained)",
-                          lmmuneqvar = "Single distribution log-Gaussian (unequal variance)")),
-            across(elpd_diff, ~str_c(., " (", se_diff, ")")),
-            across(elpd_loo, ~str_c(., " (", se_elpd_loo, ")"))) %>% 
-  mutate(across(elpd_diff, ~str_replace(., "0 \\(0\\)", "--"))) %>% 
-  arrange(dataset)
+    Description = case_when(str_detect(model, "M2$") ~ "Single distribution log-Gaussian (M2)",
+                            str_detect(model, "M3$") ~ "Single distribution log-Gaussian (unequal variance; M3)",
+                            str_detect(model, "M4$") ~ "Two distributions mixture of log-Gaussians (constrained; M4)",
+                            str_detect(model, "M5$") ~ "Two distributions mixture of log-Gaussians (unconstrained; M5)"),
+            across(elpd_diff, ~str_c(., " (", se_diff, ")"))) 
 
-table <- table %>% select(-elpd_loo) %>% 
-  pivot_wider(names_from = dataset, values_from = elpd_diff) %>% 
-  rename(Model = m, Description = model)
+table_ratios <- table %>% select(dataset, Comparison, elpd_diff_ratio) %>% 
+  arrange(Comparison)
 
+table <- table %>% select(-elpd_diff_ratio) %>% 
+  pivot_wider(names_from = dataset, values_from = elpd_diff) 
+
+table_ratios <- table_ratios %>% 
+  mutate(across(elpd_diff_ratio, as.numeric)) %>% 
+  summarise(across(elpd_diff_ratio, list(min = min, max = max), .names = "{.fn}"), .by = Comparison) %>% 
+  mutate(range = str_c("[", min, ", ", max, "]"))
+
+tr_m2 <- filter(table_ratios, str_detect(Comparison, "M2$")) %>% pull(range)
+tr_m3 <- filter(table_ratios, str_detect(Comparison, "M3$")) %>% pull(range)
+tr_m4 <- filter(table_ratios, str_detect(Comparison, "M4$")) %>% pull(range)
+tr_m5 <- filter(table_ratios, str_detect(Comparison, "M5$")) %>% pull(range)
 
 ```
+
+Model differences for all data sets are shown in Table \ref{tab:loos}. For all data sets we found the same pattern. Overall both two-distributions mixture models provided substantially better fit than any of the single distribution models. Importantly, the constrained two-distributions mixture model rendered a higher predictive performance compared to the unequal variance single distribution model; across datasets the difference $\Delta\widehat{elpd}$ ranged within `r tr_m4` standard errors, indicating a substantially higher predictive performance for the two-distributions model. The unconstrained version of the mixture model rendered a higher predictive performance than the constrained version which did not allow the distribution of short keystroke-intervals to vary across transition locations (and data set specific manipulations); difference in predictive performance was `r tr_m5` standard errors higher for the unconstrained model. Among the single distribution models we found higher predictive performance for the unequal variance model compared to the log-Gaussian model; $\Delta\widehat{elpd}$ was in a range of `r tr_m3` standard errors. The weakest model was the single distribution Gaussian model which had -- compared the single distribution log-Gaussian -- a lower predictive performance in a range of `r tr_m2` standard errors.
+
+
 
 \blandscape
 ```{r loos, results='asis'}
@@ -512,7 +516,7 @@ table <- table %>% select(-elpd_loo) %>%
 #names(table) <- c("Model", "Description", rep(c("$\\Delta\\widehat{elpd}$"), 1))
 
 apa_table(table, 
-      caption = "Model comparisons. The top row shows the models with the highest predictive performance compared to all other models. Standard error is shown in parentheses.",
+      caption = "Model comparisons. Models were compared stepwise from the simples to the most complex model. The comparison is indicated along with the description of the more complex model in each comparison. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model.  Standard error is shown in parentheses.",
       align =c("p{1.5cm}", "p{5cm}", rep("r", 6)), 
       escape = FALSE,
       longtable = T,
@@ -551,9 +555,10 @@ Figure \ref{fig:mixmodel} illustrates the mixture model approach: for each trans
 
 
 
-```{r mixmodel, fig.cap='Mixture model plot for each transition location. Shown are the distributions for both mixture components (fluent and hesitant transition durations) and their respective weighting. Posterior of SPL2 data (English sessions only).', fig.height=6}
+```{r mixmodel, fig.cap='Mixture model plot for each transition location. Shown are the distributions for both mixture components (fluent and hesitant transition durations) and their respective weighting. Posterior of CATO data.', fig.height=6}
 
-ps <- read_csv("../stanout/spl2/mog_constr_posterior_for_densityplot.csv") 
+
+ps <- read_csv("../stanout/cato/mog_constr_posterior_for_densityplot.csv") 
 # Extract parameters
 alpha <- filter(ps, param == 'beta') %>% pull(est)
 alpha2_bs <- filter(ps, param == 'delta', loc == 'before sentence') %>% pull(est)
