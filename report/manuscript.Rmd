@@ -451,7 +451,7 @@ For all models we included transition location (levels: before sentence, before 
 
 ## Model comparisons
 
-To compare the out-of-sample predictive performance of our models we used Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and compared via its difference $\Delta\widehat{elpd}$ between models. We also summarise the comparison between models as the absolute value of the ratio of the difference $\Delta\widehat{elpd}$ and its standard error -- $\mid\frac{\Delta\widehat{elpd}}{\text{SE}}\mid$, hence the *z*-score of the difference between models [@sivula2020uncertainty]. Similar to other cross-validation techniques, the advantage of using leave-one-out cross-validation is that more complicated models -- models with more parameters -- are penalised to prevent overfit.
+To compare the out-of-sample predictive performance of our models we used Pareto smoothed importance-sampling leave-one-out cross-validation [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and compared via its difference $\Delta\widehat{elpd}$ between models. We also summarised the comparison between models as the absolute value of the ratio of the difference $\Delta\widehat{elpd}$ and its standard error $\mid\frac{\Delta\widehat{elpd}}{\text{SE}}\mid$, hence the *z*-score of the difference between models [@sivula2020uncertainty]. Similar to other cross-validation techniques, the advantage of using leave-one-out cross-validation is that more complicated models -- models with more parameters -- are penalised to prevent overfit.
 
 
 
@@ -482,14 +482,13 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
                 "lift" = "LIFT",
                 "c2l1" = "C2L1",
                 "gunnexp2" = "GUNNEXP2")),
-    Description = case_when(str_detect(model, "M2$") ~ "Single distribution log-Gaussian (M2)",
-                            str_detect(model, "M3$") ~ "Single distribution log-Gaussian (unequal variance; M3)",
-                            str_detect(model, "M4$") ~ "Two distributions mixture of log-Gaussians (constrained; M4)",
-                            str_detect(model, "M5$") ~ "Two distributions mixture of log-Gaussians (unconstrained; M5)"),
+    Distribution = case_when(str_detect(model, "M2$") ~ "Single log-Gaussian (M2)",
+                            str_detect(model, "M3$") ~ "Single log-Gaussian (unequal variance; M3)",
+                            str_detect(model, "M4$") ~ "Mixture of two log-Gaussians (constrained; M4)",
+                            str_detect(model, "M5$") ~ "Mixture of two log-Gaussians (unconstrained; M5)"),
             across(elpd_diff, ~str_c(., " (", se_diff, ")"))) 
 
-table_ratios <- table %>% select(dataset, Comparison, elpd_diff_ratio) %>% 
-  arrange(Comparison)
+table_ratios <- table %>% select(dataset, Comparison, elpd_diff_ratio) 
 
 table <- table %>% select(-elpd_diff_ratio) %>% 
   pivot_wider(names_from = dataset, values_from = elpd_diff) 
@@ -515,13 +514,14 @@ Model differences for all data sets are shown in Table \ref{tab:loos}. For all d
 #names(table)[-1] <- c("Model", "Description", rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"), 1))
 #names(table) <- c("Model", "Description", rep(c("$\\Delta\\widehat{elpd}$"), 1))
 
-apa_table(table, 
-      caption = "Model comparisons. Models were compared stepwise from the simples to the most complex model. The comparison is indicated along with the description of the more complex model in each comparison. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model.  Standard error is shown in parentheses.",
+table %>% 
+  arrange(desc(Comparison)) %>% 
+  apa_table(caption = "Model comparisons. Models were compared incrementally from the simples to the most complex model. The comparison is indicated along with the distribution of the more complex model in each comparison. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model.  Standard error is shown in parentheses.",
       align =c("p{1.5cm}", "p{5cm}", rep("r", 6)), 
       escape = FALSE,
       longtable = T,
-      font_size = "small",
-      note = "$\\Delta\\widehat{elpd}$ = difference in predictive performance -- estimated as expected log pointwise predictive density -- relative to the model with the highest predictive performance in the top row.")
+      font_size = "footnotesize",
+      note = "$\\Delta\\widehat{elpd}$ = difference in predictive performance -- estimated as expected log pointwise predictive density -- relative to the model with the highest predictive performance in the top row. Model details can be found in Appendix \ref{statistical-models}.")
 #                col_spanners = list(" " = 1:2,
 #                     "\\textbf{CL21}" = 1:5,
 #                     "\\textbf{CATO}" = 6:10,
