@@ -17,7 +17,7 @@ get_pdens_plot <- function(file, max_iki, ds){
       . == "lmm" ~ "Single log-Gaussian",
       . == "lmmgaus" ~ "Single Gaussian")),
       across(model, ~str_wrap(., 20)),
-      across(model, ~factor(., levels = sort(unique(model))[c(5, 4, 3, 1, 2)], ordered = T)))
+      across(model, ~factor(., levels = sort(unique(model))[c(5, 4, 3, 2, 1)], ordered = T)))
   
   plot <- sims %>%
     ggplot(aes(x = value / 1000, 

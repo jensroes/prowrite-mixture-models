@@ -1,5 +1,5 @@
 ---
-title: "Tutorial: fitting mixed-effects and log-Gaussian mixture models on text-writing data"
+title: "Tutorial: Fitting log-Gaussian mixed-effects mixture models for keystroke data"
 author: "Jens Roeser"
 date: "Compiled `r Sys.Date()`"
 bibliography: ref.bib
@@ -50,11 +50,11 @@ theme_set(theme_bw() +
 ```
 
 
-This is a step-by-step walk-through that describes how to fit a finite mixture model of two log-Gaussian distributions using the statistical program R and the `rstan` package to interface with the probabilistic programming language Stan [@carpenter2016stan; @hoffman2014no; @rstan; @rstan2]. We will compare this mixture model to standard Gaussian and log-Gaussian models implemented in `brms` [@burkner2017brms; @R-brms_b].^[An alternative to writing models in Stan is the R package `brms` which provides a flexible framework to implement mixture models and many other types of probability models [@burkner2017brms; @R-brms_b]. In particular, `brms` has a `mixture` function to specify mixtures of various types of distributions. These could be Gaussian, skewed-Normal, shifted-Normal, ex-Gaussian etc. and combinations thereof. There is a large number of probability models for continuous data that are plausible candidates [for reaction time data see e.g. @matzke2009psychological].] For a rationale of using mixture models for writing process data see @roeser2021.
+This is a step-by-step tutorial for fitting mixed-effects mixture models with two log-Gaussian distributions [@roeser2021] using R [@R-base] and the `rstan` package to interface with the probabilistic programming language Stan [@carpenter2016stan; @hoffman2014no; @rstan; @rstan2]. We will compare the mixture-model analysis to standard Gaussian and log-Gaussian mixed-effect models fitted using `brms` [@burkner2017brms; @R-brms_b].^[The R package `brms` provides a flexible framework to implement mixture models and many other types of probability models [@burkner2017brms; @R-brms_b]. `brms` has a `mixture` function to specify mixtures of various types of distributions. These could be Gaussian, skewed-Normal, shifted-Normal, ex-Gaussian etc. and combinations thereof. There is a large number of probability models for continuous data that are plausible candidates [for reaction time data see e.g. @matzke2009psychological]. In this tutorial we use Stan for mixture modelling to demonstrate the process and because the publication associated with this tutorial is fully using Stan instead of `brms`.] 
 
-This guide shows how to fit a mixture model written in Stan to keystroke data to then calculate the differences between transition locations in the text. This tutorial is largely self-contained. To run the code below, the reader only needs to install the required packages. Data and Stan code can be loaded from the code presented below.
+In this guide we show how to fit a mixture model written in Stan to keystroke data. Then we demonstrate how the posterior of this model can be used to calculate differences between transition locations in the text. Also we show how to compare model using leave-one-out cross-validation. This tutorial is largely self-contained. To run the code below, the reader only needs to install the required packages. Data and the Stan programme can be loaded using the code below.
 
-We require three packages: (1) `rstan` to use R to interface with Stan for fitting Bayesian models^[Instructions on how to install `rstan` can be found [here]( https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started).]; (2) `tidyverse` for data processing and visualisation.^[Run `install.packages("tidyverse")` for installation.]; (3) `brms` for simple Bayesian models.^[Run `install.packages("brms")` for installation.]
+Three packages need to be installed before (see footnotes for instructions): (1) `rstan` to use R to interface with Stan for fitting Bayesian models^[Instructions on how to install `rstan` can be found [here](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started).]; (2) `tidyverse` for data wrangling and visualisation.^[Run `install.packages("tidyverse")` for installation.]; (3) `brms` for fitting Bayesian models.^[Run `install.packages("brms")` for installation.]
 
 ```{r eval = F}
 library(rstan)
@@ -65,7 +65,7 @@ library(brms)
 
 # Preparing the data
 
-First we load a sample of keystroke data. Data are loaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/) using the URL as below and the `read_csv` function. For brevity we use a random subset. Data are from participants that completed an essay writing task in the context of the Prowrite project. 
+First we load a sample of keystroke data. Data are loaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/) using the URL as below. For simplicity we use a random subset of data from participants who completed an essay-writing task in the context of the ProWrite project. 
 
 
 ```{r eval = F}
@@ -93,22 +93,21 @@ count(data, participant, location)
 ```
 
 
-# Uni-modal mixed-effects models
+# Mixed-effects models
 
-We start with two uni-modal models -- models that assume that the data come from a single underlying process that can be described as as Gaussian in the first example or a log-Gaussian in the second example. We will compare the models performance.
+We start with two standard single distribution mixed-effects models [as in @pinheiro2007linear; @baa08], i.e. models that assume that data come from a single underlying process that can be described as Gaussian or log-Gaussian. We will compare these models.
 
 ## Gaussian mixed-effects model
 
 ### Model
 
-
-We start with a Gaussian mixed-effects models similar to a standard analysis of variance. We describe the process that generates each iki $i$ as normal Gaussian distribution $\text{N}()$ characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $\text{participant}_i$. $\beta$ will be allowed to take on a different value for each transition location. Average participant-ikis are allowed to deviate from the average which is achieved by assuming a normal distribution for participant deviations distributed around 0 with a standard deviation $\sigma_\text{p}^2$.
+We start with a Gaussian mixed-effects model. We describe the process that generates the $i^\text{th}$ keystroke, where $i \in 1\dots N$ and $N$ is the total number of keystroke, as a single Gaussian (normal) distribution $\mathcal{N}()$ which is characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $u_\text{participant[i]}$. $\beta$ will be allowed to take on a different value for each transition location associated with the $i^\text{th}$ keystroke. By-participant ikis are assumed to vary around the average which is achieved by placing a normal distribution on the difference between average and by-participant ikis, indicated as $u_\text{participant[i]}$, with a mean of 0 and a standard deviation $\sigma_\text{p}^2$.
 
 $$
 \begin{align}
-\text{iki}_i \sim & \text{N}(\mu_i, \sigma_\text{e}^2)\\
-\mu_i = & \beta_\text{location[i]} + \text{participant}_i\\
-\text{participant} \sim & \text{N}(0, \sigma_\text{p}^2) 
+\text{iki}_i \sim & \mathcal{N}(\mu_i, \sigma_\text{e}^2)\\
+\mu_i = & \beta_\text{location[i]} + u_\text{participant[i]}\\
+u_\text{participant[i]} \sim & \mathcal{N}(0, \sigma_\text{p}^2) 
 \end{align}
 $$
 This model can be described in R using the following formula wrapped in the `brms` formula function `bf`.
@@ -120,22 +119,23 @@ formula <- bf(iki ~ 0 + location + (1|participant), family = gaussian())
 
 ### Priors
 
-`brms` is using sensible default priors for most model parameters which can be checked using `get_prior`.
+`brms` is using sensible regulating default priors for most model parameters which can be inspected using `get_prior` which needs the model formula and the data as input.
 
 ```{r}
 get_prior(formula = formula, data = data)
 ```
 
-We want to make sure that `(flat)` is replaced by weakly informative priors because uninformative or flat priors are never a good idea [@mcelreath2016statistical].
+We want to make sure that `(flat)` is replaced by more (i.e. weakly or regulating) informative priors [see @mcelreath2016statistical; @kruschke2010doing; @lambert2018student]. For example, we might consider a Student-*t* distribution as prior over the slope parameters (class `b`) which in our model are parameterised as the cell means of the three transition locations (levels: within word, before word, before sentence) with a mean of 350 msecs and a standard deviation of 75 msecs.
 
 ```{r}
-prior <- set_prior('student_t(3, 350, 100)', class = 'b')
+prior <- set_prior('student_t(3, 350, 75)', class = 'b')
 ```
 
+Student-*t* distributions, in comparison to normal distributions, have a degrees of freedom parameter (first argument) in addition to the mean and the standard deviation (second and third parameter, respectively). The degrees of freedom control the tails of the distribution with smaller values assigning more probability mass to the tails; the shape of the Student-*t* distribution is moving closer to a normal distribution when the degrees of freedom approach $\infty$. This is illustrated in Figure \@ref(fig:prior) for the mean and the standard deviation of the prior above.
 
-```{r}
+```{r prior, echo = F, fig.cap="Student-t prior with varying degrees of freedom."}
 mean <- 350
-sd <- 100
+sd <- 75
 tibble(x = 0:1000) %>% 
   mutate(df_3 = dstudent_t(x, 3, mean, sd),
          df_10 = dstudent_t(x, 10, mean, sd),
@@ -149,21 +149,20 @@ tibble(x = 0:1000) %>%
 ```
 
 
-### Initiate sampling
+### Sampling parameters
 
-For the model to converge we need to run a sufficient number of iterations. 10,000 iterations, as below, are a lot but does not guarantee convergence. We need to test convergence using the model's posterior (see blow). To test whether the model has converged, we need to run the model more than one time (i.e. different chains). These can be run at the same time (in parallel) using more than one core of your computer (three cores below).^[If you want to use R to check how many cores are available on your machine, run `parallel::detectCores()` (you might need to install the package `parallel`).] There is no need to use more cores and chains and using less cores would mean that at least one process has to wait until after other processes are completed. When the model has settled on a parameter values, we should observe that all three streams (chains) overlap. Running long chains (many iterations) is useful to get more accurate parameter estimates. 
+For the model to converge we need to run a sufficient number of iterations. 10,000 iterations, as below, are a lot but does not guarantee convergence. To be able to test whether converged has reached, we need to run the model several time (i.e. different chains). This can be done at the same time (in parallel) when using more than one core of your computer (three cores below).^[If you want to check how many cores are available on your machine, run `parallel::detectCores()` (you might need to install the package `parallel`).] There is no need to use more cores than chains; using less cores would mean that at least one process has to wait until after another processes has been completed. When the model has settled on a distribution of parameter values, we should observe, after the model has finished sampling, that all chains mixed nicely. Running long chains (many iterations) is useful to get more accurate parameter estimates but will take more time. 
 
 
 ```{r}
-iterations <- 10000      # No of iterations
+iterations <- 10000      # No. of iterations
 warmup <- iterations / 2 # Warmup samples to be discarded
-nchains <- ncores <- 3   # No of chains / cores used (one chain per core)
+nchains <- ncores <- 3   # No. of chains / cores used (one chain per core)
 ```
 
 ### Fitting the model
 
-
-The following code combines the model, the data, and the prior and returns the posterior. This will take a couple of minutes.
+The following code combines the model, the data, and the prior and returns the posterior. This will take a few of minutes to complete sampling from the posterior after `brms` has compiled the model code.
 
 ```{r eval = F}
 fit_gaus <- brm(formula = formula, 
@@ -178,10 +177,7 @@ fit_gaus <- brm(formula = formula,
                  seed = 365)
 ```
 
-Because Bayesian models tend to take more time to run, it makes sense to save the results using `saveRDS` for later re-use.
-
-The output of the model (i.e. the posterior) can be saved, so we don't need to run the model again (which can take a while). The function requires the name of the fitted model `fit_gaus`. We prefer to keep the name of the output similar to the name of the Stan code used and ideally the R script that is running the model so it is easy to find the script that is running which model. The model is stored as compressed ".rda" file.
-
+Because Bayesian models tend to take more time to run, it makes sense to save the results using `saveRDS` for re-use. The function requires the name of the fitted model `fit_gaus`. The model is stored as compressed ".rda" file.
 
 ```{r eval = F}
 saveRDS(object = fit_gaus,
@@ -189,13 +185,13 @@ saveRDS(object = fit_gaus,
         compress = "xz")
 ```
 
-To read the fitted model back into your working environment used `readRDS`.
+To read the fitted model back into R's working environment use `readRDS`.
 
 ```{r}
 fit_gaus <- readRDS("stan/gaussian.rda")
 ```
 
-The function `fixef` provide a summary of the model inference showing the posterior estimates as average and 95% probability interval by transition location in msecs.
+The function `fixef` provide a summary of the posterior showing parameter value estimates as average and 95% probability interval by transition location in msecs.
 
 ```{r}
 fixef(fit_gaus) %>% round()
@@ -207,13 +203,16 @@ fixef(fit_gaus) %>% round()
 
 ### Model
 
+This model is largely identical to the Gaussian mixed-effect model in the previous section, except instead of a normal distribution this model assumes the ikis come from a single underlying process that follows a log-normal distribution. Assuming a log-normal distribution is useful as ikis and other response times are zero-bound (keystroke intervals cannot be shorter than 0). A log-normal distribution forces responses to be positive. Also the log scale is not linear, meaning the distance between 100 msecs and 110 msecs is not the same as the distance between 500 and 510 msecs; instead the distance between adjacent values is reduced for larger values while the distances between adjacent values on the lower end is increased. For example, for a log with the base 10, the distance between 10 msecs and 100 msecs is identical to the distance between 100 msecs and 1000 msecs.
+
 $$
 \begin{align}
-\text{iki}_i \sim & \text{logN}(\mu_i, \sigma_\text{e}^2)\\
-\mu_i = & \beta_\text{location[i]} + \text{participant}_i\\
-\text{participant} \sim & \text{N}(0, \sigma_\text{p}^2) 
+\text{iki}_i \sim & \text{log}\mathcal{N}(\mu_i, \sigma_\text{e}^2)\\
+\mu_i = & \beta_\text{location[i]} + u_\text{participant[i]}\\
+u_\text{participant[i]} \sim & \mathcal{N}(0, \sigma_\text{p}^2) 
 \end{align}
 $$
+For the model formula we use the distribution family `lognormal`.
 
 ```{r}
 formula <- bf(iki ~ 0 + location + (1|participant), family = lognormal())
@@ -222,19 +221,24 @@ formula <- bf(iki ~ 0 + location + (1|participant), family = lognormal())
 
 ### Priors
 
+The priors default priors and the priors we are going to set are now no longer on the msecs scale but on the log scale. 
+
 ```{r}
 get_prior(formula = formula, data = data)
 ```
 
+For example, a mean of 5 msecs on the log scale are `exp(5.85)` $\approx$ `r round(exp(5.85),0)`. This prior with varying degrees of freedom is visualised in Figure \@ref(fig:logprior).
+
 ```{r}
-prior <- set_prior('student_t(3, 5, .5)', class = 'b')
+prior <- set_prior('student_t(3, 5.85, .5)', class = 'b')
 ```
 
 
-```{r}
-mean <- 5
+
+```{r logprior, fig.cap="Student-t prior with varying degrees of freedom on log scale.", echo = F}
+mean <- 5.85
 sd <- .5
-tibble(x = seq(3, 7, .01)) %>% 
+tibble(x = seq(3, 9, .01)) %>% 
   mutate(df_3 = dstudent_t(x, 3, mean, sd),
          df_10 = dstudent_t(x, 10, mean, sd),
          df_100 = dstudent_t(x, 100, mean, sd)) %>% 
@@ -248,6 +252,7 @@ tibble(x = seq(3, 7, .01)) %>%
 
 ### Fitting the model
 
+We fit the model as before with the same sampling parameters.
 
 ```{r eval = F}
 fit_lgaus <- brm(formula = formula, 
@@ -336,7 +341,7 @@ log_lik(fit_gaus) %>%
 ```
 
 
-or directly calculated using `loo`. The Pareto k diagnostic indicates that there are some observations that are very unusual under the uni-modal Gaussian model.
+or directly calculated using `loo`. The Pareto k diagnostic indicates that there are some observations that are very unusual under the single distribution Gaussian model.
 
 
 ```{r}
@@ -357,7 +362,7 @@ The model comparison shows that the model `fit_lgaus` (the model with the log-Ga
 
 Aside, `elpd_loo` and `looic` have rarely got a direct interpretation. Important is the difference between models. The size of the values is increasing as a function of the number of observations. Generally `elpd_loo` and `looic` measures how many possible futures the model can rule out. 
 
-In contrast, `loo_R2` provides a Bayesian $R^2$ that measures the variability in the data that the model can captures. This quantity is not ideal for model comparisons, as normal $R^2$, because it is subject to overfitting: models with more parameters tend to have a larger $R^2$. A larger $R^2$ means that a model captures the data well but might make predictions that do not generalise out-of-sample [see chapter 11 in @gelman2020regression; chapter 6 in @mcelreath2016statistical]. The is an example for Bayesian $R^2$ for the uni-modal log-Gaussian model.
+In contrast, `loo_R2` provides a Bayesian $R^2$ that measures the variability in the data that the model can captures. This quantity is not ideal for model comparisons, as normal $R^2$, because it is subject to overfitting: models with more parameters tend to have a larger $R^2$. A larger $R^2$ means that a model captures the data well but might make predictions that do not generalise out-of-sample [see chapter 11 in @gelman2020regression; chapter 6 in @mcelreath2016statistical]. The is an example for Bayesian $R^2$ for the single-distribution log-Gaussian model.
 
 ```{r}
 loo_R2(fit_lgaus)
@@ -366,15 +371,17 @@ loo_R2(fit_lgaus)
 
 
 
-# Bi-modal mixed-effects log-Gaussian mixture model
+# Two-distributions log-Gaussian mixed-effects mixture model
+
+
 
 The model returns population estimates for the average typing speed of fluent keystroke transitions ($\beta$), the slowdown for hesitant transitions ($\delta$) and the frequency of hesitant transitions ($\theta$) for each level of a categorical predictor after taking into account two sources of random error: (1) each participant has an individual fluent typing speed that differs across levels of the categorical predictor; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor.
 
 
 $$
 \begin{align}
-\text{iki}_{i} \sim & \theta_\text{location[i]} \cdot \text{LogN}(\beta_\text{location[i]} + \delta_\text{location[i]} + \text{participant}_i, \sigma_{e'_\text{location[i]}}^2) + \\
-  & (1 - \theta_\text{location[i]}) \cdot \text{LogN}(\beta_\text{location[i]} + \text{participant}_i, \sigma_{e_\text{location[i]}}^2)\\
+\text{iki}_{i} \sim & \theta_\text{location[i]} \cdot \text{log}\mathcal{N}(\beta_\text{location[i]} + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i]}) \cdot \text{log}\mathcal{N}(\beta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
 		&\text{where}\\
 		&\delta \sim \text{N}(0,1)\\
 		&\text{constraint: } \delta > 0
@@ -443,7 +450,7 @@ ggplot(data_mm, aes(x)) +
 ```
 
 
-The average typing speed of fluent keystroke transitions is captured by the $\beta$ parameter. The distance between fluent transitions and disfluent transitions is captured by $\delta$ (i.e. the distance between the grey and the green distribution). The hesitation probability or the "pausing frequency" is the relative height of the grey and the green distribution and captured by $\theta$. Most keystrokes are, typically, fluent transitions and hence in the grey distribution. The frequency of the minority of disfluent transitions is captured by the height of the green distribution. As this model is bi-modal, the probability of fluent transitions is just $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent transitions was $.6$. If the pausing probability decreases to $.3$ the proportion of fluent transitions had increased to $.7$.
+The average typing speed of fluent keystroke transitions is captured by the $\beta$ parameter. The distance between fluent transitions and disfluent transitions is captured by $\delta$ (i.e. the distance between the grey and the green distribution). The hesitation probability or the "pausing frequency" is the relative height of the grey and the green distribution and captured by $\theta$. Most keystrokes are, typically, fluent transitions and hence in the grey distribution. The frequency of the minority of disfluent transitions is captured by the height of the green distribution. As this model assumes a finite mixture of two distributions, the probability of fluent transitions is just $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent transitions was $.6$. If the pausing probability decreases to $.3$ the proportion of fluent transitions had increased to $.7$.
 
 
 
@@ -610,14 +617,14 @@ log_lik <- extract_log_lik(fit_molg, merge_chains = F)
 r_eff <- relative_eff(exp(log_lik)) # relative effective sample size
 loo_molg <- loo(log_lik, r_eff = r_eff)
 
-# Uni-modal log-Gaussian
+# Single distribution log-Gaussian
 loo_lgaus <- loo(fit_lgaus)
 
-# Uni-modal Gaussian
+# Single distribution Gaussian
 loo_gaus <- loo(fit_gaus)
 ```
 
-As described above we used leave-one-out cross-validation to compare the mixture of log-Gaussians model to each the uni-modal Gaussian and log-Gaussian model. Their difference is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. Models are ordered from the model with the highest predictive performance to the lowest (i.e. `elpd_loo`). 
+As described above we used leave-one-out cross-validation to compare the mixture of log-Gaussians model to each the single distribution Gaussian and log-Gaussian model. Their difference is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. Models are ordered from the model with the highest predictive performance to the lowest (i.e. `elpd_loo`). 
 
 ```{r}
 loo_comp <- loo_compare(loo_gaus, loo_lgaus, loo_molg)

@@ -1,0 +1,91 @@
+# Masking effect (CATO, GUNNEXP2)
+
+Studies associated with two datasets (CATO, GUNNEXP2) investigated to what extent masking the previously written text affects keystroke behaviour. The mixture model results for the effect of masking is shown in Table \ref{tab:maskingeffect}. Key transition were longer for masked text than for unmasked text at before and within word transitions but not before sentences. Also dyslexics showed no masking difference at before word transitions. There was no indication of longer or more frequent pauses as a result of masked text. 
+
+\blandscape
+```{r maskingeffect, results = 'asis'}
+ps_cato_2 <- ps_cato %>% 
+  separate(group, into = c("mask","group"), sep = "; ") %>% 
+  mutate(across(c(mask, group), ~str_remove(., "Task: |Group: ")))
+
+cellmeans_mask <- ps_gunn %>% 
+  rename(mask = group) %>%
+  mutate(group = "non dyslexic") %>% 
+  bind_rows(ps_cato_2) %>% 
+  mutate(across(location, ~str_replace(., "\\n", " "))) %>% 
+  pivot_wider(names_from = name, 
+              values_from = c(mean, lower, upper)) %>% 
+  mutate(across(ends_with("prob"), ~dezero(., 2)),
+         across(c(ends_with("beta"),
+                  ends_with("delta")), 
+                ~as.character(scales::comma(round(.))))) %>% 
+  pivot_longer(-c(location, group, mask, ds), 
+               names_to = c(".value", "param"),
+               names_sep = "_") %>% 
+  mutate(est = str_c(mean, " [", lower, ", ", upper,"]")) %>% 
+  select(-mean:-upper) %>% 
+  pivot_wider(names_from = mask, 
+              values_from = est) 
+
+file <- list.files(path = "../../stanout/gunnexp2", 
+                   pattern = "mogbetaun.*.csv$",
+                   full.names = T)
+
+d_gunn <- read_csv(file) %>% 
+  filter(param %in% c("beta", "delta", "theta")) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, value)),
+         ds = "gunnexp2",
+         across(param, ~recode(., "prob" = "theta")),
+         group = "non dyslexic") %>% 
+  rename(mask = xn)
+
+# get posterior
+file <- list.files(path = "../../stanout/cato", 
+                   pattern = "mogbetaun.+.csv$",
+                   full.names = T)
+
+d_cato <- read_csv(file) %>% 
+  filter(param %in% c("beta", "delta", "prob")) %>% 
+  mutate(ds = "cato") %>% 
+  rename(mask = task)
+
+tmp <- bind_rows(d_gunn, d_cato) %>% 
+  pivot_wider(names_from = mask, values_from = value) %>% 
+  unnest(c(masked, unmasked)) %>% 
+  mutate(diff = masked - unmasked) %>% 
+  summarise(across(diff, list(mean = mean, 
+                              lower = lower, 
+                              upper = upper,
+                              BF = BF), 
+                   .names = "{.fn}"),
+            .by = c(location, param, group, ds)) %>% 
+  mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
+         across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2)))),
+         across(param, ~recode(., theta = "prob")),
+         across(ds, ~str_to_upper(.))) %>% 
+  left_join(cellmeans_mask) %>% 
+  arrange(param, location, ds, group) %>% 
+  select(param, `Transition location` = location,
+         `Dataset` = ds, Group = group, 
+         Unmasked = unmasked,
+         Masked = masked,
+         "Difference" = mean, BF)
+
+write_csv(tmp, "../tables/masking_effect_cellmeans.csv")
+
+apa_table(tmp[,-1],
+          align = c("l", "l", "l", "r", "r", "r", "r"), 
+          caption = "Mixture model estimates for masking effect. Cell means are shown for the masked and unmasked writing task in msecs for fluent key-transitions, the slowdown for long transitions and the probability of hesitant transitions. The effect for masking is shown on log scale (for transition durations) and logit scale for probability of hesitant transitions. 95% PIs in brackets.",
+          note = "PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.",
+          longtable = T,
+          font_size = "footnotesize",
+          stub_indents = list(
+            "Fluent transitions" = 1:9, 
+            "Hesitation duration" = 10:18,
+            "Hesitattion probability" = 19:27) )
+
+```
+\elandscape
+
+
+

@@ -1,0 +1,154 @@
+# Posterior parameter estimates
+
+```{r eval = F}
+
+theme_set(theme_few(base_size = 11) +
+            theme(strip.background = element_blank(),
+                  legend.position = "top",
+                  legend.justification = "right",
+                  panel.grid = element_blank(),
+                  panel.background = element_rect(fill = "transparent"), # bg of the panel
+                  plot.background = element_rect(fill = "transparent", color = NA)))
+
+pdodge <- position_dodge(-.5)
+beta_plots <- list()
+delta_plots <- list()
+theta_plots <- list()
+datasets <- unique(ps$ds)
+size <- 2
+width <- 0
+linewidth <- .35
+beta_label <- "Fluent transitions\n(in msecs)"
+
+beta_plots <- map(datasets, ~filter(ps, 
+                                    name == "beta", 
+                                    location == location[1],
+                                    ds == .x) %>% 
+                    mutate(name = beta_label,
+                           group == "overall",
+                           location = "overall") %>% 
+                    unique() %>% 
+                    ggplot(aes(y = mean, 
+                               ymin = lower, 
+                               ymax = upper,
+                               x = location)) +
+                    geom_errorbar(width = width,
+                                  linewidth = linewidth,
+                                  alpha = .75,
+                                  position = pdodge) +
+                    geom_point(size = size,
+                               position = pdodge) +
+                    facet_grid(~name) +
+                    scale_colour_colorblind() +
+                    scale_y_continuous(labels = scales::comma) +
+                    labs(subtitle = .x) +
+                    theme(axis.title = element_blank(),
+                          legend.title = element_blank()) +
+                    guides(colour=guide_legend(nrow=1,byrow=TRUE),
+                           shape = guide_legend(nrow=1,byrow=TRUE)))
+
+delta_plots <- map(datasets, ~filter(ps, 
+                                     name == "delta", 
+                                     ds == .x) %>% 
+                     mutate(across(c(ds,group), ~factor(.)),
+                            across(c(mean, lower, upper), ~ . /1000),
+                            name = delta_label) %>% 
+                     ggplot(aes(y = mean, 
+                                ymin = lower, 
+                                ymax = upper,
+                                x = location,
+                                shape = group)) +
+                     geom_errorbar(width = width, 
+                                   alpha = .75, 
+                                   linewidth = linewidth,
+                                   position = pdodge) +
+                     geom_point(aes(colour = group), 
+                                size = size, 
+                                position = pdodge) +
+                     facet_grid(~name) +
+                     scale_shape_manual(values = 1:length(filter(ps, ds == .x) %>% 
+                                                            pull(group) %>% 
+                                                            factor())) +
+                     scale_colour_colorblind() +
+                     scale_y_log10(labels = scales::comma) +
+                     theme(axis.title = element_blank(),
+                           legend.title = element_blank()) +
+                     guides(colour=guide_legend(nrow=2,byrow=TRUE),
+                            shape = guide_legend(nrow=2,byrow=TRUE)))
+
+theta_plots <- map(datasets, ~filter(ps, 
+                                     name == "prob", 
+                                     ds == .x) %>% 
+                     mutate(across(c(ds,group), ~factor(.)),
+                            name = theta_label) %>% 
+                     ggplot(aes(y = mean, 
+                                ymin = lower, 
+                                ymax = upper,
+                                x = location,
+                                shape = group)) +
+                     geom_errorbar(width = width,
+                                   linewidth = linewidth,
+                                   alpha = .75, 
+                                   position = pdodge) +
+                     geom_point(aes(colour = group), 
+                                size = size, 
+                                position = pdodge) +
+                     facet_grid(~name) +
+                     scale_shape_manual(values = 1:length(filter(ps, ds == .x) %>% 
+                                                            pull(group) %>% 
+                                                            factor())) +
+                     scale_colour_colorblind() +
+                     scale_y_continuous(labels = dezero_plot, 
+                                        limits = c(0, 1)) +
+                     theme(axis.title = element_blank(),
+                           legend.title = element_blank()) +
+                     guides(colour=guide_legend(nrow=2,byrow=TRUE),
+                            shape = guide_legend(nrow=2,byrow=TRUE)))
+
+# Combine parameter plots 
+plot_param <- list()
+plot_param <- map(1:6, ~beta_plots[[.]] + delta_plots[[.]] + theta_plots[[.]] +
+                    plot_layout(guides = "collect", widths = c(.45, 1, 1)) &
+                    theme(legend.position = "bottom"))
+
+plot_param[[2]] <- plot_param[[2]] & theme(legend.position = "none")
+plot_param[[3]] <- plot_param[[3]] & guides(colour=guide_legend(nrow=1,byrow=TRUE),
+                                            shape = guide_legend(nrow=1,byrow=TRUE))
+
+plot_param[[5]] <- plot_param[[5]] & guides(colour=guide_legend(nrow=1,
+                                                                byrow=TRUE,
+                                                                reverse=TRUE),
+                                            shape = guide_legend(nrow=1,
+                                                                 byrow=TRUE,
+                                                                 reverse=TRUE))
+
+plot_fin_1 <- plot_param[[1]] / plot_param[[2]] / plot_param[[3]]
+plot_fin_1 <- grid.arrange(patchworkGrob(plot_fin_1), 
+                           left = "Posterior estimate with 95% PIs",
+                           bottom = "Transition location")
+ggsave("../figures/psplots1constr.pdf", plot_fin_1, height = 8, width = 7)
+
+plot_fin_2 <- plot_param[[4]] / plot_param[[5]] / plot_param[[6]]
+plot_fin_2 <- grid.arrange(patchworkGrob(plot_fin_2), 
+                           left = "Posterior estimate with 95% PIs",
+                           bottom = "Transition location")
+ggsave("../figures/psplots2constr.pdf", plot_fin_2, height = 8, width = 7)
+```
+
+
+\begin{figure}[!htb]
+\centering
+\includegraphics{figures/psplots1constr.pdf}
+\caption{Posterior parameter distribution}
+\end{figure}
+\newpage
+\begin{figure}[!htb]
+\ContinuedFloat
+\captionsetup{list=off,format=cont}
+\centering
+\includegraphics{figures/psplots2constr.pdf}
+\label{fig:fullps1}
+\caption{Posterior parameter distribution}
+\end{figure}
+
+

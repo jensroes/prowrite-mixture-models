@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/991090/a38bd641b6d04cbca3ae2bf457f37084
+bundleId: https://api.rpubs.com/api/v1/document/991090/a38bd641b6d04cbca3ae2bf457f37084
+url: http://rpubs.com/jensroes/991090
+when: 1689340164.31848
