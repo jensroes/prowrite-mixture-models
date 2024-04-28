@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2024.3.7)  27 APR 2024 13:39
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2024.3.7)  28 APR 2024 17:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -932,99 +932,105 @@ File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 File: mt-eur.cfg 2006/07/31 v1.1 microtype config. file: AMS Euler Roman (RS)
 ) [1{/home/jens/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/home/jens/.TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}
 
-] [2] [3] [4] [5]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+] [2]
+Underfull \vbox (badness 1221) has occurred while \output is active []
 
-[6]
+[3]
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <10> on input line 223.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <7> on input line 223.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <5> on input line 223.
+
+Underfull \vbox (badness 7308) has occurred while \output is active []
+
+[4] [5]
 Underfull \vbox (badness 4752) has occurred while \output is active []
 
-[7] [8] [9]
+[6] [7] [8]
+Underfull \vbox (badness 4752) has occurred while \output is active []
+
+[9]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [10] [11] [12]
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 283.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 283.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 283.
-
-Underfull \hbox (badness 6364) in paragraph at lines 287--287
+Underfull \hbox (badness 6364) in paragraph at lines 276--276
 []|\T1/lmr/m/n/10 (+20) Rønneberg et al.
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 287--287
+Underfull \hbox (badness 10000) in paragraph at lines 276--276
 []|\T1/lmr/m/n/10 (+20) Argumentative
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 288--288
+Underfull \hbox (badness 10000) in paragraph at lines 277--277
 []|\T1/lmr/m/n/10 (+20) Torrance et al.
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 288--288
+Underfull \hbox (badness 10000) in paragraph at lines 277--277
 []|\T1/lmr/m/n/10 (+20) Secondary
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 289--289
+Underfull \hbox (badness 10000) in paragraph at lines 278--278
 []|\T1/lmr/m/n/10 (+20) Undergraduate
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 290--290
+Underfull \hbox (badness 10000) in paragraph at lines 279--279
 []|\T1/lmr/m/n/10 (+20) Vandermeulen,
  []
 
 
-Underfull \hbox (badness 6252) in paragraph at lines 290--290
+Underfull \hbox (badness 6252) in paragraph at lines 279--279
 \T1/lmr/m/n/10 (+20) Steen-dam, et al.
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 290--290
+Underfull \hbox (badness 10000) in paragraph at lines 279--279
 []|\T1/lmr/m/n/10 (+20) Secondary
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 290--290
+Underfull \hbox (badness 10000) in paragraph at lines 279--279
 []|\T1/lmr/m/n/10 (+20) The Nether-
  []
 
 
-Underfull \hbox (badness 1783) in paragraph at lines 291--291
+Underfull \hbox (badness 1783) in paragraph at lines 280--280
 []|\T1/lmr/m/n/10 (+20) Rossetti and Van
  []
 
 
-Underfull \hbox (badness 1057) in paragraph at lines 291--291
+Underfull \hbox (badness 1057) in paragraph at lines 280--280
 []|\T1/lmr/m/n/10 (+20) Text sim-pli-fi-ca-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 292--292
+Underfull \hbox (badness 10000) in paragraph at lines 281--281
 []|\T1/lmr/m/n/10 (+20) Torrance et al.
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 292--292
+Underfull \hbox (badness 10000) in paragraph at lines 281--281
 []|\T1/lmr/m/n/10 (+20) Argumentative
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 292--292
+Underfull \hbox (badness 10000) in paragraph at lines 281--281
 []|\T1/lmr/m/n/10 (+20) Undergraduate
  []
 
 
-Underfull \hbox (badness 1590) in paragraph at lines 292--293
+Underfull \hbox (badness 1590) in paragraph at lines 281--282
 []|\T1/lmr/m/n/10 (+20) English (L1) /
  []
 
 [13]
-Underfull \hbox (badness 10000) in paragraph at lines 323--324
+Underfull \hbox (badness 10000) in paragraph at lines 312--313
 []|\T1/lmr/m/n/10 (+20) T$[]$h$[]$e c$[]$a$[]$t m$[]$e$[]$o$[]$w$[]$e$[]$d.
  []
 
@@ -1035,7 +1041,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 ]
-Overfull \hbox (5.45514pt too wide) in paragraph at lines 347--366
+Overfull \hbox (5.45514pt too wide) in paragraph at lines 336--355
  [] 
  []
 
@@ -1046,17 +1052,17 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 Underfull \vbox (badness 4752) has occurred while \output is active []
 
 [19] [20{/home/jens/.TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}] [21]
-Overfull \hbox (8.57965pt too wide) in paragraph at lines 457--457
+Overfull \hbox (8.57965pt too wide) in paragraph at lines 446--446
 []|\T1/lmr/m/n/10 (-20) Comparison| 
  []
 
 
-Overfull \hbox (8.57965pt too wide) in paragraph at lines 462--462
+Overfull \hbox (8.57965pt too wide) in paragraph at lines 451--451
 []|\T1/lmr/m/n/10 (-20) Comparison| 
  []
 
 
-Underfull \hbox (badness 1237) in paragraph at lines 466--466
+Underfull \hbox (badness 1237) in paragraph at lines 455--455
 []|\T1/lmr/m/n/10 (+20) Mixture of two log-Gaussians
  []
 
@@ -1068,16 +1074,16 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 [23
 
 ]
-<manuscript_files/figure-latex/mixmodel-1.pdf, id=177, 549.05125pt x 410.53375pt>
+<manuscript_files/figure-latex/mixmodel-1.pdf, id=181, 549.05125pt x 410.53375pt>
 File: manuscript_files/figure-latex/mixmodel-1.pdf Graphic file (type pdf)
 <use manuscript_files/figure-latex/mixmodel-1.pdf>
-Package pdftex.def Info: manuscript_files/figure-latex/mixmodel-1.pdf  used on input line 492.
+Package pdftex.def Info: manuscript_files/figure-latex/mixmodel-1.pdf  used on input line 481.
 (pdftex.def)             Requested size: 469.77043pt x 351.2543pt.
 [24 <./manuscript_files/figure-latex/mixmodel-1.pdf>]
-<manuscript_files/figure-latex/crossstudypost2-1.pdf, id=203, 564.1075pt x 301.125pt>
+<manuscript_files/figure-latex/crossstudypost2-1.pdf, id=207, 564.1075pt x 301.125pt>
 File: manuscript_files/figure-latex/crossstudypost2-1.pdf Graphic file (type pdf)
 <use manuscript_files/figure-latex/crossstudypost2-1.pdf>
-Package pdftex.def Info: manuscript_files/figure-latex/crossstudypost2-1.pdf  used on input line 505.
+Package pdftex.def Info: manuscript_files/figure-latex/crossstudypost2-1.pdf  used on input line 494.
 (pdftex.def)             Requested size: 469.75845pt x 250.76074pt.
 [25]
 Underfull \vbox (badness 8075) has occurred while \output is active []
@@ -1091,252 +1097,248 @@ Underfull \vbox (badness 1221) has occurred while \output is active []
 [28] [29] [30] [31]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[32] [33]
+[32] [33] [34
+pdfTeX warning (ext4): destination with the same identifier (name{references}) has been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.550 \newpage
+              ]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 553.
+(hyperref)                removing `\\' on input line 559.
 
-[34
+[35
 
 ]
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.571 \begin{equation}
+l.577 \begin{equation}
                       
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.571 \begin{equation}
+l.577 \begin{equation}
                       
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.571 \begin{equation}
+l.577 \begin{equation}
                       
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.571 \begin{equation}
+l.577 \begin{equation}
                       
 Underfull \vbox (badness 4752) has occurred while \output is active []
 
-[35] [36]
+[36] [37]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[37] [38] [39]
+[38] [39] [40]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[40] [41]
+[41] [42]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 676.
+(hyperref)                removing `\\' on input line 682.
 
-<figures/fitplots.pdf, id=343, 451.6875pt x 614.295pt>
+<figures/fitplots.pdf, id=353, 451.6875pt x 614.295pt>
 File: figures/fitplots.pdf Graphic file (type pdf)
 <use figures/fitplots.pdf>
-Package pdftex.def Info: figures/fitplots.pdf  used on input line 682.
+Package pdftex.def Info: figures/fitplots.pdf  used on input line 688.
 (pdftex.def)             Requested size: 451.71394pt x 614.33098pt.
 
-LaTeX Warning: Float too large for page by 38.29974pt on input line 687.
+LaTeX Warning: Float too large for page by 38.29974pt on input line 693.
 
-[42
+[43
 
-] [43 <./figures/fitplots.pdf>]
+] [44 <./figures/fitplots.pdf>]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 692.
+(hyperref)                removing `\\' on input line 698.
 
-<manuscript_files/figure-latex/crossstudypost-1.pdf, id=363, 564.1075pt x 301.125pt>
+<manuscript_files/figure-latex/crossstudypost-1.pdf, id=373, 564.1075pt x 301.125pt>
 File: manuscript_files/figure-latex/crossstudypost-1.pdf Graphic file (type pdf)
 <use manuscript_files/figure-latex/crossstudypost-1.pdf>
-Package pdftex.def Info: manuscript_files/figure-latex/crossstudypost-1.pdf  used on input line 698.
+Package pdftex.def Info: manuscript_files/figure-latex/crossstudypost-1.pdf  used on input line 704.
 (pdftex.def)             Requested size: 469.75845pt x 250.76074pt.
-[44
+[45
 
 ]
 Underfull \vbox (badness 1859) has occurred while \output is active []
 
-[45 <./manuscript_files/figure-latex/crossstudypost-1.pdf>] [46] [47
+[46 <./manuscript_files/figure-latex/crossstudypost-1.pdf>] [47] [48
 
-] [48]
+] [49]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 771.
+(hyperref)                removing `\\' on input line 777.
 
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 773.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 779.
 (/home/jens/.TinyTeX/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.786 \begin{longtable}{lrrr}
-                             \noalign{\getlongtablewidth\global\LTcapwidth=\... [49
+l.792 \begin{longtable}{lrrr}
+                             \noalign{\getlongtablewidth\global\LTcapwidth=\... [50
 
 
 ]
 Underfull \vbox (badness 1509) has occurred while \output is active []
 
-[50] [51]
+[51] [52]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 821.
+(hyperref)                removing `\\' on input line 827.
 
 
 pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.836 \begin{longtable}{lrrrr}
-                              \noalign{\getlongtablewidth\global\LTcapwidth=... [52
+l.842 \begin{longtable}{lrrrr}
+                              \noalign{\getlongtablewidth\global\LTcapwidth=... [53
 
-] [53]
+] [54]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 870.
+(hyperref)                removing `\\' on input line 876.
 
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 883.
-[54
-
-]
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 913.
-
+(Font)              <10.95> on input line 889.
 [55
 
 ]
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\\' on input line 919.
+
+[56
+
+]
 pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.928 \begin{longtable}{lllrrrr}
-                                \noalign{\getlongtablewidth\global\LTcapwidt... [56
+l.934 \begin{longtable}{lllrrrr}
+                                \noalign{\getlongtablewidth\global\LTcapwidt... [57
 
-] [57]
+] [58]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 973.
+(hyperref)                removing `\\' on input line 979.
 
-<figures/psplots1constr.pdf, id=459, 505.89pt x 578.16pt>
+<figures/psplots1constr.pdf, id=469, 505.89pt x 578.16pt>
 File: figures/psplots1constr.pdf Graphic file (type pdf)
 <use figures/psplots1constr.pdf>
-Package pdftex.def Info: figures/psplots1constr.pdf  used on input line 977.
+Package pdftex.def Info: figures/psplots1constr.pdf  used on input line 983.
 (pdftex.def)             Requested size: 469.76265pt x 536.87161pt.
-[58
+[59
 
 
  <./figures/psplots1constr.pdf>]
-<figures/psplots2constr.pdf, id=474, 505.89pt x 578.16pt>
+<figures/psplots2constr.pdf, id=484, 505.89pt x 578.16pt>
 File: figures/psplots2constr.pdf Graphic file (type pdf)
 <use figures/psplots2constr.pdf>
-Package pdftex.def Info: figures/psplots2constr.pdf  used on input line 985.
+Package pdftex.def Info: figures/psplots2constr.pdf  used on input line 991.
 (pdftex.def)             Requested size: 469.76265pt x 536.87161pt.
-[59 <./figures/psplots2constr.pdf>]
+[60 <./figures/psplots2constr.pdf>]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 993.
+(hyperref)                removing `\\' on input line 999.
 
 
 pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1006 \begin{longtable}{lrrrr}
-                               \noalign{\getlongtablewidth\global\LTcapwidth... [60
-
-]
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 1038.
-
-
-pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.1051 \begin{longtable}{lrrrr}
+l.1012 \begin{longtable}{lrrrr}
                                \noalign{\getlongtablewidth\global\LTcapwidth... [61
 
 ]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 1083.
+(hyperref)                removing `\\' on input line 1044.
 
 
 pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1094 \begin{longtable}{lrrrr}
+l.1057 \begin{longtable}{lrrrr}
                                \noalign{\getlongtablewidth\global\LTcapwidth... [62
 
 ]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 1140.
+(hyperref)                removing `\\' on input line 1089.
+
+
+pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.1100 \begin{longtable}{lrrrr}
+                               \noalign{\getlongtablewidth\global\LTcapwidth... [63
+
+]
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\\' on input line 1146.
 
 
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1146 \begin{equation}
+l.1152 \begin{equation}
                        
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1146 \begin{equation}
+l.1152 \begin{equation}
                        
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1146 \begin{equation}
+l.1152 \begin{equation}
                        
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1146 \begin{equation}
-                        [63
+l.1152 \begin{equation}
+                        [64
 
 ]
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.2}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1160 \begin{equation}
+l.1166 \begin{equation}
                        
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.2}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1160 \begin{equation}
+l.1166 \begin{equation}
                        
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.2}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1160 \begin{equation}
+l.1166 \begin{equation}
                        
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.2}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.1160 \begin{equation}
+l.1166 \begin{equation}
                        
-<manuscript_files/figure-latex/simdata-1.pdf, id=520, 350.30875pt x 233.87375pt>
+<manuscript_files/figure-latex/simdata-1.pdf, id=530, 350.30875pt x 233.87375pt>
 File: manuscript_files/figure-latex/simdata-1.pdf Graphic file (type pdf)
 <use manuscript_files/figure-latex/simdata-1.pdf>
-Package pdftex.def Info: manuscript_files/figure-latex/simdata-1.pdf  used on input line 1174.
+Package pdftex.def Info: manuscript_files/figure-latex/simdata-1.pdf  used on input line 1180.
 (pdftex.def)             Requested size: 350.32391pt x 233.88385pt.
-[64 <./manuscript_files/figure-latex/simdata-1.pdf>]
+[65 <./manuscript_files/figure-latex/simdata-1.pdf>]
 Underfull \vbox (badness 1552) has occurred while \output is active []
 
-[65] [66] [67]
+[66] [67]
+Underfull \vbox (badness 1715) has occurred while \output is active []
 
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\\' on input line 1248.
-
-[68
-
-
-pdfTeX warning (ext4): destination with the same identifier (name{references}) has been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.1260 \newpage
-               ]
+[68]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [69]
@@ -1370,18 +1372,18 @@ L3 programming layer <2020/03/25>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 29521 strings out of 476082
- 541765 string characters out of 5793248
+ 29524 strings out of 476082
+ 541865 string characters out of 5793248
  1947187 words of memory out of 5000000
- 50600 multiletter control sequences out of 15000+600000
+ 50598 multiletter control sequences out of 15000+600000
  655633 words of font info for 205 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 99i,15n,107p,2078b,776s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 99i,15n,107p,2145b,776s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbxi10.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmex10.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi12.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi8.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr6.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr7.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmri12.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy6.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy7.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb></home/jens/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt12.pfb>
-Output written on manuscript.pdf (78 pages, 3001032 bytes).
+Output written on manuscript.pdf (78 pages, 3006842 bytes).
 PDF statistics:
- 973 PDF objects out of 1000 (max. 8388607)
- 818 compressed objects within 9 object streams
- 282 named destinations out of 1000 (max. 500000)
- 49440 words of extra memory for PDF output out of 51595 (max. 10000000)
+ 981 PDF objects out of 1000 (max. 8388607)
+ 826 compressed objects within 9 object streams
+ 287 named destinations out of 1000 (max. 500000)
+ 49432 words of extra memory for PDF output out of 51595 (max. 10000000)
 

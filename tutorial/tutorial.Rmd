@@ -227,7 +227,7 @@ The priors default priors and the priors we are going to set are now no longer o
 get_prior(formula = formula, data = data)
 ```
 
-For example, a mean of 5 msecs on the log scale are `exp(5.85)` $\approx$ `r round(exp(5.85),0)`. This prior with varying degrees of freedom is visualised in Figure \@ref(fig:logprior).
+For example, a mean of 5 msecs on the log scale are `exp(5.85)` $\approx$ `r round(exp(5.85),0)` msecs on a linear scale. This prior with varying degrees of freedom is visualised in Figure \@ref(fig:logprior).
 
 ```{r}
 prior <- set_prior('student_t(3, 5.85, .5)', class = 'b')
@@ -309,11 +309,10 @@ log_lik(fit_gaus) %>%
   pivot_longer(-sample, 
                names_to = "obs", 
                values_to = "loglik") %>%
-  group_by(obs) %>%
-  summarise(M = mean(loglik), var = var(loglik)) %>%
-  filter(M > -10) %>% # there are some terrible ones for this model :)
+  summarise(M = mean(loglik), var = var(loglik), .by = obs) %>%
+  filter(M > -10) %>% # there are some terrible ones for this model 
   mutate(obs = as.numeric(str_remove(obs, "V"))) %>%
-  ggplot(aes(x = obs, y = M, ymin = M-var, ymax = M+var)) +
+  ggplot(aes(x = obs, y = M, ymin = M - var, ymax = M + var)) +
   geom_pointrange(fatten = .5) +
   labs(x = "Observations", 
        y = "log-posterior predictive density (with variance)")
@@ -329,10 +328,9 @@ log_lik(fit_gaus) %>%
   pivot_longer(-sample, 
                names_to = "obs", 
                values_to = "loglik") %>%
-  group_by(obs) %>%
   summarise(mean_loglik = mean(exp(loglik)),
-            var_loglik = var(loglik)) %>% 
-  ungroup() %>%
+            var_loglik = var(loglik),
+            .by = obs) %>% 
   summarise(elpd_loo = sum(log(mean_loglik)), # sum of mean log lik
             p_loo = sum(var_loglik), # effective number of parameters
             looic = -2 * (elpd_loo - p_loo)) %>% # Bayesian deviance
@@ -805,8 +803,7 @@ To determine these differences we change the data format above and create a vari
 ```{r}
 posterior_diffs <- posterior_in_msecs %>%
   pivot_longer(beta:theta, names_to = "parameter") %>%
-  group_by(location) %>% 
-  mutate(id = row_number()) %>%
+  mutate(id = row_number(), .by = location) %>%
   pivot_wider(names_from = location, values_from = value) %>%
   select(-id) %>% # drop id column
   mutate(diff_sent = `before-sentence` - `before-word`,
@@ -828,14 +825,13 @@ p_diff <- function(x) mean(x < 0)
 # Summarise differences
 posterior_diffs %>%
   pivot_longer(starts_with("diff")) %>% 
-  group_by(parameter, name) %>%      # group by parameters, comparison
   summarise(across(value, 
-            list(mean = base::mean,  # mean difference
+            list(mean = base::mean,  # mean of difference
                  lower = lower,      # 2.5% lower bound of difference
                  upper = upper,      # 97.5% upper bound of difference
                  p_diff = p_diff),   # prob that difference is negative
-            .names = "{.fn}")) %>% 
-  ungroup() %>% 
+            .names = "{.fn}"),
+            .by = c(parameter, name)) %>%   # group by parameters, comparison 
   mutate(across(where(is.numeric), round, 2)) %>% # round after 2nd decimal place
   arrange(name)
 ```
@@ -843,16 +839,15 @@ posterior_diffs %>%
 ```{r echo=F}
 ps <- posterior_diffs %>%
   pivot_longer(-parameter) %>% 
-  group_by(parameter, name) %>%
   summarise(across(value, 
             list(mean = base::mean,  
                  lower = lower,      
                  upper = upper,      
                  p_diff = p_diff),   
-            .names = "{.fn}")) %>% 
-  ungroup() %>% 
-  mutate(across(where(is.numeric), round, 2),
-         parameter = gsub("\\[diff\\]", "", parameter)) 
+            .names = "{.fn}"),
+            .by = c(parameter, name)) %>% 
+  mutate(across(where(is.numeric), ~round(., 2)),
+         across(parameter, ~str_remove(., "\\[diff\\]"))) 
 ```
 
 
@@ -1098,8 +1093,7 @@ posterior_ppts_long <- posterior_ppts %>%
                 `2` = "before-word",
                 `3` = "within-word")) %>%
   # create different columns for location
-  group_by(location) %>% 
-  mutate(id = row_number()) %>%
+  mutate(id = row_number(), .by = location) %>%
   pivot_wider(names_from = location, values_from = value) %>% 
   select(-id) # drop id
 
@@ -1111,11 +1105,11 @@ We can then summarise by-participant estimates for each transition location with
 ```{r}
 posterior_ppts_long_summary <- posterior_ppts_long %>%
   pivot_longer(-participant, names_to = "location") %>%
-  group_by(location, participant) %>%
   summarise(across(value, list(mean = base::mean, 
                                lower = lower, 
-                               upper = upper), .names = '{.fn}')) %>% 
-  ungroup()
+                               upper = upper),
+                   .names = '{.fn}'),
+            .by = c(location, participant)) 
 
 posterior_ppts_long_summary
 ```
@@ -1149,11 +1143,11 @@ posterior_ppts_long_diff_summary <- posterior_ppts_long %>%
   pivot_longer(-participant, 
                names_to = 'difference', 
                values_to = 'diff') %>% 
-  group_by(participant, difference) %>%
   summarise(across(diff, list(mean = base::mean, 
                                lower = lower, 
-                               upper = upper), .names = '{.fn}')) %>% 
-  ungroup()
+                               upper = upper),
+                   .names = '{.fn}'),
+            .by = c(participant, difference)) 
 
 posterior_ppts_long_diff_summary
 ```

@@ -28,10 +28,10 @@ affiliation:
     institution   : "Department of English, Iowa State University, Iowa"
 
 
-abstract: Classical serial models view the process of producing a text as a discrete chain of pauses and writing bursts. In contrast, parallel cascading models of writing assume that planning is not complete at production onset and operates in parallel to writing execution. We implemented these two views in Bayesian statistical models and applied our models to key-stroke logs of 6 data sets from free text production. We reanalysed keystroke intervals at before-sentence transitions, before word transitions and within word transitions. Model comparisons demonstrated strong evidence in favour of the statistical implementation of the cascading view of the serial models across all data sets. Further we found -- across populations -- that transitions across word and even sentence boundaries are often fluent and uninterrupted by planning of upcoming linguistic material; when pausing occurred pauses were longer before sentence than before word which is consistent with the idea larger linguistic edges are associated with higher level planning. Our results cannot be explained by the serial but are in line with the cascading view of writing.   
+abstract: "Classical serial models view the process of producing a text as a chain of discrete pauses and writing bursts. In contrast, parallel cascading models of writing assume that planning is not complete at production onset and operates in parallel with execution. These two theories make different assumptions about the underlying process that generates inter-keystroke intervals. Across six datasets comprising multi-sentence text composition we instantiated these assumptions as two sets of Bayesian mixed-effects models: (1) single-distribution models as assumed by the serial processing account, and (2) finite two-distribution mixture models as assumed by the parallel processing account. We analysed keystroke intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the statistical implementation of the cascading view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that keystroke latencies at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial but are in line with the cascading, semi-parallel view of writing."
 
 
-keywords: "Keystroke modelling; finite mixture models; Bayesian models; text composition"
+keywords: "Cascading parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
 
 
 bibliography      : ["references.bib"]
@@ -114,7 +114,6 @@ delta_label <- "Slowdown for hesitant\ntransitions (in secs)"
 theta_label <- "Probability of hesitant\ntransitions"
 ```
 
-# Introduction
 
 ```{r child = "sections/introduction.Rmd"}
 ```
@@ -204,6 +203,9 @@ Maybe distinguih between a strong version of serial model and a weak version tha
 
 
 # (APPENDIX) Appendix {.unnumbered}
+
+\newpage
+
 
 ```{r child = 'appendix/models.Rmd'}
 ```
