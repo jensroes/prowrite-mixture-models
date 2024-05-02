@@ -2,7 +2,11 @@
 title             : "Ideas cascading into keystrokes -- modelling writing hesitations as finite mixture process"
 shorttitle        : "Modelling writing hesitations"
 
-csl               : "apa.csl" 
+csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
+documentclass     : "apa7"
+output            : 
+  papaja::apa6_pdf:
+    keep_tex: FALSE
 
 author: 
   - name          : "Jens Roeser"
@@ -14,33 +18,27 @@ author:
     affiliation   : "1"
   - name          : "Rianne Conijn"
     affiliation   : "2"
-  - name          : "Evgeny Chukharev"
+  - name          : "Gunn Helen Ofstad"
     affiliation   : "3"
+  - name          : "Evgeny Chukharev"
+    affiliation   : "4"
 
 affiliation:
   - id            : "1"
     institution   : "Department of Psychology, Nottingham Trent University, United Kingdom"
-
   - id            : "2"
     institution   : "Artificial Intelligence Systems Institute, Eindhoven University of Technology, The Netherlands"
-
   - id            : "3"
+    institution   : "Educational Sciences and Humanities, University of Stavanger, Norway"
+  - id            : "4"
     institution   : "Department of English, Iowa State University, Iowa"
 
 
 abstract: "Classical serial models view the process of producing a text as a chain of discrete pauses and writing bursts. In contrast, parallel cascading models of writing assume that planning is not complete at production onset and operates in parallel with execution. These two theories make different assumptions about the underlying process that generates inter-keystroke intervals. Across six datasets comprising multi-sentence text composition we instantiated these assumptions as two sets of Bayesian mixed-effects models: (1) single-distribution models as assumed by the serial processing account, and (2) finite two-distribution mixture models as assumed by the parallel processing account. We analysed keystroke intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the statistical implementation of the cascading view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that keystroke latencies at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial but are in line with the cascading, semi-parallel view of writing."
 
-
-keywords: "Cascading parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
-
+keywords: "Cascading semi-parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
 
 bibliography      : ["references.bib"]
-
-documentclass     : "apa7"
-classoption       : "man"
-output            : 
-  papaja::apa6_pdf:
-    keep_tex: TRUE
 
 figsintext        : yes
 figurelist        : no
@@ -66,6 +64,20 @@ header-includes:
   - \newcommand{\blandscape}{\begin{landscape}}
   - \newcommand{\elandscape}{\end{landscape}}
   - \DeclareCaptionFormat{cont}{#1 (cont.)#2#3\par}
+  - |
+    \makeatletter
+    \renewcommand{\paragraph}{\@startsection{paragraph}{4}{\parindent}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-1em}%
+      {\normalfont\normalsize\bfseries\typesectitle}}
+    
+    \renewcommand{\subparagraph}[1]{\@startsection{subparagraph}{5}{1em}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-\z@\relax}%
+      {\normalfont\normalsize\bfseries\itshape\hspace{\parindent}{#1}\textit{\addperi}}{\relax}}
+    \makeatother
+
+  
 ---
 
 ```{r setup, include=FALSE}
@@ -128,15 +140,12 @@ theta_label <- "Probability of hesitant\ntransitions"
 ```{r child = "sections/results.Rmd"}
 ```
 
-```{=html}
 <!-- TODO: 
-- address difference between posteriors of shift analysis for constrained and unconstrained model?
-- pausing frequency for words and sentences are equal but more importantly pauses occure less than 80% of the time indicating parallel planing.
 - would be really good, on some point, to distinguish between open and closed class words
 -->
-```
 
-# Discussion
+
+# Discussion 
 
 ```{r child = "sections/discussion.Rmd"}
 ```
@@ -146,28 +155,11 @@ theta_label <- "Probability of hesitant\ntransitions"
 ```{r child = "sections/conclusion.Rmd"}
 ```
 
-```{=html}
 <!-- 
 
-----
 Add to OSF
 Work on tutorial and add as link to methods
-----
-
-
-~~~~~
 Say how the results don't contradic the reported studies but speaks better to their conclusions 
-but the modelling frameword doesn't require us to impose pause thresholds
-~~~~~
-
-~~~~
-Move from results to discussion?
-Open: to what extent are even short latencies longer at sentences. This is obvious for when multiple keystrokes are summed across at sentences boundaries as there are typically three key transitions necessary to start a sentence: (1) .^_ , (2) _^[shift], (3) [shift]^C
-We believe the second one is the linguistically meaningful one
-I think give Davids papers as examples, if he uses sums instead of means (other studies?)
-
-~~~
-
 
 neural oscillationsoccur every 153 ms (6.5 hz). Which is kind of the magic number for the short-duration IKI component.
 
@@ -175,14 +167,7 @@ Duprez, J., Stokkermans, M., Drijvers, L., & Cohen, M. X. (2021). Synchronizatio
 
 González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized samples of keystroke dynamics features for free-text inputs. Data in Brief, 48, 109125. https://doi.org/10.1016/J.DIB.2023.109125
 
-~~~~
-I think the serial account isn't all inconsistent with the mixture model. I don't think the serial account says that pauses must occure on linguistic edges but between bursts which can in principlpe happen anywhere (but why would they be random). Obviously the problem here is that one needs to postulate what a pause is instead of leaving it to the model to work out. The serial account and the cascading account make very similar predictions for inexperienced writers.
-
-Maybe distinguih between a strong version of serial model and a weak version that is basically a chunky cacading model
-
-
 -->
-```
 
 
 \newpage
@@ -191,11 +176,11 @@ Maybe distinguih between a strong version of serial model and a weak version tha
 
 \begingroup
 
-\setlength{\parindent}{-0.5in}
+<!-- \setlength{\parindent}{-0.5in} -->
 
-\setlength{\leftskip}{0.5in}
+<!-- \setlength{\leftskip}{0.5in} -->
 
-<div id = "references"></div>
+<div id = "refs"></div>
 
 \endgroup
 

@@ -18,6 +18,7 @@ output:
 ```{r, include=FALSE}
 library(rmdformats)
 library(knitr)
+library(patchwork)
 library(tidyverse)
 library(rstan)
 library(brms)
@@ -148,6 +149,8 @@ tibble(x = 0:1000) %>%
   labs(colour = "Degrees of\nfreedom")
 ```
 
+The choice of priors here is weakly informative. The intention is to use knowledge that we generally have about how long key intervals usually are to point the model towards the right area in the parameter space by assigning low probabilities to unlikely or even implausible values. Even if we know very little about the duration of keystroke interval, we do know that they shouldn't be longer than a day, or event an hour, or several minutes, because such long intervals are unlikely to reflect active writing.
+
 
 ### Sampling parameters
 
@@ -178,6 +181,15 @@ fit_gaus <- brm(formula = formula,
 ```
 
 Because Bayesian models tend to take more time to run, it makes sense to save the results using `saveRDS` for re-use. The function requires the name of the fitted model `fit_gaus`. The model is stored as compressed ".rda" file.
+
+Before you save the posterior, create a new directory called "stan" where we will save all Stan outputs in this tutorial.
+
+```{r eval = F}
+# Create an empty directory called "stan"
+dir.create("stan")
+```
+
+
 
 ```{r eval = F}
 saveRDS(object = fit_gaus,
@@ -221,13 +233,13 @@ formula <- bf(iki ~ 0 + location + (1|participant), family = lognormal())
 
 ### Priors
 
-The priors default priors and the priors we are going to set are now no longer on the msecs scale but on the log scale. 
+The default priors and the priors that we need to specity are now no longer on the msecs scale but on the log scale. 
 
 ```{r}
 get_prior(formula = formula, data = data)
 ```
 
-For example, a mean of 5 msecs on the log scale are `exp(5.85)` $\approx$ `r round(exp(5.85),0)` msecs on a linear scale. This prior with varying degrees of freedom is visualised in Figure \@ref(fig:logprior).
+For example, a mean of 5 on the log scale are `exp(5.85)` $\approx$ `r round(exp(5.85),0)` msecs on a linear scale. This prior with varying degrees of freedom is visualised in Figure \@ref(fig:logprior).
 
 ```{r}
 prior <- set_prior('student_t(3, 5.85, .5)', class = 'b')
@@ -288,64 +300,71 @@ fit_lgaus <- readRDS("stan/loggaussian.rda")
 fixef(fit_lgaus) %>% round(1)
 ```
 
+These can be converted into msecs using the exponential function `exp`.
 
-
-## Model comparison
-
-To evaluate the predictive performance of the models we can use leave-one-out cross-validation. The out-of-sample predictive performance was determined via Pareto smoothed importance-sampling [@vehtari2015pareto; @vehtari2017practical]. Cross-validation, in contrast to more conventional model-comparison metrics such as $R^2$, prevent overfitting by penalising models with more parameters [see @mcelreath2016statistical; @lambert2018student].
-
-Cross validation generally is measuring the performance of a model, meaning its ability to capture new data. Overfitting happens when a model is capturing nuances of a sample, rather than patterns one would expect to repeat in new samples. The leave-one-out information criterion (LOO-IC) is determined as follows: train a model on $N-1$ observations, predict the remaining data points from the training model, repeat process $N$ times to predict every observation from a model of th remaining data. Adding up the prediction results gives an estimate of the expected log predictive density (`elpd_loo`; $\widehat{elpd}$), i.e. an approximation of the results that would be expected for new data.
-
-The function `loo` can be used to access the expected log predictive density which uses probability calculations for approximate LOO-IC vio Pareto smoothed importance sampling [@vehtari2015pareto; @vehtari2017practical].
-
-
-Approximation involved in `loo` uses the log posterior predictive densities: how likely is each data point given the distribution parameter estimates? This is shown for each data point in Figure \@ref(fig:loglik). Extremely small values indicate that an observation is very unlike for a given set of parameter values.
-
-
-```{r loglik, fig.cap="Log-posterior densities of each data point"}
-log_lik(fit_gaus) %>% 
-  as_tibble() %>% 
-  mutate(sample = 1:n()) %>%
-  pivot_longer(-sample, 
-               names_to = "obs", 
-               values_to = "loglik") %>%
-  summarise(M = mean(loglik), var = var(loglik), .by = obs) %>%
-  filter(M > -10) %>% # there are some terrible ones for this model 
-  mutate(obs = as.numeric(str_remove(obs, "V"))) %>%
-  ggplot(aes(x = obs, y = M, ymin = M - var, ymax = M + var)) +
-  geom_pointrange(fatten = .5) +
-  labs(x = "Observations", 
-       y = "log-posterior predictive density (with variance)")
+```{r}
+fixef(fit_lgaus)[,-2] %>% 
+  exp() %>% round(0)
 ```
 
-`elpd_loo` is the sum of the means and returns the expected log predictive density. `p_loo` is the sum of the variances and indicates the flexibility of the model fit (also used as the effective number of parameters). `looic`, or LOO-IC, corresponds to $-2 \cdot ($`elpd_loo`$-$`p_loo`$)$ (for deviance scale). This can be manually estimated
+The posterior estimates obtained from the log-Gaussian model are radically different (larger) from the posterior estimates of the Gaussian model which is likely due. This difference is likely due to the missing lower bound at zero in the Gaussian model as we as its inability to give less emphasis to values in the right tail.
+
+
+```{r}
+fixef(fit_gaus)[,-2] %>% 
+  round(0)
+```
+
+
+# Model comparison I
+
+To evaluate the out-of-sample predictive performance of the models we can use leave-one-out cross-validation via Pareto smoothed importance-sampling [@vehtari2015pareto; @vehtari2017practical]. Cross-validation is a alternative to more conventional model-comparison metrics such as $R^2$ as it penalises models with more parameters to prevent overfitting [see @mcelreath2016statistical; @lambert2018student]. Overfitting happens when a model is capturing nuances of a sample, rather than patterns one would expect to repeat in new samples. 
+
+In contrast, cross-validation is measuring the performance of a model, meaning its ability to generalise to new data. The leave-one-out information criterion (LOO-IC) is determined as follows: train a model on $N-1$ observations, predict the remaining data points from the training model, repeat process $N$ times to predict every observation from a model of th remaining data. Adding up the prediction results gives an estimate of the expected log-predictive density (`elpd_loo`; $\widehat{elpd}$), i.e. an approximation of the results that would be expected for new data.
+
+The function `loo` can be used to access the expected log-predictive density which uses probability calculations to approximate LOO-IC via Pareto smoothed importance sampling [@vehtari2015pareto; @vehtari2017practical]. LOO can be approximated with the log posterior predictive densities as a measure of how likely a data point is, given the parameter estimates. This is shown for each data point in Figure \@ref(fig:loglik). Extremely small values indicate that an observation is very unlike under the model's parameter values and we are unlike to observe them in a new sample.
+
+
+```{r loglik, fig.cap="Log-posterior densities of each data point (errorbars show variance) of the Gaussian model."}
+log_lik(fit_gaus) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(),
+               names_to = "obs", 
+               values_to = "loglik") %>%
+  summarise(mean = mean(loglik), var = var(loglik), .by = obs) %>%
+  filter(mean > -10) %>% # there are some terrible ones for this model 
+  mutate(obs = as.numeric(str_remove(obs, "V"))) %>%
+  ggplot(aes(x = obs, y = mean, ymin = mean - var, ymax = mean + var)) +
+  geom_pointrange(fatten = .5) +
+  labs(x = "observations", 
+       y = "log-posterior predictive density")
+```
+
+If we sum over those means we obtain the $\widehat{elpd}$, the expected log predictive density, indicated as `elpd_loo`. $p_\text{loo}$ (`p_loo`) is the sum of the variances and indicates the flexibility of the model fit (also used as the effective number of parameters). `looic`, or LOO-IC, corresponds to $-2 \times ($`elpd_loo`$-$`p_loo`$)$ (for the deviance scale). To illustrate these, we can calculate them manually
 
 
 ```{r}
 log_lik(fit_gaus) %>% 
   as_tibble() %>% 
-  mutate(sample = 1:n()) %>%
-  pivot_longer(-sample, 
+  pivot_longer(cols = everything(),
                names_to = "obs", 
                values_to = "loglik") %>%
-  summarise(mean_loglik = mean(exp(loglik)),
-            var_loglik = var(loglik),
-            .by = obs) %>% 
-  summarise(elpd_loo = sum(log(mean_loglik)), # sum of mean log lik
-            p_loo = sum(var_loglik), # effective number of parameters
+  summarise(mean = mean(loglik), var = var(loglik), .by = obs) %>% 
+  summarise(elpd_loo = sum(mean), # sum of mean log lik
+            p_loo = sum(var), # effective number of parameters
             looic = -2 * (elpd_loo - p_loo)) %>% # Bayesian deviance
-  pivot_longer(everything(), names_to = "Estimate") %>% 
+  pivot_longer(everything()) %>% 
   mutate(across(value, round, 1))
 ```
 
 
-or directly calculated using `loo`. The Pareto k diagnostic indicates that there are some observations that are very unusual under the single distribution Gaussian model.
-
+or directly using `loo` (a small difference isn't unexpected). 
 
 ```{r}
 loo(fit_gaus)
 ```
 
+The Pareto *k* diagnostic indicates that there are some observations that are very unusual under the single distribution Gaussian model.
 
 The difference in `elpd_loo` for both models can be obtained using `loo` and is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. 
 
@@ -355,43 +374,40 @@ loo_fit$diffs %>%
   as.data.frame() %>% 
   round(1)
 ```
-The model comparison shows that the model `fit_lgaus` (the model with the log-Gaussian likelihood) is approximately `r round(abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2]),0)` times better than `fit_gaus` (try `abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2])`).
 
+The model comparison shows that the model `fit_lgaus` (the model with the log-Gaussian likelihood) is approximately `r round(abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2]),0)` standard errors better than `fit_gaus`. This can be calculated by `abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2])` by normalising the difference over its standard error $\mid\frac{\Delta\widehat{elpd}}{\text{SE}}\mid$, which returns the *z* or *t* value of the difference between models [@sivula2020uncertainty]. A difference of `r round(abs(loo_fit$diffs[2,1] / loo_fit$diffs[2,2]),0)` standard errors is substantial. By comparison, a *t*-value of more extreme than $\mid2\mid$ corresponds to a difference that is significant at a $\alpha$-level of 0.05 (i.e. $p<0.05$) [e.g. @baa08book]. 
 
-Aside, `elpd_loo` and `looic` have rarely got a direct interpretation. Important is the difference between models. The size of the values is increasing as a function of the number of observations. Generally `elpd_loo` and `looic` measures how many possible futures the model can rule out. 
+Aside, unlike $R^2$, `elpd_loo` and `looic` have no direct interpretation. This is because the size of `elpd_loo` increases as a function of the number of observations. Generally you can think of `elpd_loo` and `looic` as how many possible futures the model can rule out. Important is the difference between models.  
 
-In contrast, `loo_R2` provides a Bayesian $R^2$ that measures the variability in the data that the model can captures. This quantity is not ideal for model comparisons, as normal $R^2$, because it is subject to overfitting: models with more parameters tend to have a larger $R^2$. A larger $R^2$ means that a model captures the data well but might make predictions that do not generalise out-of-sample [see chapter 11 in @gelman2020regression; chapter 6 in @mcelreath2016statistical]. The is an example for Bayesian $R^2$ for the single-distribution log-Gaussian model.
+In contrast, `loo_R2` provides a Bayesian $R^2$ that measures the variance in the data that the model can capture. This quantity is not ideal for model comparisons because, similar to the frequentist $R^2$, it is subject to overfitting: a model with more parameters can never have a smaller $R^2$, and $R^2$ will innevitabily increase when we add more parameters to a model. A larger $R^2$ means that a model captures the data well but might make predictions that do not generalise out-of-sample [see chapter 11 in @gelman2020regression; also chapter 6 in @mcelreath2016statistical]. The is an example for Bayesian $R^2$ for the single-distribution log-Gaussian model.
 
 ```{r}
 loo_R2(fit_lgaus)
 ```
 
 
-
-
 # Two-distributions log-Gaussian mixed-effects mixture model
 
-
-
-The model returns population estimates for the average typing speed of fluent keystroke transitions ($\beta$), the slowdown for hesitant transitions ($\delta$) and the frequency of hesitant transitions ($\theta$) for each level of a categorical predictor after taking into account two sources of random error: (1) each participant has an individual fluent typing speed that differs across levels of the categorical predictor; (2) each participant has in individual hesitation frequency that differs across levels of the categorical predictor.
-
+The mixture model captures the writing process as a combination of three parameters: the average typing speed of fluent keystroke transitions ($\beta$), the slowdown for hesitant transitions ($\delta$) and the probability of hesitant transitions ($\theta$). In the model below, these are estimated each level of a categorical predictor `location` for the $i^\text{th}$ keystroke interval. 
 
 $$
 \begin{align}
-\text{iki}_{i} \sim & \theta_\text{location[i]} \cdot \text{log}\mathcal{N}(\beta_\text{location[i]} + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
-  & (1 - \theta_\text{location[i]}) \cdot \text{log}\mathcal{N}(\beta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
+\text{iki}_{i} \sim & \theta_\text{location[i],participant[i]} \times \text{log}\mathcal{N}(\beta_\text{location[i]} + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i],participant[i]}) \times \text{log}\mathcal{N}(\beta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
 		&\text{where}\\
-		&\delta \sim \text{N}(0,1)\\
+		&\delta \sim \mathcal{N}(0,1)\\
 		&\text{constraint: } \delta > 0
 \end{align}
 $$
 
 
-The parameters of this equation are visualised in Figure \@ref(fig:mixturemodel). The illustrate shows the dissociation of two underlying processes that the model is looking for in the data. There are two distributions of which the left one in grey is the distribution of fluent keystroke intervals; the right distribution in green is wider and captures generally longer keystroke intervals (with some overlap between fluent and disfluent transitions). 
+Model takes into account two sources of random error: (1) each participant has an individual fluent typing speed that differs across levels of the categorical predictor and is distribution $u_\text{participant} \sim \mathcal{N}(0, \sigma^2_p)$; (2) each participant has in individual hesitation probability $\theta_\text{participant}$ that differs across levels of the categorical predictor.
+
+The parameters of this equation are visualised in Figure \@ref(fig:mixturemodel). The illustrate shows the dissociation of two underlying processes that the model is estimating on the basis of the data. There are two distributions of which the left one in grey is the distribution of fluent keystroke intervals; the right distribution in green is wider and captures longer keystroke intervals (with some overlap between fluent and disfluent transitions). 
 
 
 
-```{r mixturemodel, echo = F, fig.cap="What's a mixture model for keystroke intervals? The parameters of the mixture model explained visually. Each of the three parameters is determined for each transition location."}
+```{r mixturemodel, echo = F, fig.cap="What's a mixture model for keystroke intervals? The parameters of the mixture model explained visually. Each of the three parameters can determined for each transition location."}
 
 plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
 
@@ -423,7 +439,7 @@ ggplot(data_mm, aes(x)) +
   stat_function(geom = "area", fun = plot_mix_comps, fill = "#009E73",
                 show.legend = F, alpha = .25, 
                 args = list(alpha2[1], sigmap[1], lam = theta[1])) +
-  annotate("label", x=4,y=.6, label="beta*':'~'Quick typing'", size = 4, parse = T) +
+  annotate("label", x=4,y=.6, label="beta*':'~'Typing speed'", size = 4, parse = T) +
   annotate("label", x=7.25,y=.35, label="atop(theta*':'~'Hesitation probability', '\"Pausing\"')", parse = T, size = 4) +
   annotate("label", x=9,y=.15, parse = T, label="delta*':'~'\"Slowdown\"'", size = 4) +
   geom_segment(x = alpha, y = 0.05, xend = alpha2, yend = 0.05, 
@@ -447,14 +463,13 @@ ggplot(data_mm, aes(x)) +
 
 ```
 
-
-The average typing speed of fluent keystroke transitions is captured by the $\beta$ parameter. The distance between fluent transitions and disfluent transitions is captured by $\delta$ (i.e. the distance between the grey and the green distribution). The hesitation probability or the "pausing frequency" is the relative height of the grey and the green distribution and captured by $\theta$. Most keystrokes are, typically, fluent transitions and hence in the grey distribution. The frequency of the minority of disfluent transitions is captured by the height of the green distribution. As this model assumes a finite mixture of two distributions, the probability of fluent transitions is just $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent transitions was $.6$. If the pausing probability decreases to $.3$ the proportion of fluent transitions had increased to $.7$.
-
+Importantly Figure \@ref(fig:mixturemodel) illustrates the average typing speed of fluent keystroke transitions captured by the $\beta$ parameter; the distance between fluent transitions and disfluent transitions captured by $\delta$ (i.e. the distance between the grey and the green distribution); the hesitation probability or the "pausing frequency" which is the height of the green distribution captured by $\theta$. Most keystrokes are, typically, fluent transitions and hence part of the grey distribution. The frequency of the minority of disfluent transitions is captured by the height of the green distribution. As this model assumes a finite mixture of two distributions, the probability of fluent transitions is the inverse $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent transitions is $.6$. If the pausing probability decreases to $.3$ the proportion of fluent transitions had increased to $.7$ etc.
 
 
-## Model fit
 
-The data must be transformed into a list to feed them into Stan. The information required from the data is determined in the Stan code and has to do with what we need to estimate the model parameters and how the model is implemented. The exert from the Stan code below shows which information is expected as input (e.g. int is integer), how they are named, and what the smallest (i.e. lower) and largest possible value (i.e. upper) are. The full Stan code can be found at the end of this tutorial.
+## Model input values
+
+The data must be transformed into a list to feed them into Stan. The information required from the data is determined in the Stan code and has to do with what we need to estimate the model parameters and how the model is implemented. The exert from the Stan code below shows the information that is expected as input, which data type is expected (e.g. `int` means integer), their names, and what the smallest (i.e. `lower`) and largest possible value (i.e. `upper`) are. The full Stan code can be found at the end of this tutorial.
 
 ```{r eval=F, engine='Rcpp'}
 // Do not run
@@ -464,13 +479,13 @@ data {
   int<lower=1> nS;                   // number of ppts
   int<lower=1, upper=nS> ppt[N];     // ppts identifier
   int<lower=1> K;                    // number of conditions
-  int<lower=1> condition[N];                  // condition identifiers
+  int<lower=1> condition[N];         // condition identifiers
   vector[N] y;                       // outcome
 }
 ```
 
 
-Depending on the data we might have different numbers of participants and conditions. The Stan code is using indices to be able to fit varying numbers for each. In the code below we use `factor` in combination with `as.numeric` to ensure that there are no empty indices. We create vectors with participant identifiers `ppts` (numbers $1$ through $I$ where $I$ is the number of participants) and a numeric identifier `location` for each transition locations (levels: before-sentence = 1, before-word = 2, within-word = 3).  The returned values are indices for the parameters in the model: For example, for the location identifier, `beta[1]` is the population estimate for non-hesitant typing intervals at before-sentence transition locations, `beta[2]` is same for before-word transition locations; `theta[1]` and `theta[2]` are the disfluency probability on the logit scale for before-sentence and before-word transition locations, respectively.
+Participants and conditions are expected to represent indices in the Stan code. In the code below we use `factor` in combination with `as.numeric` to ensure that there are no empty indices for participants and conditions. We create vectors with participant identifiers `ppts` (numbers $1$ through $I$ where $I$ is the number of participants) and a numeric identifier `condition` for each level of the transition location (levels: before-sentence = 1, before-word = 2, within-word = 3).  The returned values are indices for the parameters in the model: For example, for the location identifier, `beta[1]` is the population estimate for non-hesitant typing intervals at before-sentence transition locations, `beta[2]` for before-word transition locations; `theta[1]` and `theta[2]` are the hesitation probability (on the logit scale) for before-sentence and before-word transition locations, respectively.
 
 ```{r}
 ppts <- pull(data, participant) %>% factor() %>% as.numeric()
@@ -497,20 +512,18 @@ glimpse(data_list)
 ```
 
 
-## Load model
+## Loading the model
 
-The Stan code can be downloaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/blob/main/tutorial/stan/molg.stan) using `readLines` and `writeLines`. The code will be saved as "molg.stan" (mixture of log-Gaussians) in a directory called "stan" which needs to be available in your current working directory. 
+The Stan code can be downloaded from [GitHub](https://github.com/jensroes/prowrite-mixture-models/blob/main/tutorial/stan/molg.stan) using `readLines` and saved locally using `writeLines` as "molg.stan" (mixture of log-Gaussians) in the directory "stan". 
 
 ```{r eval = F}
-# Create an empty directory called "stan"
-dir.create("stan")
 # Download Stan code
 file <- readLines("https://raw.githubusercontent.com/jensroes/prowrite-mixture-models/main/tutorial/stan/molg.stan")
-# Save Stan code to current working directory
+# Save Stan code in "stan" directory
 writeLines(file, "stan/molg.stan")
 ```
 
-The Stan model can be loaded and translated into an S4 class object using the `stan_model` function and assign it to the object `molg`. The "molg.stan" file needs to be available in the directory "stan" located inside the current working directory.
+The Stan model can be loaded and translated into an S4 class object using the `stan_model` function and assigned to `molg`. The "molg.stan" file needs to be available in the directory "stan" located inside the current working directory.
 
 
 ```{r eval = F}
@@ -518,12 +531,9 @@ molg <- stan_model(file = "stan/molg.stan")
 ```
 
 
-This code fits the posterior of a categorical predictor with any number of levels. In other words, the posterior that model returns can be used to calculate simple effects, main effects and interactions of a factorial design. We demonstrate below how to calculate a simple effect. The same logic can be used to calculate main effects and interactions. Also, participant estimates are calculated for both mixture components and the mixing proportions by condition. For including more predictors, or removing, e.g., random error terms, or adjusting priors, the user will have to work directly in the Stan code.
+This code fits the posterior of a categorical predictor with any number of levels. In other words, the posterior that the model returns can be used to calculate simple differences, main effects and interactions of factorial designs. We demonstrate below how to calculate a simple difference. The same logic can be used to calculate main effects and interactions. Also, participant estimates are calculated for both mixture components and the hesitation probability by location. For including more predictors, or removing, e.g., random error terms, or adjusting priors, the Stan code can be changed by opening it in R or a text editor. The Stan code used is largely based on @sorensen2016bayesian and @vasishth2017. @sorensen2016bayesian presents a detailed tutorial on how to write models in Stan [see also @lambert2018student].
 
-This Stan code used is largely based on @sorensen2016bayesian and @vasishth2017. @sorensen2016bayesian presents a detailed tutorial on how to fit Stan models [see also @lambert2018student].
-
-
-The model is fitting a number of parameters that are not relevant for our inference. To reduce the size of the R object that contains the posterior we can select the parameters of interest and disregard all parameters that are not relevant for our inference.
+The model is fitting a number of parameters of which not all are interesting for inference. To reduce the size of the model object that contains the posterior we can determine which parameters should be saved and disregard all parameters.
 
 ```{r}
 # Parameters to keep in output
@@ -540,7 +550,7 @@ pars <- c("beta",                        # fluent typing
 ```
 
 
-The `sampling` function applies the model to the data using the information specified above (iterations, warmup, chains, cores, parameters `pars` to be saved). `save_warmup` is set to `FALSE` to discard the warmup samples (which are not used for inference anyway) to reduce the size of the posterior. To allow reproducibility (and because Bayesian models involves random number generation) we set the seed. The seed can be any number but using the same number ensures the use of the same random number. Lastly, the control argument was specified with higher values for `adapt_delta` and `max_treedepth`: using higher values here mean the model runs slower but supports more careful parameter estimation. The model is assigned to the variable `m`.
+The `sampling` function applies the model to the data using the information introduced before (iterations, warmup, chains, cores, parameters `pars` to be saved). `save_warmup` is set to `FALSE` to discard the warmup samples (which are not used for inference anyway) to reduce the size of the model object. To allow reproducibility (and because Bayesian models involves random number generation) we set the seed using an arbitrary number. Lastly, the control argument was specified with higher values for `adapt_delta` and `max_treedepth`: using higher values here means the model runs slower but means more careful parameter estimation. The model is assigned to `fit_molg`.
 
 ```{r eval = F}
 # Fit model
@@ -568,8 +578,7 @@ fit_molg <- sampling(molg,
 #print(inits_chain1)
 ```
 
-
-Save the results using `saveRDS`.
+As above we save the results using `saveRDS`.
 
 ```{r eval = F}
 saveRDS(object = fit_molg,
@@ -583,18 +592,13 @@ fit_molg <- readRDS("stan/molg.rda")
 ```
 
 
-Running this model will take a while to complete sampling depending on your hardware specifications. The time it took my machine to complete this job can me viewed using `get_elapsed_time`. Therefore it is worth to not use all cores for this to run or to use a dedicated high performance machine.
-
+Running this model will take a while to complete sampling depending on your hardware specifications. The time it took my laptop to complete this job can me viewed using `get_elapsed_time`. It is worth to not use all cores to run this model or to use a dedicated high performance machine.
 
 ```{r}
-get_elapsed_time(fit_molg)/60 # in mins
+get_elapsed_time(fit_molg) / 60 # in mins
 ```
 
-
-
-
-Inferred posterior estimates shown as average and 95% probability interval can be extracted using the `print` function for each transition location and the three parameter values of interest.
-
+Inferred posterior estimates shown as average and 95% probability interval can be extracted using the `print` function for each transition location and the three parameter values of interest. `prob` is the $\theta$ parameter on the probability scale rather than on the logit scale. $\beta$ and $\delta$ are on the log scale. 
 
 ```{r}
 print(fit_molg, 
@@ -602,11 +606,94 @@ print(fit_molg,
       probs = c(.025, .975))
 ```
 
+We will return to the interpretation of these estimates below.
 
-## Model comparsion
 
-Similar to above we will compare the three models -- the mixture of log-Gaussians, and the uni-model Gaussian and log-Gaussian models -- using leave-one-out cross-validation. Because the mixture model was fitted directly in Stan and the uni-model models were fitted in `brms`, we need to extract the fit statistics before comparing the models using functions provided by the package `loo`.
+## Model diagnostics
 
+### Convergence
+
+Before we interpret these result we need to ensure that the model reached convergence. Convergence can be established using two simple techniques. First, we can inspect the chains in trace plots which show the parameter estimate across iterations (here after warmup) for each chain in different colours. We will look at the population-level parameters saved in `pars`.
+
+```{r}
+pars <- c("beta", "delta", "theta")
+```
+
+To create trace plots, we can apply the `stan_trace` function to the model `fit_molg` and extract the MCMC chains for the parameters in `pars`. The `alpha` argument makes the colours slightly more transparent otherwise it is difficult to see the chains hiding in the back. If the chains overlap and look like "fat hairy caterpillars", chains have converged on the same target distribution. The chains below look good except for one divergent transition for `beta[3]`.
+
+```{r}
+# Check convergence
+stan_trace(fit_molg, pars = pars, alpha = .5)
+```
+
+
+Second, we can calculate the $\hat{R}$ statistic. Successful convergence is reflected in $\hat{R}$ values smaller than 1.05 [@gelman1992]. $\hat{R}$ is similar to the *F* statistic in standard analysis of variance: it tells us how much bigger the variability between chains is compared to the variability within all chains. A value of $\approx 1$ indicates that the variability is essentially identical signifying convergence. Larger $\hat{R}$ values indicate that the chains are diverging. The `rhat` function applied to the model and the parameters of interest extracts the $\hat{R}$ statistic. There is no evidence for convergence problems.
+
+```{r}
+summary(fit_molg, pars=pars)$summary %>% 
+  as.data.frame() %>% 
+  rownames_to_column("parameter") %>% 
+  mutate(across(Rhat, round, 3)) %>% 
+  select(parameter, Rhat)
+```
+
+
+Convergence problems can have many reasons and therefore many solutions: for example, running longer chains (in particular longer warmups), increasing the maximum treedepth and the average acceptance probability (`adapt_delta`), specifying starting values, using sensible regulating priors, constraining parameters, or changing the parametrisation of the model. Severe convergence problems indicate model misspecifications.
+
+
+### Posterior predictive check
+
+```{r echo = F, include = F}
+(total_samples <- (iterations - warmup) * nchains)
+```
+
+The model is simulating hypothetical data sets on the basis of the estimated posterior parameter values. This happened for every iteration for every chains. In other words there is a total of `r scales::comma(total_samples)` simulated data sets (and samples per parameter) available to us because
+
+```{r}
+(total_samples <- (iterations - warmup) * nchains)
+```
+
+We can draw predicted data from the model output and compare these to the observed data. A model that makes reasonable predictions should fit the observed data.
+
+Using the `as.matrix` function we extract a matrix of `y_tilde`, the simulated data. This returns a matrix of the size `total_samples` $\times$ `nrow(data)` (so `r scales::comma(total_samples)` $\times$ `r scales::comma(nrow(data))`). We use the `sample` function to draw `N` randomly sampled hypothetical data sets. 
+
+```{r}
+y_tilde <- as.matrix(fit_molg, pars = "y_tilde")   # extract simulated data sets
+N <- 50                                            # number of simulations to use
+rnd_sims <- sample(total_samples, N)               # created random indices
+y_tilde_sample <- y_tilde[rnd_sims,]               # draw N random simulations 
+```
+
+The `ppc_dens_oberlay` function from the `bayesplot` package is then mapping the observed data ($y$; thick blue line) to the simulated data ($y_{rep}$; thin light blue lines). We find that the simulated data sets closely align with the observed data.
+
+```{r}
+library(bayesplot)
+ppc_dens_overlay(data_list$y, y_tilde_sample) +
+  scale_x_continuous(limits = c(0, 3000))
+```
+
+For comparison we also visualised the fit for the simulated data of the Gaussian and the log-Gaussian model in Figure \@ref(fig:fitother). Both models show a substantially poorer fit to the keystroke data than the mixture model-based simulations. Note that the Gaussian model does not rule out negative values which are conceptually implausible.
+
+```{r fitother, echo=FALSE, fig.cap="Fit of simulated datasets compared to observed data for the Gaussian and the log-Gaussian model. x-axes were truncated for visability."}
+y_tilde <- posterior_predict(fit_gaus, ndraws = N)
+p_gaus <- ppc_dens_overlay(fit_gaus$data$iki, y_tilde) +
+  labs(subtitle = "Gaussian model") +
+  scale_x_continuous(limits = c(-1000, 3000))
+
+y_tilde <- posterior_predict(fit_lgaus, ndraws = N)
+p_lgaus <- ppc_dens_overlay(fit_lgaus$data$iki, y_tilde) +
+  labs(subtitle = "log-Gaussian model") +
+  scale_x_continuous(limits = c(0, 3000))
+
+p_gaus + p_lgaus +
+  plot_layout(guides = "collect") 
+```
+
+
+
+# Model comparsion II
+
+Similar to the section "Model comparison I" we will use leave-one-out cross-validation to compare the three models, the mixture of log-Gaussians, and the single distribution Gaussian and log-Gaussian models. Because the mixture model was fitted directly in Stan and the single-distribution models were fitted in `brms`, we need to extract LOO statistics before for which we need the log-likelihood and the relative effective sample size for the Stan model. We can then go ahead and compare the models using functions provided by the `loo` package .
 
 ```{r}
 library(loo)
@@ -622,127 +709,55 @@ loo_lgaus <- loo(fit_lgaus)
 loo_gaus <- loo(fit_gaus)
 ```
 
-As described above we used leave-one-out cross-validation to compare the mixture of log-Gaussians model to each the single distribution Gaussian and log-Gaussian model. Their difference is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. Models are ordered from the model with the highest predictive performance to the lowest (i.e. `elpd_loo`). 
+As described above we used leave-one-out cross-validation to compare the mixture of log-Gaussians model to the single distribution Gaussian and log-Gaussian models. This time we need to use the `loo_compare` function because we had to extract the LOO statistics.
 
 ```{r}
 loo_comp <- loo_compare(loo_gaus, loo_lgaus, loo_molg)
 ```
 
-To extract the model comparisons and fit statistics:
+We can then extract the model comparisons and fit statistics:
 
 ```{r}
-loo_comp %>% as.data.frame() %>% 
+loo_comp %>% 
+  as.data.frame() %>% 
   rownames_to_column("models") %>% 
   mutate(across(models, recode, model3 = "fit_molg"),
          across(where(is.numeric), round, 1))  
 ```
 
-The model comparison shows that the model `fit_molg` (the mixture of log-Gaussian ) is approximately `r round(abs(loo_comp[2,1] / loo_comp[2,2]),0)` times better than `fit_lgaus` (try `abs(loo_comp[2,1] / loo_comp[2,2])`).
+The difference between the model in the top row and the two other models is shown in `elpd_diff` ($\Delta\widehat{elpd}$) with standard error shown in `se_diff`. Models are ordered from the model with the highest predictive performance to the lowest (i.e. `elpd_loo`). The model comparison shows that the model `fit_molg` (the mixture of log-Gaussian ) is approximately `r round(abs(loo_comp[2,1] / loo_comp[2,2]),0)` standard error better than the single distribution log-Gaussian `fit_lgaus` (try `abs(loo_comp[2,1] / loo_comp[2,2])`). This constitutes substantial support for the mixture model over the single distribution log-Gaussian.
 
 
 
+# Posterior probability distribution
 
-## Model diagnostics
-
-### Convergence
-
-Model convergence can be established in two practically simple techniques. First, we can inspect the chains in trace plots which show the parameter estimate across iterations (here after warmup) for each chain. We will look at the population-level parameters (names are determined in the Stan code) and assign those to `pars`.
-
-```{r}
-pars <- c("beta", "delta", "theta")
-```
-
-To create trace plots, we can apply the `stan_trace` function to the model `m` and extract the MCMC chains for the parameters in `pars`. The `alpha` argument makes the colours slightly more transparent. If the chains overlap and look like "fat hairy caterpillars", chains have converged on the same target distribution. 
-
-```{r}
-# Check convergence
-stan_trace(fit_molg, pars = pars, alpha = .5)
-```
-
-
-
-Second, we can calculate the $\hat{R}$ statistic. Successful convergence is reflected in $\hat{R}$ values smaller than 1.05 [@gelman1992]. $\hat{R}$ is similar to the F statistic: it tells us how much bigger the variability between chains is compared to the variability within chains. A value of $\approx 1$ indicates that the variability is essentially identical signifying convergence. For this we can use the `rhat` function applied to the model and the population parameters. 
-
-```{r}
-summary(fit_molg, pars=pars)$summary %>% 
-  as.data.frame() %>% 
-  rownames_to_column("parameter") %>% 
-  mutate(across(Rhat, round, 3)) %>% 
-  select(parameter, Rhat)
-```
-
-
-Convergence problems can have many reasons and therefore many solutions: running longer chains (in particular longer warmups), increasing the maximum treedepth and the average acceptance probability (`adapt_delta`), specifying starting values, adjusting priors, constraining parameters, or changing the parametrisation of the model. Severe convergence problems are indicative of a misspecification of the model.
-
-
-### Posterior predictive check
-
-```{r echo = F, include = F}
-(total_samples <- (iterations - warmup) * nchains)
-```
-
-The model used the posterior parameter values to simulate hypothetical data sets. This happened for every iteration for every chains. In other words there is a total of `r scales::comma(total_samples)` simulated data sets (and samples per parameter) available to us because
-
-```{r}
-(total_samples <- (iterations - warmup) * nchains)
-```
-
-We can draw predicted data from the model output and compare these to the observed data. A model that makes reasonable predictions should fit the observed data.
-
-Using the `as.matrix` function we extract a matrix of `y_tilde`, the simulated data. This returns a matrix with the size `total_samples` $\times$ `nrow(data)` (so `r scales::comma(total_samples)` $\times$ `r scales::comma(nrow(data))`). We use the `sample` function to draw `N` randomly sampled hypothetical data sets. The `ppc_dens_oberlay` function from the `bayesplot` package is then mapping the observed data ($y$; thick blue line) to the simulated data ($y_{rep}$; thin lightblue lines).
-
-```{r}
-y_tilde <- as.matrix(fit_molg, pars = "y_tilde")   # extract simulated data sets
-N <- 50                                            # number of simulations to use
-rnd_sims <- sample(total_samples, N)               # created random indices
-y_tilde_sample <- y_tilde[rnd_sims,]               # draw N random simulations 
-```
-
-```{r}
-library(bayesplot)
-ppc_dens_overlay(data_list$y, y_tilde_sample) +
-  scale_x_continuous(limits = c(0, 3000))
-```
-
-
-
-# Posterior probability distributions
-
-At the core of Bayesian inference is the posterior probability distribution. For each model parameter we have `r scales::comma(total_samples)` posterior samples that form a posterior probability distribution. These samples are the results of the number of iterations after warmup for all chains.
+At the core of Bayesian inference is the posterior probability distribution. For each model parameter we have `r scales::comma(total_samples)` posterior samples that render the posterior probability distribution. These samples are the result of the posterior sample from the target distribution after warmup across all chains. If the target distribution was not found by the end of the warmup, inference will not be reliable. We know whether the target distribution was determined if the chains converged.
 
 The distribution of parameter values represents the uncertainty about parameter values given the data. There is a large range of things one can do with a posterior. Below we will focus on summarising parameter estimates, comparing conditions, and extracting by-participant estimates. 
 
-The `names` function can be used to remind us of the parameter names used in the model (we reduced the output to the first 15 parameter names). The meaning of the parameters is described above and is determined in the Stan code. Indices refer to the transition locations (1 = before-sentence; 2 = before-word; 3 = within-word) and to the participant identifier for by-participant parameters (indicated by `_s`).
+The `names` function can be used to remind us of the parameter names available in the model (we omitted the log-likelihood `log_lik`, and the stimulated data sets `y_tilde`). The meaning of the parameters is described above and is determined in the Stan code. Indices refer to the transition locations (1 = before-sentence; 2 = before-word; 3 = within-word) and to the participant identifier for by-participant parameters (indicated by `_s`).
 
 
 ```{r}
 names(fit_molg)[!str_detect(names(fit_molg), "log_lik|y_tilde")]
 ```
 
-
-## Parameter-value estimates
-
-The parameter estimates can be visualised using the `stan_hist` function with the model variable `m` and the to-be visualised parameters `pars` as arguments. The function returns a histogram for each other parameter values. Each histogram is the probability distribution of the parameter values indicating which values are more or less probable to be the true parameter value.
+The posterior probability distribution of the parameter estimates can be visualised using the `stan_hist` function with the model variable `fit_molg` and the to-be visualised parameters `pars` as arguments. The function returns a histogram for each other parameter values. Each histogram is the probability distribution of the parameter values indicating which values are more or less probable estimates for the true parameter value. 
 
 ```{r}
 stan_hist(fit_molg, pars = pars)
 ```
 
 
-The posterior samples of the parameter values can be summarised using the `print` function. The `probs` argument requires the lower and upper bound of the probability interval that we are interested in. A lower bound of .025 and an upper bound of .975 gives the 95% probability interval (PI; also called "credible intervals"), i.e. the range that contains the true parameter value with a 95% probability given the data. 
-
-The output summaries the most probable parameter value as mean with its standard error (`se_mean`) and standard deviation (`sd`), the effective sample size (`n_eff`) indicating sampling efficiency and the convergence metric $\hat{R}$ (`Rhat`) we introduced above. 
+The posterior samples of the parameter values can be summarised using the `print` function. The `probs` argument can be used to extract the lower and upper bound of the probability interval. A lower bound of .025 and an upper bound of .975 gives the 95% probability interval (PI; also called "credible intervals"), i.e. the range that contains the true parameter value with a 95% probability given the data. 
 
 ```{r}
 print(fit_molg, pars = pars, probs = c(.025,.975))
 ```
 
+The output summaries the most probable parameter value as mean with its standard error (`se_mean`) and standard deviation (`sd`), the effective sample size (`n_eff`) indicating sampling efficiency and the convergence metric $\hat{R}$ (`Rhat`) we introduced above. 
 
-For the following steps, we will focus on the three parameters that have conceptually interesting interpretations: (1) the average fluent typing speed $\beta$, (2) the disfluency slowdown $\delta$, and (3) the disfluency probability $\theta$.
-
-```{r}
-pars <- c("beta", "delta", "theta")
-```
+For the following steps, we will focus on the three parameters that have conceptually interesting interpretations: (1) the average fluent typing speed $\beta$, (2) the hesitation slowdown $\delta$, and (3) the hesitation probability $\theta$ (which at the moment is still on the logit scale).
 
 The `plot` function shows the posterior probability distribution of the three parameters for before-sentence transitions (indicated as 1), before-word transitions (indicated as 2), and within-word transitions summarised as median and 95% PI.
 
@@ -750,14 +765,14 @@ The `plot` function shows the posterior probability distribution of the three pa
 plot(fit_molg, pars = pars, ci_level = .95) # ci = credible interval
 ```
 
-The values for $\beta$ and $\delta$ are shown on a log-scale. To transform their values back to msecs we can extract the posterior samples using the `as.data.frame` function. We prefer the use of tibble objects. 
+The values for $\beta$ and $\delta$ are shown on a log-scale. To transform their values back to msecs we can extract the posterior samples using the `as.data.frame` function (we prefer the use of tibbles). 
 
 ```{r}
 posterior <- as.data.frame(fit_molg, pars) %>% as_tibble() 
 posterior
 ```
 
-The `pivot_longer` function is transforming the data above to a long format with an additional column for component and the model parameters kept as columns. The `names_pattern` argument is using a regular expression to extract the number in the squared brackets.
+The `pivot_longer` function transforms the data to a long format with an additional column for component and the model parameters as columns. The `names_pattern` argument is using a regular expression to extract the number in the squared brackets.
 
 ```{r}
 posterior_long <- pivot_longer(posterior, everything(), 
@@ -766,7 +781,7 @@ posterior_long <- pivot_longer(posterior, everything(),
 posterior_long
 ```
 
-This code is then transforming `beta` and `delta` to msecs using the exponential function `exp` to un-log the values. In order to transform the slowdown `delta` into msecs we need to add `beta` before using the exponential function; we can then subtract beta again. `theta` samples are currently on the logit scale and can be transformed to probabilities using `brms::inv_logit_scaled`. The `recode` function changes the component indices from 1 to "before-sentence", 2 to "before-word", 3 to "within-word".
+This code is then transforming `beta` and `delta` to msecs using the exponential function `exp`. In order to transform the slowdown `delta` into msecs we need to add `beta` before using the exponential function; we can then subtract beta again. `theta` samples are currently on the logit scale and can be transformed to probabilities using `brms::inv_logit_scaled` (the model also contained a `prob` parameter which is `theta` but on the probability scale). The `recode` function changes the location indices from 1 to "before-sentence", 2 to "before-word", 3 to "within-word".
 
 ```{r}
 posterior_in_msecs <- mutate(posterior_long,
@@ -780,25 +795,54 @@ posterior_in_msecs
 ```
 
 
-The posterior distribution of the parameter estimates can then be visualised in, for example, histograms.
+The posterior distribution of the parameter estimates can then be visualised in, for example, histograms. The histograms show that especially the hesitation parameter is sensitive to transition location with more hesitations before sentences than before words than within words.
 
 ```{r}
-pivot_longer(posterior_in_msecs, beta:theta, names_to = "parameter") %>%
+pivot_longer(posterior_in_msecs, beta:theta) %>%
   ggplot(aes(x = value, colour = location, fill = location)) +
   geom_histogram(position = "identity", alpha = .25) +
-  facet_wrap(~parameter, scales = "free", labeller = label_parsed) +
+  facet_wrap(~name, scales = "free", labeller = label_parsed) +
   scale_fill_brewer("Transition\nlocation", palette = "Dark2") +
   scale_color_brewer("Transition\nlocation", palette = "Dark2") +
   labs(x = "Posterior parameter estimate") +
   theme(legend.position = "top")
 ```
+```{r echo = F}
+rm("mean")
+```
+
+To illustrate differences to the estimated cells means compared to the single distribution models, here are the means for all parameters and their location. The central tendencies of the single distribution models are in principle a combination of `beta` and `beta + delta` weighted by `theta`.
+
+```{r}
+pivot_longer(posterior_in_msecs, beta:theta) %>% 
+  summarise(across(value, list(mean = mean), 
+                   .names = "{.col}"), 
+            .by = c(name, location)) %>% 
+  arrange(name)
+```
+
+These are the estimated cell means from the log-Gaussian model
+
+```{r}
+fixef(fit_lgaus)[,1] %>% exp() %>% round(0)
+```
+
+and the estimated cell means of the Gaussian model
+
+```{r}
+fixef(fit_gaus)[,1] %>% round(0)
+```
+
+Differences are especially noticeable for before-sentence transitions.
 
 
-## Difference between transition locations
+# Hypothesis testing
 
-We can calculate the differences between the transition locations for each parameter. This is giving an indication of whether fluent typing ($\beta$) is influenced by linguistic edges, maybe the size of the disfluency slowdown ($\delta$), or the disfluency probability ($\theta$). 
+## Differences between transition locations
 
-To determine these differences we change the data format above and create a variable that indicates the parameter and one column for the corresponding values for each transition location. The last line calculates the difference between (1) transitions before sentences and words, and (2) transitions before and within words for each of the three parameters.
+We can calculate the differences between the transition locations for each parameter to determine to what extent each of the parameters are sensitive to transition locations. This will show us to what extent fluent typing ($\beta$), the size of the hesitation slowdown ($\delta$), and the hesitation probability ($\theta$) are sensitive to the linguistic location of a key pair.
+
+To determine these differences we change the data format above and create a column that indicates the parameter name and a column for the corresponding values for each transition location. The last line calculates the difference between (1) transitions before sentences and words, and (2) transitions before and within words for each of the three parameters.
 
 ```{r}
 posterior_diffs <- posterior_in_msecs %>%
@@ -806,27 +850,27 @@ posterior_diffs <- posterior_in_msecs %>%
   mutate(id = row_number(), .by = location) %>%
   pivot_wider(names_from = location, values_from = value) %>%
   select(-id) %>% # drop id column
-  mutate(diff_sent = `before-sentence` - `before-word`,
-         diff_word = `before-word` - `within-word`,
+  mutate(diff_sent = `before-sentence` - `before-word`, # compare sentences to word
+         diff_word = `before-word` - `within-word`, # compare within to before word
          parameter = paste0(parameter, "[diff]")) %>% 
   select(parameter, starts_with("diff"))
 
 posterior_diffs
 ```
 
-The difference between the conditions can be summarised using the mean, the 95% PIs and the probability that the difference between the components is small 0 (indicated as e.g. $P(\hat{\beta} <0)$ for the parameter $\beta$; the hat $\hat{.}$ symbol indicates that the value is an estimate of the population parameter value). This summary tells us whether the difference between the consonants task and the LF-bigrams task is different from zero and the most probable value for the difference between tasks.
+The difference between the conditions can be summarised using the mean, the 95% PIs and the probability that the difference between the components is smaller than 0 (indicated as e.g. $P(\hat{\beta} <0)$ for the parameter $\beta$; the hat symbol indicates $\hat{.}$ that the value is an estimate of the population parameter value). This summary tells us how certainly we can rule out a null difference between transition locations the most probable value for the differences. 
 
 ```{r}
-# Create some summary functions
-lower <- function(x) quantile(x, .025)
-upper <- function(x) quantile(x, .975)
-p_diff <- function(x) mean(x < 0)
+# Create summary functions for convenience
+lower <- function(x) quantile(x, .025) # lower bound of 95% PI
+upper <- function(x) quantile(x, .975) # upper bound of 95% PI
+p_diff <- function(x) mean(x < 0)      # prob that difference is negative
 
 # Summarise differences
 posterior_diffs %>%
   pivot_longer(starts_with("diff")) %>% 
   summarise(across(value, 
-            list(mean = base::mean,  # mean of difference
+            list(mean = mean,        # mean of difference
                  lower = lower,      # 2.5% lower bound of difference
                  upper = upper,      # 97.5% upper bound of difference
                  p_diff = p_diff),   # prob that difference is negative
@@ -836,7 +880,28 @@ posterior_diffs %>%
   arrange(name)
 ```
 
-```{r echo=F}
+```{r echo = F}
+ests <- posterior_diffs %>%
+  pivot_longer(starts_with("diff")) %>% 
+  summarise(across(value, 
+            list(mean = mean,        # mean of difference
+                 lower = lower,      # 2.5% lower bound of difference
+                 upper = upper,      # 97.5% upper bound of difference
+                 p_diff = p_diff),   # prob that difference is negative
+            .names = "{.fn}"),
+            .by = c(parameter, name)) %>%   # group by parameters, comparison 
+  mutate(across(where(is.numeric), round, 2)) %>% # round after 2nd decimal place
+  arrange(name)
+
+theta <- ests %>% filter(str_detect(parameter, "theta"))
+delta <- ests %>% filter(str_detect(parameter, "delta"))
+```
+
+For example, form these results we can infer that there is a $P(\hat{\theta} <0)$ = `r theta %>% filter(name == "diff_sent") %>% pull(p_diff) %>% round(2)` chance that hesitations do not occur more frequently before sentence; in fact the results show hesitations are more probable my `r theta %>% filter(name == "diff_sent") %>% pull(mean) %>% round(2)` to occur before sentences compare to before words (95% PI: `r theta %>% filter(name == "diff_sent") %>% pull(lower) %>% round(2)`, `r theta %>% filter(name == "diff_sent") %>% pull(upper) %>% round(2)`). Also, the slowdown associated with hesitations is `r delta %>% filter(name == "diff_sent") %>% pull(mean) %>% round(0)` msecs longer for sentences (95% PI: `r delta %>% filter(name == "diff_sent") %>% pull(lower) %>% round(0)`, `r delta %>% filter(name == "diff_sent") %>% pull(upper) %>% round(0)`) with a probability of $P(\hat{\delta} <0)$ = `r delta %>% filter(name == "diff_sent") %>% pull(p_diff) %>% round(2)` to be smaller than zero.
+
+
+
+```{r echo = F}
 ps <- posterior_diffs %>%
   pivot_longer(-parameter) %>% 
   summarise(across(value, 
@@ -851,7 +916,7 @@ ps <- posterior_diffs %>%
 ```
 
 
-These differences can be viewed in histograms. The vertical line indicates a difference between tasks corresponding to a value of zero. The area of the histogram to the left of this line corresponds to the probability `p` to observe a value smaller than zero as in the output above. 
+These differences can be viewed in histograms. The vertical line indicates a difference between transition locations corresponding to a value of zero. The area of the histogram to the left of this line corresponds to the probability `p_diff` to observe a negative difference. 
 
 
 ```{r}
@@ -869,75 +934,66 @@ posterior_diffs %>%
   theme(legend.position = "top")
 ```
 
-We observe the following differences that can be written up in a report like this: We observe evidence for a higher probability to pause before sentences which is `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(mean)` (95% PI: `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(lower)`, `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(upper)`) times more likely than before words, which was is `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(mean)` (95% PI: `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(lower)`, `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(upper)`) more likely than within words. 
+We observe the following differences that can be reported as followed: Evidence was found for a higher probability to hesitate before sentences with a difference of `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(mean)` (95% PI: `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(lower)`, `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(upper)`) compared to before-word transitions; before-word transitions show an increased hesitation probability of `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(mean)` (95% PI: `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(lower)`, `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(upper)`) compared to within-word transitions. 
 
-Similarly, differences were found for the hesitation difference. Hesitations before sentences are `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(mean)` msecs (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(lower)`, `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(upper)`) longer than before words, which were `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(mean)` msecs (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(lower)`, `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(upper)`) longer than within words. 
+Similarly, differences were found for the hesitation slowdown. Hesitations before sentences were `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(mean) %>% round(0)` msecs (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(upper) %>% round(0)`) longer than before words. Hesitations before words were `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(mean) %>% round(0)` msecs longer than within words, although the probability interval (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(upper) %>% round(0)`) did not rule out a negative difference, or no difference, which however had a low probability $P(\hat{\delta} <0)$ = `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(p_diff) %>% round(2)`.
 
-Interestingly though fluent transitions (i.e. planning and executing motor plans) were only faster within words by `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(mean)` msecs (95% PI: `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(lower)`, `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(upper)`) compared to before-word transitions but there was no difference for before-sentence transitions compared to before-word transitions ($\hat{\beta}$ = `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(mean)` msecs, 95% PI: `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(lower)`, `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(upper)`).
-
-
+For fluent transitions there was evidence that within-word transitions were `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(mean) %>% round(0)` msecs longer (95% PI: `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(upper) %>% round(0)`) compared to before-word transitions. There was negligible evidence for longer transitions for before-sentence transitions compared to before-word transitions ($\hat{\beta}$ = `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(mean) %>% round(0)` msecs, 95% PI: `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(upper) %>% round(0)`).
 
 
 ## ROPE
 
-In practice, we rarely believe that only an effect of exactly null is indicating that there is no difference between our groups (which is what a null hypothesis assumes). Instead there are values that are non-different from null; for example a slowdown of 1 msecs is meaningless in most, if not all, contexts. To take this into account we can determine the *region of practical equivalence* [ROPE, @kruschke2010believe; @kruschke2011bayesian; @kruschke2014doing]. We can define the ROPE as the range of values that is _a priori_ considered non-different from a null effect. The ROPE value indicates to what extent the posterior can not rule out a negligible effect. A meaningful difference between groups (or effects more generally) should have a small proportion of posterior samples within the ROPE.
+One problem with null-hypothesis significance testing it that, in practice, we rarely believe that only a difference of exactly null is indicating that there is no difference between groups. Instead there are values that are non-different from null; for example a difference in keystroke intervals of 1 msecs is meaningless in most, if not all, contexts. A hesitation probability increase of 0.001 is too small to be meaningful. To take this into account we can determine a *region of practical equivalence* [ROPE, @kruschke2010believe; @kruschke2011bayesian; @kruschke2014doing]. We can define the ROPE as the range of values that is _a priori_ considered non-different from a null effect. The ROPE value indicates to what extent the posterior can not rule out a negligible effect. A meaningful difference between groups should have a small proportion of posterior samples within the ROPE.
 
-To calculate the ROPE for out differences between two transition locations, we can use the `rope` function from the `bayestestR` package.^[To install `bayestestR` run `install.packages("bayestestR")`.] The `rope` function requires as input a vector with the posterior difference. We can create such a vector from our posterior differences. Let's focus on $\beta_\text{diff}$, the average typing speed for fluent transitions.
+To calculate the ROPE for our differences between two transition locations, we can use the `rope` function from the `bayestestR` package.^[To install `bayestestR` run `install.packages("bayestestR")`.] The `rope` function requires as input a vector with the posterior difference. We can create such a vector from our posterior differences that we calculated above. Let's focus on $\delta_\text{diff}$, the slowdown difference for hesitant transitions.
 
 ```{r}
 # Extract vector of differences
 # For sentence vs word
-beta_diff_sent <- filter(posterior_diffs, parameter == "beta[diff]") %>% pull(diff_sent)
+delta_diff_sent <- filter(posterior_diffs, parameter == "delta[diff]") %>% pull(diff_sent)
 
 # For before word vs within word
-beta_diff_word <- filter(posterior_diffs, parameter == "beta[diff]") %>% pull(diff_word)
+delta_diff_word <- filter(posterior_diffs, parameter == "delta[diff]") %>% pull(diff_word)
 ```
 
-Also, we need to define the `range` argument which specifies the range of values are not considerably different from null. Of course this range will depend on what the parameter represents and researcher intuition. For example, for fluent typing we would consider small differences, of say 10 msecs, more meaningful than for disfluencies. If we consider differences of 10 msecs or smaller equivalent to a null difference, we can define the `range` argument with a lower bound of -10 and the upper bound of 10.
+Also, we need to define the `range` argument which specifies the range of values are considered indifferent from a null difference. Of course this range will depend on what the parameter represents and researcher's intuition as well as prior knowledge of the domain. For example, for fluent transitions we would consider small differences, of say 10 msecs, more meaningful than for hesitations. If we consider differences of 10 msecs or smaller equivalent to a null difference, we can define the `range` argument with a lower bound of -10 and the upper bound of 10.
 
 ```{r}
 library(bayestestR)
-rope(beta_diff_sent, range = c(-10, 10))
+rope(delta_diff_word, range = c(-10, 10))
 ```
 
-The ROPE for fluent typing speed for the difference between before-sentence and before-word transitions contains `r round(pull(rope(beta_diff_sent, range = c(-10, 10)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(beta_diff_sent, range = c(-10, 10)))*100,2)`% probability that the posterior difference $\beta_\text{diff}$ is between -10 and 10 msecs which we considered negligible.
+The ROPE for hesitation durations for the difference between before-word and within-word transitions contains `r round(pull(rope(delta_diff_word, range = c(-10, 10)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(delta_diff_word, range = c(-10, 10)))*100,2)`% chance that the true difference $\beta_\text{diff}$ is between -10 and 10 msecs and therefore negligible.
 
+Let's see what happens if we determine a wider ROPE for negligible differences which can be understood as a more conservative test for a non-zero difference. What happens if we define a ROPE of -50 through 50 msecs for the difference between before-word and within-word hesitations
 
 ```{r}
-rope(beta_diff_word, range = c(-10, 10))
+rope(delta_diff_word, range = c(-50, 50))
 ```
 
-However, the ROPE for fluent typing speed for the difference between before-word and within-word transitions contains `r round(pull(rope(beta_diff_word, range = c(-10, 10)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(beta_diff_word, range = c(-10, 10)))*100,2)`% probability that the posterior difference $\beta_\text{diff}$ is between -10 and 10 msecs which we considered negligible.
-
-Let's see what happens if we determine a wider ROPE for negligible differences. What happens if we define a ROPE of -50 through 50 msecs for the difference between before-word and within-word transitions.
-
-```{r}
-rope(beta_diff_word, range = c(-50, 50))
-```
-
-The ROPE contains `r round(pull(rope(beta_diff_word, range = c(-50, 50)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(beta_diff_word, range = c(-50, 50)))*100,2)`% probability that the posterior difference $\beta_\text{diff}$ is between -50 and 50 msecs which we considered negligible.
+The ROPE contains `r round(pull(rope(delta_diff_word, range = c(-50, 50)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(delta_diff_word, range = c(-50, 50)))*100,2)`% probability that the true difference $\beta_\text{diff}$ is between -50 and 50 msecs which would therefore be a negligible effect.
 
 
 ## Bayes Factor
 
-Frequentist null-hypothesis testing is based on the *p*-value. Conceptually this test is evaluates whether the data allow us to reject the null hypothesis (i.e. the true parameter value being some difference, is zero). More specifically it tests whether the probability of observing a test statistic (e.g. *t*, *F*, $\chi^2$) as or more extreme if the null hypothesis were true. Therefore, *p*-values have two possible outcomes: reject the null (i.e. $p<.05$); inconclusive evidence (i.e. $p>.05$). And that's it. It does not provide direct evidence for the alternative hypothesis; nor does it provide evidence for the null hypothesis.
+Frequentist null-hypothesis testing is based on the *p*-value. Conceptually this probability represents how likely the data are if there was no effect and we can, if this probability is low enough (typically smaller than .05) reject the null hypothesis (i.e. the true parameter value being some difference, is zero). In other words, if the data are very unlikely, the null-hypothesis becomes implausible. More specifically it tests whether the probability of observing a test statistic (e.g. *t*, *F*, $\chi^2$) as or more extreme if the null hypothesis is true. There are two possible outcomes for *p*-values: reject the null (i.e. $p<.05$); inconclusive evidence (i.e. $p>.05$). And that's it. *p*-values do neither provide direct evidence for the alternative hypothesis (only evidence against the null), nor do they provide evidence for the null hypothesis (that data are not inconsistent with the null hypothesis is not evidence that there is no difference; or absentence of evidence is not evidence of absence).
 
-Bayes Factors (BFs) provide a continuum of three possible outcomes [@dienes2014using; @dienes2016bayes; @dienes2018four]: (1) there is evidence to reject the null / alternative hypothesis; (2) the evidence is inconclusive (get more data!); (3) accept the null / alternative hypothesis.
+In contrast, Bayes Factors (BFs) provide a continuum of three possible outcomes [@dienes2014using; @dienes2016bayes; @dienes2018four]: (1) there is evidence to reject the null / alternative hypothesis; (2) the evidence is inconclusive (get more data!); (3) accept the null / alternative hypothesis.
 
-For example, if our BF is the probably of the alternative hypothesis $H1$ over the null hypothesis $H_0$, values $>1$ indicate that there is more evidence for $H1$ and $<1$ indicates more evidence for $H_0$. This can be turned around by swapping nominator and denominator 
+For example, if our BF is the probability of the alternative hypothesis $H_1$ over the null hypothesis $H_0$, given the data $y$, values $>1$ indicate that there is more evidence for $H_1$ than for $H_0$, given the data, and $<1$ indicates that there is more evidence for $H_0$. This can be turned around by swapping nominator and denominator 
 
 $$
 \text{BF}_{10} = \frac{p(H_1 \mid y)}{p(H_0 \mid y)} 
 $$
-or by taking the inverse of $\text{BF}_{10}$, meaning $\text{BF}_{01} = \frac{1}{\text{BF}_{10}}$. 
+or by taking the inverse of $\text{BF}_{10}$ which is $\text{BF}_{01} = \frac{1}{\text{BF}_{10}}$. 
 
-The strength of evidence for $H_0$ and $H_1$ is continuous rather than binary (i.e. evidence vs no evidence). Authors have proposed different soft thresholds of what constitutes evidence [see, e.g., @bag12; @jeffreys1961theory; @lee2014bayesian] but generally a BF larger than 3 is weak evidence, larger than 5 / 6 indicate moderate evidence and 10 / 32 is strong evidence for a statistically meaningful effect. For example BF$_{10}$=2 reflects that the alternative hypothesis is two times more likely than the null hypothesis given the evidence. BF$_{10}$=0.33 is weak evidence in favour of the null hypothesis because $\frac{1}{0.33} \approx 3$. Notably BFs can be used to obtain evidence in favour of the null [for discussion see @dienes2014using; @dienes2018four; @dienes2016bayes]. 
+The strength of evidence for $H_0$ and $H_1$ is continuous rather than binary (i.e. evidence vs no evidence). Authors have proposed different soft thresholds of what constitutes meaningful evidence [see, e.g., @bag12; @jeffreys1961theory; @lee2014bayesian] but generally a BF larger than 3 is weak evidence, larger than 5 / 6 indicate moderate evidence and 10 / 32 is strong evidence for a statistically meaningful effect. For example BF$_{10}$=2 reflects that the alternative hypothesis is two times more likely than the null hypothesis given the evidence. BF$_{10}$=0.33 is weak evidence in favour of the null hypothesis because $\frac{1}{0.33} \approx 3$. Notably, BFs can be used to obtain evidence in favour of the null; for discussion see @dienes2014using, @dienes2018four, @dienes2016bayes and for a practical application in writing research see @spilling2022handwriting and @spilling2023writing.
 
 
 The BF can be calculated using the Savage-Dickey method [see, e.g., @dickey1970weighted; @jeffreys1961theory; @wagenmakers2010bayesian]. The BF is determined on the basis of the height of the posterior density at zero compared to the height of the prior density at zero. Important to note here is that the resulting BF is sensitive to the prior in situations when the sample is small and / or prior information play a big role. It is therefore a good idea to carefully think about the prior in advance of analysis (hence "prior") and to be mindful of the role of priors in the calculation of BFs.
 
 
-Figure \@ref(fig:sdbf) shows an example for the calculation of BFs based on a posterior with an effect difference that is distributed according to $\text{N}(2.5, 1)$ compared against three priors with a wide SD $\text{N}(0, 10)$, a SD equal to the posterior $\text{N}(0, 2.5)$, and relatively small SD $\text{N}(0, 1)$.
+Figure \@ref(fig:sdbf) shows an example for the calculation of BFs based on a posterior with an effect difference that is normally distributed with a mean of 2.5 and a SD of 1, expressed as $\mathcal{N}(2.5, 1)$, compared against three priors with a wide SD $\mathcal{N}(0, 10)$, a SD equal to the posterior $\mathcal{N}(0, 2.5)$, and relatively small SD $\mathcal{N}(0, 1)$. The resulting BFs are shown in the boxes as well as their calculation. The denominator shows the height of the posterior (black line) at zero and the nominator shows the height of the prior at zero (indicates as black dots). The BF is larger for the more informative prior. Of course in practice, the shape of the posterior density is not independent of the prior; for more informative priors the posterior will move closer to the prior. 
 
 
 ```{r sdbf, fig.cap="Example for the BF calculated using the Savage-Dickey method for 3 differently wide priors.", echo=F}
@@ -998,8 +1054,7 @@ pd %>% mutate(across(name, recode_factor,
 ```
 
 
-
-To calculate the BF on the basis of posterior samples, the Savage-Dickey method can be implemented like so [taken from @nicenboim2016statistical] which requires an appropriate prior distribution. We will fix the mean of the prior to 0 but allow to change the SD as function argument.
+To calculate the BF on the basis of posterior samples, the Savage-Dickey method can be implemented as below [taken from @nicenboim2016statistical] which requires an appropriate prior distribution. 
 
 ```{r}
 BF <- function(posterior_difference, prior_sd = 1){
@@ -1011,8 +1066,10 @@ BF <- function(posterior_difference, prior_sd = 1){
 }
 ```
 
+The `logspline` function estimates the density of the posterior and the `dlogspline` and the `dnorm` functions return the height of the density at 0. We fixed the mean of the prior to 0 but allow to change the SD as function argument. Aside, the mean of the prior does not need to be zero but can take on any value that can be justified on the basis of domain knowledge. We are illustrating here how BFs can be used to test the evidence again a null hypothesis.
 
-For demonstration purposes we will calculate the BF with different priors SDs for the hesitation probability $\theta$, or in particular the posterior difference in hesitation $\theta_\text{diff}$ for before-sentence vs before-word transitons and before-word vs within-word transitions.
+
+For demonstration purposes we will calculate the BF with different priors SDs for the hesitation probability $\theta$, or in particular the posterior difference in hesitation $\theta_\text{diff}$ for before-sentence vs before-word transitions and before-word vs within-word transitions.
 
 First, we extract vectors of differences
 
@@ -1024,7 +1081,7 @@ theta_diff_sent <- filter(posterior_diffs, parameter == "theta[diff]") %>% pull(
 theta_diff_word <- filter(posterior_diffs, parameter == "theta[diff]") %>% pull(diff_word)
 ```
 
-and then apply the `BF` function from above first to the difference between before-sentence and before-word transitions. For interpretation it is important to remember that $\theta$ is a probability; hence the difference between two probabilities can only range between -1 and 1. In other words, a prior SD of 1 is saying that all differences are as likely as no difference (which makes very little sense here). Similar to the calculations for ROPE above, it is useful to contemplate which prior distribution appropriately reflects the null hypothesis for the scale the difference is on (e.g. probability, log msecs, msecs).
+and then apply the `BF` function from above first to the difference between before-sentence and before-word transitions. For interpretation it is important to remember that $\theta$ is a probability; hence the difference between two probabilities can only range between -1 and 1 (in the most extreme case). In other words, a prior SD of 1 is saying that all differences are as likely as no difference (which makes very little sense). Similar to the calculations of the ROPE above, it is useful to contemplate which prior distribution appropriately reflects the null hypothesis for the scale the difference is on (e.g. probability, log msecs, msecs). An SD of 1 and .5 are not useful prior distributions are they assign some prior probability to differences across the full range of differences. An SD of .1 is a more realistic representation for the distribution of null differences
 
 ```{r}
 # Prior with sd of 1
@@ -1058,14 +1115,16 @@ To calculate the evidence ratio, which is based on the height of prior and poste
 
 ## Note on using more than a single grouping variable 
 
-The Stan code presented in this walk through can be used to estimate the posterior for two and more conditions: We can calculate the difference between conditions from the posterior as well as main effects and interactions for more complex factorial designs as any factorial design can be reduced to a single variable.^[For example, say we have a 2 $\times$ 2 factorial design with factor 1 having two levels AB and CD and factor 2 having the corresponding levels AC and BD. These two factors render four conditions A, B, C, D. From posterior samples for each level A through D we can calculate main effect 1 as $\text{ME1}=(A+B) - (C+D)$, main effect 2 as $\text{ME2}=(A+C) - (B+D)$, and their interaction as $\text{Interaction}=(A-B) - (C-D)$ (or $\text{Interaction}=(A-C) - (B-D)$) and summary statistics as shown above.]
+The Stan code presented in this tutorial can be used to estimate the posterior for two and more conditions represented in one predictor variable (called `condition` above): We can calculate the difference between conditions from the posterior as well as main effects and interactions for more complex factorial designs as any factorial design can be reduced to a single variable.
+
+For example, say we have a 2 $\times$ 2 factorial design with factor 1 having two levels AB and CD and factor 2 having the corresponding levels AC and BD. These two factors render four conditions A, B, C, D. From posterior samples for each level A through D we can calculate main effect 1 as $\text{ME1}=(A+B) - (C+D)$, main effect 2 as $\text{ME2}=(A+C) - (B+D)$, and their interaction as $\text{Interaction}=(A-B) - (C-D)$ (or $\text{Interaction}=(A-C) - (B-D)$) and summary statistics as shown above.
 
 
 
 
 ## By-participant estimates 
 
-In some contexts we would like to obtain by-participant estimates of the probability of a participant to exhibit a disfluency (i.e. $\theta_s$). These estimates inform us about the prevalence of typing hesitations.
+In some contexts we would like to obtain by-participant estimates of the probability of a participant to exhibit hesitations (i.e. $\theta_s$) reflecting how often a participant is pausing. 
 
 As before we can extract the posterior from the model `fit_molg`. This time we use the parameter that stored by-participant estimates `prob_s` (which is the inverse-logit of the `theta_s` which we didn't store in the model fit) corresponding to the population estimate `theta`. 
 
@@ -1074,21 +1133,15 @@ posterior_ppts <- as.data.frame(fit_molg, pars = 'prob_s') %>% as_tibble()
 names(posterior_ppts)[1:10]
 ```
 
-This posterior tibble has the format
-
-| "$<\text{parameter name}>\text{_s}[<\text{transition location id}>, <\text{participant id}>]$" 
-
-where indices indicate the transition-location id and the participant identifier of the parameters. The following code creates a long format with columns `name` with the names above as levels and a `value` column with their respective values (both `name` and `value` are `pivot_longer` defaults). The `name` column is then separated into `name` (levels: `prob`), `location` (levels: `1`, `2`, `3`), and participant (an index for each participant) using "," to separate the three variables. 
-
+The column names have the format `<parameter>_s[<location>, <participant>]` where indices indicate the transition-location id and the participant identifier of the parameters. The following code creates a long format with columns `location` and `participant` and a `value` column with their respective values (`value` is `pivot_longer` defaults). The previous column names were separated into `location` (levels: `1`, `2`, `3`), and `participant` (an index for each participant) using "," to separate the two variables and extracting the numbers inside the squared brackets (the remainder of the name was discarded).
 
 ```{r}
 posterior_ppts_long <- posterior_ppts %>%
-  pivot_longer(everything()) %>%
-  # separate into location and ppt using "," as separator
-  separate(name, into = c("location", "participant"), sep = ",") %>% 
-  # extract number from new variables and recode location
-  mutate(across(c(location, participant), parse_number),
-         across(location, recode, 
+  pivot_longer(everything(), 
+               names_to = c("location", "participant"), 
+               # extract indice for location and ppt using "," as separator
+               names_pattern = "\\[(.+),(.+)\\]") %>%
+  mutate(across(location, recode, 
                 `1` = "before-sentence",
                 `2` = "before-word",
                 `3` = "within-word")) %>%
@@ -1102,10 +1155,15 @@ posterior_ppts_long
 
 We can then summarise by-participant estimates for each transition location with the most probable parameter value and the 95% PI as before.
 
+```{r echo = F}
+rm("mean")
+```
+
+
 ```{r}
 posterior_ppts_long_summary <- posterior_ppts_long %>%
   pivot_longer(-participant, names_to = "location") %>%
-  summarise(across(value, list(mean = base::mean, 
+  summarise(across(value, list(mean = mean, 
                                lower = lower, 
                                upper = upper),
                    .names = '{.fn}'),
@@ -1119,10 +1177,13 @@ For all 10 participants we see the estimate probability of typing hesitations by
 
 ```{r}
 posterior_ppts_long_summary %>%
+  mutate(across(participant, as.numeric)) %>% 
   ggplot(aes(x = participant, 
-             y = mean, ymin = lower, ymax = upper,
-            colour = location,
-            shape = location)) +
+             y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             colour = location,
+             shape = location)) +
   geom_pointrange(position = position_dodge(.75)) +
   labs(x = "Participant id", 
        y = "Hesitation probability with 95% PIs") +
@@ -1143,28 +1204,32 @@ posterior_ppts_long_diff_summary <- posterior_ppts_long %>%
   pivot_longer(-participant, 
                names_to = 'difference', 
                values_to = 'diff') %>% 
-  summarise(across(diff, list(mean = base::mean, 
-                               lower = lower, 
-                               upper = upper),
+  summarise(across(diff, list(mean = mean, 
+                              lower = lower, 
+                              upper = upper),
                    .names = '{.fn}'),
             .by = c(participant, difference)) 
 
 posterior_ppts_long_diff_summary
 ```
 
-This calculation and visualisation allows researchers to identify participants that do or do not differ in terms of hesitation frequency, in our example depending on transition locations.
+This calculation and visualisation allows us to identify participants that do or do not differ in terms of hesitation frequency depending on transition locations.
 
 ```{r }
 posterior_ppts_long_diff_summary %>%
   mutate(across(difference, recode, 
                 diff_sent = "Comparison: before-sentence vs before-word",
-                diff_word = "Comparison: before-word vs within-word")) %>% 
-  ggplot(aes(x = factor(as.numeric(participant)), 
-             y = mean, ymin = lower, ymax = upper)) +
+                diff_word = "Comparison: before-word vs within-word"),
+         across(participant, as.numeric)) %>% 
+  ggplot(aes(x = participant, 
+             y = mean, 
+             ymin = lower, 
+             ymax = upper)) +
   geom_hline(yintercept = 0, colour = "red", linetype = "dashed") +
-  geom_pointrange(position = position_dodge(.75)) +
+  geom_pointrange() +
   facet_wrap(~difference) +
   coord_flip() +
+  scale_x_continuous(breaks = 1:10) +
   labs(x = "Participant id", 
        y = "Difference in hesitation probabilities with 95% PIs") 
 ```

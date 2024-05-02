@@ -7,8 +7,8 @@ In particular, the first data set was simulated using a two-distributions mixtur
 \begin{equation}
 \begin{aligned}
 (\#eq:simmog)
-\text{y} \sim\text{ } & \theta \cdot \text{logN}(\beta + \delta, \sigma^2_1) +\\
-& (1 - \theta) \cdot \text{logN}(\beta, \sigma^2_2)\\
+\text{y} \sim\text{ } & \theta \cdot \text{log}\mathcal{N}(\beta + \delta, \sigma^2_1) +\\
+& (1 - \theta) \cdot \text{log}\mathcal{N}(\beta, \sigma^2_2)\\
 \text{constraint: } & \delta, \sigma_\text{2}^2, \sigma_\text{1}^2>0\\
 		& \sigma_{1}^2 > \sigma_{2}^2
 \end{aligned}
@@ -21,7 +21,7 @@ The second data set was generated with a single distribution log-Gaussian proces
 \begin{equation}
 \begin{aligned}
 (\#eq:simuv)
-\text{y} \sim\text{ }& \text{logN}(\beta, \sigma^2)\\
+\text{y} \sim\text{ }& \text{log}\mathcal{N}(\beta, \sigma^2)\\
 \text{constraint: } & \sigma^2>0
 \end{aligned}
 \end{equation}
