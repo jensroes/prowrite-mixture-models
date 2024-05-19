@@ -565,8 +565,8 @@ fit_molg <- sampling(molg,
                      save_warmup = FALSE, # Don't save the warmup samples.
                      seed = 365, 
                      # Improve sampling efficiency
-                     control = list(adapt_delta = 0.94,  # default: 0.9
-                                    max_treedepth = 12)) # default: 10
+                     control = list(adapt_delta = 0.96,  # default: 0.9
+                                    max_treedepth = 14)) # default: 10
 ```
 
 

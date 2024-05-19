@@ -45,12 +45,12 @@ model {
   vector[2] lp_parts;
 
   // Priors
-  beta ~ normal(5, 1);
-  sigma ~ cauchy(0, 2.5);
+  beta ~ normal(5, .5);
+  sigma ~ student_t(7, 0, 1);
   sigma_diff ~ normal(0, 1);
-  delta ~ normal(0, 1);
+  delta ~ normal(0, .5);
   theta ~ normal(0, 1);
-  tau ~ cauchy(0, .5);
+  tau ~ student_t(7, 0, .5);
     
   for(s in 1:nS){
     for(k in 1:K){
