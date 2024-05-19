@@ -15,6 +15,7 @@ data {
 
 
 parameters {
+  // fixed effects
   real beta; // fluent interkey intervals
   vector<lower=0>[K] delta; // slowdown for long interkey intervals
   vector[K] theta; // hesitation probability
@@ -23,9 +24,10 @@ parameters {
   real<lower=0> sigma; // residual sd
   vector<lower=0>[K] sigma_diff; 
 
-   // For random effects
-	vector[nS] u; //subj intercepts
-  real<lower=0> sigma_u;//subj sd
+  // For random effects
+	vector[nS] u; // participant intercepts
+  real<lower=0> sigma_u; // participant sd
+  matrix[K, nS] theta_s; // participant hesitations
 
 }
 

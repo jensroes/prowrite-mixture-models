@@ -543,7 +543,8 @@ pars <- c("beta",                        # fluent typing
           "prob",                        # mixing proportion as probability
           "prob_s",                      # by-participant disfluency probability
           "sigma",                       # variance component
-          "sigma_diff", "sigmap_e", "sigma_e",  # variance by mixture component
+          "sigmap_e", "sigma_e",         # variance by mixture component
+          "sigma_diff",                  # difference between variances
           "sigma_u",                     # variance for random ppt 
           "log_lik",                     # log likelihood (for model comparison) 
           "y_tilde")                     # predicted data 
@@ -568,15 +569,7 @@ fit_molg <- sampling(molg,
                                     max_treedepth = 12)) # default: 10
 ```
 
-```{r echo = F}
-#sampler_params <- get_sampler_params(m, inc_warmup = FALSE)
-#sampler_params_chain1 <- sampler_params[[3]]#colnames(sampler_params_chain1)
-#sapply(sampler_params, function(x) mean(x[, "accept_stat__"]))
-#sapply(sampler_params, function(x) max(x[, "treedepth__"]))
-#inits <- get_inits(m)
-#inits_chain1 <- inits[[1]]
-#print(inits_chain1)
-```
+
 
 As above we save the results using `saveRDS`.
 
