@@ -2,19 +2,48 @@
 
 A possible concern with these results -- substantially better predictive performance for two-distribution mixture models -- is that, in principle, as the mixture model has more parameters it might always lead to a better fit. We addressed this concern before by using cross-validation techniques for model comparison which is preventing overfitting models. To address this concern we repeated a comparison for a single distribution model and a two-distributions mixture model for two sets of simulated data that were simulated either with a single distribution or two-distributional process at heart. In other words, this allows us to test the predictive performance of our models in a context where we know the true underlying data generating process -- single distribution vs two distributions -- and we can test whether these models can successfully uncover the true parameter value.
 
-In particular, the first data set was simulated using a two-distributions mixture model with two mixture components similar to the process described above (equations in \ref{eq:bimodcon} and \ref{eq:bimoduncon}). This process and the corresponding Bayesian model is summarised in equation \ref{eq:simmog}.
+In particular, the first data set was simulated using a two-distributions mixture model with two mixture components similar to the process described above (equation \ref{eq:bimodcon}). This process and the corresponding Bayesian model is summarised in equation \ref{eq:simmog}.
 
 \begin{equation}
 \begin{aligned}
 (\#eq:simmog)
-\text{y} \sim\text{ } & \theta \cdot \text{log}\mathcal{N}(\beta + \delta, \sigma^2_1) +\\
-& (1 - \theta) \cdot \text{log}\mathcal{N}(\beta, \sigma^2_2)\\
+\text{y} \sim\text{ } & \theta \times \text{log}\mathcal{N}(\beta + \delta, \sigma^2_1) +\\
+& (1 - \theta) \times \text{log}\mathcal{N}(\beta, \sigma^2_2)\\
 \text{constraint: } & \delta, \sigma_\text{2}^2, \sigma_\text{1}^2>0\\
 		& \sigma_{1}^2 > \sigma_{2}^2
 \end{aligned}
 \end{equation}
 
 This model is largely identical to the models before but reduced to its main parameters (but not mixed effects for participants). The model includes two log-normal distributions with a mixing proportion $\theta$ of which the distribution of shorter values has a mean of $\beta$ and a standard deviation $\sigma^2_2$; the second distribution of longer values is constrained to have a mean that is larger by a factor of $\delta$ and has a larger standard deviation $\sigma^2_1$.
+
+In R, data that follow the model in equation \ref{eq:simmog} can be simulate using a helper function called `molg` (mixture of log Gaussians).
+
+```{r eval = F, echo = T}
+# Function for a mixture of log Gaussians
+molg <- function(n, theta, mu1, mu2, sigma1, sigma2) {
+  y0 <- rlnorm(n, mean = mu1, sd = sigma1)
+  y1 <- rlnorm(n, mean = mu2, sd = sigma2)
+  mix <- rbinom(n, size = 1, prob = theta)
+  y <- y0 * (1 - mix) + y1 * mix 
+}
+
+N <- 1000 # number of subjects
+beta <- 5 # mean of fluent key intervals (in log)
+delta <- 1 # slowdown for hesitant interkey intervals (in log)
+theta <- .35 # propotion of hesitations
+sigma <- c(.25, .5) # trial-by-trial error
+
+# Generate data from a mixture of two log-Gaussians
+y <- molg(n = N, 
+          theta = theta,
+          mu1 = beta,
+          mu2 = beta + delta,
+          sigma1 = sigma[1],
+          sigma2 = sigma[2])
+
+```
+
+
 
 The second data set was generated with a single distribution log-Gaussian process. The model and its corresponding Bayesian model is summarised in equation \ref{eq:simuv}.
 
@@ -25,6 +54,18 @@ The second data set was generated with a single distribution log-Gaussian proces
 \text{constraint: } & \sigma^2>0
 \end{aligned}
 \end{equation}
+
+Data following the distirbution in equation \ref{eq:simuv} can be simulated using a few lines of R code:
+
+```{r echo = T, eval=F}
+N <- 1000 # number of subjects
+beta <- 5 # Population mean
+sigma <- .25 # trial-by-trial error
+
+# Generate data from a log normal distribution
+y <- rlnorm(n = N, mean = beta, sd = sigma)
+```
+
 
 Again, this model is a simplified version of the single distribution models used in the main analysis. The model assumes a log-Gaussian distribution with a mean parameter $\beta$ and a standard deviation $\sigma^2$.
 
@@ -123,7 +164,7 @@ apa_table(table[,-1],
 
 ```
 
-We used LOO-CV to compare the predictive performance of the two models for each data generating process. The model comparisons can be found for each data generating process in Table \ref{tab:loossim}. The results rule out the possibility that the mixture model does always lead to higher predictive performance. Indeed, the mixture model showed a slightly lower predictive performance for the data that were generated with a single-distribution process. However, for the data generated with a two-distribution mixture process, the mixture model shows a substantially higher predictive performance. In fact, the ratio of $\Delta\widehat{elpd}$ and its standard error -- a *z*-score approximation -- reveals a value of 11.6 which is strong evidence in in favour of the mixture model compared to the single-distribution model (Sivula et al., 2020). In comparison, for the single-distribution data, the single-distribution model was negligibly better than the two-distribution mixture model which was evidence by a value of 0.77 for the ratio of $\Delta\widehat{elpd}$ and its standard error. Thus, as the difference $\Delta\widehat{elpd}$ between the model is negligible, the single distribution is preferred by the law of parsimony. 
+We used LOO-CV to compare the predictive performance of the two models for each data generating process. The model comparisons can be found for each data generating process in Table \ref{tab:loossim}. The results rule out the possibility that the mixture model does always lead to higher predictive performance. Indeed, the mixture model showed a slightly lower predictive performance for the data that were generated with a single-distribution process. However, for the data generated with a two-distribution mixture process, the mixture model shows a substantially higher predictive performance. In fact, the mixture model's predictive performance is 11.6 standard errors higher compared to the single-distribution model. In comparison, for the single-distribution data, the two-distributions mixture model was negligibly different from the single-distribution model with a difference of 0.77 standard errors. Thus, the single distribution is more parsimonious. 
 
 
 ```{r loossim, results='asis'}

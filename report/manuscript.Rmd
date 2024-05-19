@@ -1,6 +1,6 @@
 ---
-title             : "Ideas cascading into keystrokes -- modelling writing hesitations as finite mixture process"
-shorttitle        : "Modelling writing hesitations"
+title             : "Ideas cascade in parallel into keystrokes -- modelling writing hesitations as finite mixture process"
+shorttitle        : "Ideas cascade in parallel into keystrokes"
 
 csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
 documentclass     : "apa7"
@@ -34,7 +34,7 @@ affiliation:
     institution   : "Department of English, Iowa State University, Iowa"
 
 
-abstract: "Classical serial models view the process of producing a text as a chain of discrete pauses and writing bursts. In contrast, parallel cascading models of writing assume that planning is not complete at production onset and operates in parallel with execution. These two theories make different assumptions about the underlying process that generates inter-keystroke intervals. Across six datasets comprising multi-sentence text composition we instantiated these assumptions as two sets of Bayesian mixed-effects models: (1) single-distribution models as assumed by the serial processing account, and (2) finite two-distribution mixture models as assumed by the parallel processing account. We analysed keystroke intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the statistical implementation of the cascading view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that keystroke latencies at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial but are in line with the cascading, semi-parallel view of writing."
+abstract: "Classical serial models view the process of producing a text as a chain of discrete pauses, during which the next span of text is planned, and bursts of activity during which this text is output onto the page or computer screen. In contrast, semi-parallel models of writing assume that planning is not complete at production onset and operates in parallel with execution. Across six datasets from participants composing multi-sentence texts we instantiated these assumptions in two sets of Bayesian mixed effects models: (1) single-distribution models as assumed by the serial processing account, and (2) a finite (two-distribution) mixture model as assumed by the parallel processing account. We analysed interkey intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the parallel view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that interkey intervals at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial processing but are in line with the semi-parallel view of writing."
 
 keywords: "Cascading semi-parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
 
@@ -121,9 +121,9 @@ theme_set(theme_few(base_size = 12) +
 
 options(scipen = 999)
 
-beta_label <- "Fluent transition\nduration (in msecs)"
-delta_label <- "Slowdown for hesitant\ntransitions (in secs)"
-theta_label <- "Probability of hesitant\ntransitions"
+beta_label <- "Fluent interkey\nintervals (in msecs)"
+delta_label <- "Slowdown for hesitant\ninterkey intervals (in secs)"
+theta_label <- "Probability of hesitant\ninterkey intervals"
 ```
 
 
@@ -202,12 +202,12 @@ González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized s
 
 \newpage
 
-```{r child = 'appendix/transloc.Rmd'}
+```{r child = 'appendix/transloc.Rmd', eval=F}
 ```
 
 \newpage
  
-```{r child = 'appendix/shift.Rmd'}
+```{r child = 'appendix/shift.Rmd', eval = F}
 ```
 
 \newpage

@@ -16,10 +16,7 @@ data {
 
 parameters {
   vector<lower=0>[K] delta;
-
-  real beta_mu;
-  vector[K] beta_raw;
-  real<lower=0> beta_sigma;
+  real beta;
 
   real theta_mu;
   vector[K] theta_raw;
@@ -39,7 +36,6 @@ parameters {
 
 transformed parameters{
   vector[K] theta = theta_mu + theta_sigma * theta_raw;
-  vector[K] beta = beta_mu + beta_sigma * beta_raw;
   vector<lower=0>[K] sigmap_e = sigma + sigma_diff;
   vector<lower=0>[K] sigma_e = sigma - sigma_diff;
   matrix[K, nS] log_theta_s_1 = log_inv_logit(theta_s);
@@ -53,9 +49,7 @@ model {
   vector[2] lp_parts;
 
   // Priors
-  beta_mu ~ normal(5, .5);
-  beta_sigma ~ cauchy(0, 1);
-  beta_raw ~ normal(0, 1);
+  beta ~ normal(5, 1);
   sigma ~ cauchy(0, 2.5);
   sigma_diff ~ normal(0, 1);
   delta ~ normal(0, .5);
@@ -76,7 +70,7 @@ model {
 
   // likelihood
   for(n in 1:N){
-    real mu = beta[condition[n]] + u[ppt[n]];
+    real mu = beta + u[ppt[n]];
     lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
     lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
     target += log_sum_exp(lp_parts);
@@ -90,7 +84,7 @@ generated quantities{
   real<lower=0,upper=1> prob_tilde; 
 
   for(n in 1:N){
-    real mu = beta[condition[n]] + u[ppt[n]];
+    real mu = beta + u[ppt[n]];
     lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
     lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
     log_lik[n] = log_sum_exp(lp_parts);

@@ -81,13 +81,13 @@ data <- read_csv("data/sampledata.csv")
 
 
 
-We reduced the data to three variables: a participant identifier `participant`, the inter-keystroke intervals `iki`, and the transition location `location` (levels: within-word, before-word, before-sentence).
+We reduced the data to three variables: a participant identifier `participant`, the interkey intervals `iki`, and the transition location `location` (levels: within-word, before-word, before-sentence).
 
 ```{r}
 data
 ```
 
-We reduced the number of keystroke transitions to `n` observations per participant and per location.
+We reduced the number of interkey intervals to `n` observations per participant and per location.
 
 ```{r}
 count(data, participant, location)
@@ -102,7 +102,7 @@ We start with two standard single distribution mixed-effects models [as in @pinh
 
 ### Model
 
-We start with a Gaussian mixed-effects model. We describe the process that generates the $i^\text{th}$ keystroke, where $i \in 1\dots N$ and $N$ is the total number of keystroke, as a single Gaussian (normal) distribution $\mathcal{N}()$ which is characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $u_\text{participant[i]}$. $\beta$ will be allowed to take on a different value for each transition location associated with the $i^\text{th}$ keystroke. By-participant ikis are assumed to vary around the average which is achieved by placing a normal distribution on the difference between average and by-participant ikis, indicated as $u_\text{participant[i]}$, with a mean of 0 and a standard deviation $\sigma_\text{p}^2$.
+We start with a Gaussian mixed-effects model. We describe the process that generates the $i^\text{th}$ interkey interval, where $i \in 1\dots N$ and $N$ is the total number of keystroke, as a single Gaussian (normal) distribution $\mathcal{N}()$ which is characterised by a mean $\mu$ and a standard deviation $\sigma_\text{e}^2$. The mean can be decomposed into $\beta$ and $u_\text{participant[i]}$. $\beta$ will be allowed to take on a different value for each transition location associated with the $i^\text{th}$ keystroke. By-participant interkey intervals (ikis) are assumed to vary around the average which is achieved by placing a normal distribution on the difference between average and by-participant ikis, indicated as $u_\text{participant[i]}$, with a mean of 0 and a standard deviation $\sigma_\text{p}^2$.
 
 $$
 \begin{align}
@@ -149,7 +149,7 @@ tibble(x = 0:1000) %>%
   labs(colour = "Degrees of\nfreedom")
 ```
 
-The choice of priors here is weakly informative. The intention is to use knowledge that we generally have about how long key intervals usually are to point the model towards the right area in the parameter space by assigning low probabilities to unlikely or even implausible values. Even if we know very little about the duration of keystroke interval, we do know that they shouldn't be longer than a day, or event an hour, or several minutes, because such long intervals are unlikely to reflect active writing.
+The choice of priors here is weakly informative. The intention is to use knowledge that we generally have about how long interkey intervals usually are to point the model towards the right area in the parameter space by assigning low probabilities to unlikely or even implausible values. Even if we know very little about the duration of interkey intervals, we do know that they shouldn't be longer than a day, or event an hour, or several minutes, because such long intervals are unlikely to reflect active writing.
 
 
 ### Sampling parameters
@@ -215,7 +215,7 @@ fixef(fit_gaus) %>% round()
 
 ### Model
 
-This model is largely identical to the Gaussian mixed-effect model in the previous section, except instead of a normal distribution this model assumes the ikis come from a single underlying process that follows a log-normal distribution. Assuming a log-normal distribution is useful as ikis and other response times are zero-bound (keystroke intervals cannot be shorter than 0). A log-normal distribution forces responses to be positive. Also the log scale is not linear, meaning the distance between 100 msecs and 110 msecs is not the same as the distance between 500 and 510 msecs; instead the distance between adjacent values is reduced for larger values while the distances between adjacent values on the lower end is increased. For example, for a log with the base 10, the distance between 10 msecs and 100 msecs is identical to the distance between 100 msecs and 1000 msecs.
+This model is largely identical to the Gaussian mixed-effect model in the previous section, except instead of a normal distribution this model assumes the ikis come from a single underlying process that follows a log-normal distribution. Assuming a log-normal distribution is useful as ikis and other response times are zero-bound (interkey intervals cannot be shorter than 0). A log-normal distribution forces responses to be positive. Also the log scale is not linear, meaning the distance between 100 msecs and 110 msecs is not the same as the distance between 500 and 510 msecs; instead the distance between adjacent values is reduced for larger values while the distances between adjacent values on the lower end is increased. For example, for a log with the base 10, the distance between 10 msecs and 100 msecs is identical to the distance between 100 msecs and 1000 msecs.
 
 $$
 \begin{align}
@@ -388,12 +388,12 @@ loo_R2(fit_lgaus)
 
 # Two-distributions log-Gaussian mixed-effects mixture model
 
-The mixture model captures the writing process as a combination of three parameters: the average typing speed of fluent keystroke transitions ($\beta$), the slowdown for hesitant transitions ($\delta$) and the probability of hesitant transitions ($\theta$). In the model below, these are estimated each level of a categorical predictor `location` for the $i^\text{th}$ keystroke interval. 
+The mixture model captures the writing process as a combination of three parameters: the average typing speed of fluent interkey intervals ($\beta$), the slowdown for hesitant interkey intervals ($\delta$) and the probability of hesitant interkey intervals ($\theta$). In the model below, these are estimated each level of a categorical predictor `location` for the $i^\text{th}$ interkey intervals. 
 
 $$
 \begin{align}
-\text{iki}_{i} \sim & \theta_\text{location[i],participant[i]} \times \text{log}\mathcal{N}(\beta_\text{location[i]} + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
-  & (1 - \theta_\text{location[i],participant[i]}) \times \text{log}\mathcal{N}(\beta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
+\text{iki}_{i} \sim & \theta_\text{location[i],participant[i]} \times \text{log}\mathcal{N}(\beta + \delta_\text{location[i]} + u_\text{participant[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+  & (1 - \theta_\text{location[i],participant[i]}) \times \text{log}\mathcal{N}(\beta+ u_\text{participant[i]}, \sigma_{e_\text{location[i]}}^2)\\
 		&\text{where}\\
 		&\delta \sim \mathcal{N}(0,1)\\
 		&\text{constraint: } \delta > 0
@@ -403,11 +403,11 @@ $$
 
 Model takes into account two sources of random error: (1) each participant has an individual fluent typing speed that differs across levels of the categorical predictor and is distribution $u_\text{participant} \sim \mathcal{N}(0, \sigma^2_p)$; (2) each participant has in individual hesitation probability $\theta_\text{participant}$ that differs across levels of the categorical predictor.
 
-The parameters of this equation are visualised in Figure \@ref(fig:mixturemodel). The illustrate shows the dissociation of two underlying processes that the model is estimating on the basis of the data. There are two distributions of which the left one in grey is the distribution of fluent keystroke intervals; the right distribution in green is wider and captures longer keystroke intervals (with some overlap between fluent and disfluent transitions). 
+The parameters of this equation are visualised in Figure \@ref(fig:mixturemodel). The illustrate shows the dissociation of two underlying processes that the model is estimating on the basis of the data. There are two distributions of which the left one in grey is the distribution of fluent interkey intervals; the right distribution in green is wider and captures longer interkey intervals (with some overlap between fluent and disfluent interkey intervals). 
 
 
 
-```{r mixturemodel, echo = F, fig.cap="What's a mixture model for keystroke intervals? The parameters of the mixture model explained visually. Each of the three parameters can determined for each transition location."}
+```{r mixturemodel, echo = F, fig.cap="What's a mixture model for interkey intervals? The parameters of the mixture model explained visually. Each of the three parameters can determined for each transition location."}
 
 plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
 
@@ -463,7 +463,7 @@ ggplot(data_mm, aes(x)) +
 
 ```
 
-Importantly Figure \@ref(fig:mixturemodel) illustrates the average typing speed of fluent keystroke transitions captured by the $\beta$ parameter; the distance between fluent transitions and disfluent transitions captured by $\delta$ (i.e. the distance between the grey and the green distribution); the hesitation probability or the "pausing frequency" which is the height of the green distribution captured by $\theta$. Most keystrokes are, typically, fluent transitions and hence part of the grey distribution. The frequency of the minority of disfluent transitions is captured by the height of the green distribution. As this model assumes a finite mixture of two distributions, the probability of fluent transitions is the inverse $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent transitions is $.6$. If the pausing probability decreases to $.3$ the proportion of fluent transitions had increased to $.7$ etc.
+Importantly Figure \@ref(fig:mixturemodel) illustrates the average typing speed of fluent interkey intervals captured by the $\beta$ parameter; the distance between fluent transitions and disfluent transitions captured by $\delta$ (i.e. the distance between the grey and the green distribution); the hesitation probability or the "pausing frequency" which is the height of the green distribution captured by $\theta$. Most interkey intervals are, typically, fluent and hence part of the grey distribution. The frequency of the minority of disfluent interkey intervals is captured by the height of the green distribution. As this model assumes a finite mixture of two distributions, the probability of fluent interkey intervals is the inverse $1-\theta$; in other words, a pausing probability of $\theta=.4$ means that the probability of fluent interkey intervals is $.6$. If the pausing probability decreases to $.3$ the proportion of fluent interkey intervals had increased to $.7$ etc.
 
 
 
@@ -492,7 +492,7 @@ ppts <- pull(data, participant) %>% factor() %>% as.numeric()
 condition <- pull(data, location) %>% factor() %>% as.numeric()
 ```
 
-In the below code, the names on the left side of the arrow must correspond to the names expected in the Stan code (above); names on the right side do not. We assign the participant and location identifiers created above and their maximum values `nS` and `K`, respectively. The keystroke data `iki` are assigned to `y` and the total number of observations is assigned to `N` (number of rows in the data `nrow(data`).
+In the below code, the names on the left side of the arrow must correspond to the names expected in the Stan code (above); names on the right side do not. We assign the participant and location identifiers created above and their maximum values `nS` and `K`, respectively. The interkey interval data `iki` are assigned to `y` and the total number of observations is assigned to `N` (number of rows in the data `nrow(data`).
 
 ```{r}
 data_list <- within( list(), {
@@ -606,7 +606,7 @@ print(fit_molg,
       probs = c(.025, .975))
 ```
 
-We will return to the interpretation of these estimates below.
+We return to the interpretation of these estimates below.
 
 
 ## Model diagnostics
@@ -619,7 +619,7 @@ Before we interpret these result we need to ensure that the model reached conver
 pars <- c("beta", "delta", "theta")
 ```
 
-To create trace plots, we can apply the `stan_trace` function to the model `fit_molg` and extract the MCMC chains for the parameters in `pars`. The `alpha` argument makes the colours slightly more transparent otherwise it is difficult to see the chains hiding in the back. If the chains overlap and look like "fat hairy caterpillars", chains have converged on the same target distribution. The chains below look good except for one divergent transition for `beta[3]`.
+To create trace plots, we can apply the `stan_trace` function to the model `fit_molg` and extract the MCMC chains for the parameters in `pars`. The `alpha` argument makes the colours slightly more transparent otherwise it is difficult to see the chains hiding in the back. If the chains overlap and look like "fat hairy caterpillars", chains have converged on the same target distribution. The chains below look good except for a divergent transition for `theta[3]`.
 
 ```{r}
 # Check convergence
@@ -768,29 +768,30 @@ plot(fit_molg, pars = pars, ci_level = .95) # ci = credible interval
 The values for $\beta$ and $\delta$ are shown on a log-scale. To transform their values back to msecs we can extract the posterior samples using the `as.data.frame` function (we prefer the use of tibbles). 
 
 ```{r}
-posterior <- as.data.frame(fit_molg, pars) %>% as_tibble() 
+posterior <- as.data.frame(fit_molg, pars) %>% as_tibble() %>% rownames_to_column("idx")
 posterior
 ```
 
 The `pivot_longer` function transforms the data to a long format with an additional column for component and the model parameters as columns. The `names_pattern` argument is using a regular expression to extract the number in the squared brackets.
 
 ```{r}
-posterior_long <- pivot_longer(posterior, everything(), 
-             names_to = c(".value", "location"),
-             names_pattern = "(.*)\\[(.)\\]") 
+posterior_long <- pivot_longer(posterior, 
+                               cols = -c(idx, beta), 
+                               names_to = c(".value", "location"),
+                               names_pattern = "(.*)\\[(.)\\]") 
 posterior_long
 ```
 
-This code is then transforming `beta` and `delta` to msecs using the exponential function `exp`. In order to transform the slowdown `delta` into msecs we need to add `beta` before using the exponential function; we can then subtract beta again. `theta` samples are currently on the logit scale and can be transformed to probabilities using `brms::inv_logit_scaled` (the model also contained a `prob` parameter which is `theta` but on the probability scale). The `recode` function changes the location indices from 1 to "before-sentence", 2 to "before-word", 3 to "within-word".
+This code is then transforming `beta` and `delta` to msecs using the exponential function `exp`. In order to transform the slowdown `delta` into msecs we need to add `beta` before using the exponential function; we can then subtract beta again. `theta` samples are currently on the logit scale and can be transformed to probabilities using `brms::inv_logit_scaled` (the model also contained a `prob` parameter which is `theta` but on the probability scale). The `recode` function changes the location indices from 1 to "before sentence", 2 to "before word", 3 to "within word".
 
 ```{r}
 posterior_in_msecs <- mutate(posterior_long,
                              delta = exp(beta + delta) - exp(beta),
                              across(beta, exp),
                              across(theta, inv_logit_scaled),
-                             across(location, recode, `1` = "before-sentence",
-                                                      `2` = "before-word",
-                                                      `3` = "within-word"))
+                             across(location, recode, `1` = "before sentence",
+                                                      `2` = "before word",
+                                                      `3` = "within word"))
 posterior_in_msecs
 ```
 
@@ -798,7 +799,16 @@ posterior_in_msecs
 The posterior distribution of the parameter estimates can then be visualised in, for example, histograms. The histograms show that especially the hesitation parameter is sensitive to transition location with more hesitations before sentences than before words than within words.
 
 ```{r}
-pivot_longer(posterior_in_msecs, beta:theta) %>%
+pivot_longer(posterior_in_msecs, c(beta, delta, theta)) %>%
+  mutate(across(location, ~case_when(str_detect(name, "beta") ~ "overall",
+                                     TRUE ~ .)), # correct location for beta
+         across(location, ~factor(.,             # order locations for plotting
+                                  levels = c("before sentence", 
+                                             "before word", 
+                                             "within word",
+                                             "overall"), 
+                                  ordered = TRUE))) %>% 
+  unique() %>%  # remove duplicated values for beta 
   ggplot(aes(x = value, colour = location, fill = location)) +
   geom_histogram(position = "identity", alpha = .25) +
   facet_wrap(~name, scales = "free", labeller = label_parsed) +
@@ -814,7 +824,10 @@ rm("mean")
 To illustrate differences to the estimated cells means compared to the single distribution models, here are the means for all parameters and their location. The central tendencies of the single distribution models are in principle a combination of `beta` and `beta + delta` weighted by `theta`.
 
 ```{r}
-pivot_longer(posterior_in_msecs, beta:theta) %>% 
+pivot_longer(posterior_in_msecs, c(beta, delta, theta)) %>% 
+  mutate(across(location, ~case_when(str_detect(name, "beta") ~ "overall",
+                                     TRUE ~ .))) %>% 
+  unique() %>% 
   summarise(across(value, list(mean = mean), 
                    .names = "{.col}"), 
             .by = c(name, location)) %>% 
@@ -840,25 +853,26 @@ Differences are especially noticeable for before-sentence transitions.
 
 ## Differences between transition locations
 
-We can calculate the differences between the transition locations for each parameter to determine to what extent each of the parameters are sensitive to transition locations. This will show us to what extent fluent typing ($\beta$), the size of the hesitation slowdown ($\delta$), and the hesitation probability ($\theta$) are sensitive to the linguistic location of a key pair.
+We can calculate the differences between the transition locations for each parameter to determine to what extent each of the parameters are sensitive to transition locations. This will show us to what extent fluent interkey intervals ($\beta$), the size of the hesitation slowdown ($\delta$), and the hesitation probability ($\theta$) are sensitive to the linguistic location of a key pair.
 
 To determine these differences we change the data format above and create a column that indicates the parameter name and a column for the corresponding values for each transition location. The last line calculates the difference between (1) transitions before sentences and words, and (2) transitions before and within words for each of the three parameters.
 
 ```{r}
 posterior_diffs <- posterior_in_msecs %>%
-  pivot_longer(beta:theta, names_to = "parameter") %>%
+  select(-idx) %>% 
+  pivot_longer(delta:theta, names_to = "parameter") %>%
   mutate(id = row_number(), .by = location) %>%
   pivot_wider(names_from = location, values_from = value) %>%
   select(-id) %>% # drop id column
-  mutate(diff_sent = `before-sentence` - `before-word`, # compare sentences to word
-         diff_word = `before-word` - `within-word`, # compare within to before word
+  mutate(diff_sent = `before sentence` - `before word`, # compare sentences to word
+         diff_word = `before word` - `within word`,     # compare within to before word
          parameter = paste0(parameter, "[diff]")) %>% 
   select(parameter, starts_with("diff"))
 
 posterior_diffs
 ```
 
-The difference between the conditions can be summarised using the mean, the 95% PIs and the probability that the difference between the components is smaller than 0 (indicated as e.g. $P(\hat{\beta} <0)$ for the parameter $\beta$; the hat symbol indicates $\hat{.}$ that the value is an estimate of the population parameter value). This summary tells us how certainly we can rule out a null difference between transition locations the most probable value for the differences. 
+The difference between the conditions can be summarised using the mean, the 95% PIs and the probability that the difference between transition locations is smaller than 0 (indicated as e.g. $P(\hat{\theta} < 0)$ for the parameter $\theta$; the hat symbol indicates $\hat{.}$ that the value is an estimate of the population parameter value). This summary tells us how certainly we can rule out a null difference between transition locations the most probable value for the differences. 
 
 ```{r}
 # Create summary functions for convenience
@@ -897,7 +911,7 @@ theta <- ests %>% filter(str_detect(parameter, "theta"))
 delta <- ests %>% filter(str_detect(parameter, "delta"))
 ```
 
-For example, form these results we can infer that there is a $P(\hat{\theta} <0)$ = `r theta %>% filter(name == "diff_sent") %>% pull(p_diff) %>% round(2)` chance that hesitations do not occur more frequently before sentence; in fact the results show hesitations are more probable my `r theta %>% filter(name == "diff_sent") %>% pull(mean) %>% round(2)` to occur before sentences compare to before words (95% PI: `r theta %>% filter(name == "diff_sent") %>% pull(lower) %>% round(2)`, `r theta %>% filter(name == "diff_sent") %>% pull(upper) %>% round(2)`). Also, the slowdown associated with hesitations is `r delta %>% filter(name == "diff_sent") %>% pull(mean) %>% round(0)` msecs longer for sentences (95% PI: `r delta %>% filter(name == "diff_sent") %>% pull(lower) %>% round(0)`, `r delta %>% filter(name == "diff_sent") %>% pull(upper) %>% round(0)`) with a probability of $P(\hat{\delta} <0)$ = `r delta %>% filter(name == "diff_sent") %>% pull(p_diff) %>% round(2)` to be smaller than zero.
+For example, form these results we can infer that there is a $P(\hat{\theta} < 0)$ = `r theta %>% filter(name == "diff_sent") %>% pull(p_diff) %>% round(2)` chance that hesitations do not occur more frequently before sentence; in fact the results show hesitations are more probable by `r theta %>% filter(name == "diff_sent") %>% pull(mean) %>% round(2)` to occur before sentences compare to before words (95% PI: `r theta %>% filter(name == "diff_sent") %>% pull(lower) %>% round(2)`, `r theta %>% filter(name == "diff_sent") %>% pull(upper) %>% round(2)`). Also, the slowdown associated with hesitations is `r delta %>% filter(name == "diff_sent") %>% pull(mean) %>% round(0)` msecs longer for sentences (95% PI: `r delta %>% filter(name == "diff_sent") %>% pull(lower) %>% round(0)`, `r delta %>% filter(name == "diff_sent") %>% pull(upper) %>% round(0)`) with a probability of $P(\hat{\delta} < 0)$ = `r delta %>% filter(name == "diff_sent") %>% pull(p_diff) %>% round(2)` to be smaller than zero.
 
 
 
@@ -925,20 +939,20 @@ posterior_diffs %>%
   mutate(across(name, recode, diff_sent = "before-sentence vs before-word",
                               diff_word = "before-word vs within word")) %>% 
   ggplot(aes(x = value, colour = name, fill = name)) +
+  geom_vline(xintercept = 0, colour = "black", linetype = "dotted", size = .5) +
   geom_histogram(position = "identity", alpha = .25) +
   facet_wrap(~parameter, scales = "free", labeller = label_parsed) +
   scale_fill_brewer("Difference", palette = "Dark2") +
   scale_color_brewer("Difference", palette = "Dark2") +
-  geom_vline(xintercept = 0, colour = "red", linetype = "dashed", size = .5) +
   labs(x = "Difference between transition locations") +
   theme(legend.position = "top")
 ```
 
 We observe the following differences that can be reported as followed: Evidence was found for a higher probability to hesitate before sentences with a difference of `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(mean)` (95% PI: `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(lower)`, `r ps %>% filter(parameter == "theta", name == "diff_sent") %>% pull(upper)`) compared to before-word transitions; before-word transitions show an increased hesitation probability of `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(mean)` (95% PI: `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(lower)`, `r ps %>% filter(parameter == "theta", name == "diff_word") %>% pull(upper)`) compared to within-word transitions. 
 
-Similarly, differences were found for the hesitation slowdown. Hesitations before sentences were `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(mean) %>% round(0)` msecs (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(upper) %>% round(0)`) longer than before words. Hesitations before words were `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(mean) %>% round(0)` msecs longer than within words, although the probability interval (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(upper) %>% round(0)`) did not rule out a negative difference, or no difference, which however had a low probability $P(\hat{\delta} <0)$ = `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(p_diff) %>% round(2)`.
+Similarly, differences were found for the hesitation slowdown. Hesitations before sentences were `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(mean) %>% round(0)` msecs (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "delta", name == "diff_sent") %>% pull(upper) %>% round(0)`) longer than before words. Hesitations before words were `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(mean) %>% round(0)` msecs longer than within words, although the probability interval (95% PI: `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(upper) %>% round(0)`) did not rule out a negative difference, or no difference, which however had a low probability $P(\hat{\delta} < 0)$ = `r ps %>% filter(parameter == "delta", name == "diff_word") %>% pull(p_diff) %>% round(2)`.
 
-For fluent transitions there was evidence that within-word transitions were `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(mean) %>% round(0)` msecs longer (95% PI: `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(upper) %>% round(0)`) compared to before-word transitions. There was negligible evidence for longer transitions for before-sentence transitions compared to before-word transitions ($\hat{\beta}$ = `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(mean) %>% round(0)` msecs, 95% PI: `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(upper) %>% round(0)`).
+<!-- For fluent transitions there was evidence that within-word transitions were `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(mean) %>% round(0)` msecs longer (95% PI: `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "beta", name == "diff_word") %>% pull(upper) %>% round(0)`) compared to before-word transitions. There was negligible evidence for longer transitions for before-sentence transitions compared to before-word transitions ($\hat{\beta}$ = `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(mean) %>% round(0)` msecs, 95% PI: `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(lower) %>% round(0)`, `r ps %>% filter(parameter == "beta", name == "diff_sent") %>% pull(upper) %>% round(0)`). -->
 
 
 ## ROPE
@@ -963,7 +977,7 @@ library(bayestestR)
 rope(delta_diff_word, range = c(-10, 10))
 ```
 
-The ROPE for hesitation durations for the difference between before-word and within-word transitions contains `r round(pull(rope(delta_diff_word, range = c(-10, 10)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(delta_diff_word, range = c(-10, 10)))*100,2)`% chance that the true difference $\beta_\text{diff}$ is between -10 and 10 msecs and therefore negligible.
+The ROPE for the hesitation duration of the difference between before-word and within-word transitions contains `r round(pull(rope(delta_diff_word, range = c(-10, 10)))*100,2)`% of the posterior samples. In other words, there is a `r round(pull(rope(delta_diff_word, range = c(-10, 10)))*100,2)`% chance that the true difference $\beta_\text{diff}$ is between -10 and 10 msecs and therefore negligible.
 
 Let's see what happens if we determine a wider ROPE for negligible differences which can be understood as a more conservative test for a non-zero difference. What happens if we define a ROPE of -50 through 50 msecs for the difference between before-word and within-word hesitations
 

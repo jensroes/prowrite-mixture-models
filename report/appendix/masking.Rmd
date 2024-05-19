@@ -1,6 +1,6 @@
-# Masking effect (CATO, GUNNEXP2)
+# Masking effect (CATO, GE2)
 
-Studies associated with two datasets (CATO, GUNNEXP2) investigated to what extent masking the previously written text affects keystroke behaviour. The mixture model results for the effect of masking is shown in Table \ref{tab:maskingeffect}. Key transition were longer for masked text than for unmasked text at before and within word transitions but not before sentences. Also dyslexics showed no masking difference at before word transitions. There was no indication of longer or more frequent pauses as a result of masked text. 
+Studies associated with two datasets (CATO, GE2) investigated to what extent masking the previously written text affects keystroke behaviour. The mixture model results for the effect of masking is shown in Table \ref{tab:maskingeffect}. Key transition were longer for masked text than for unmasked text at before and within word transitions but not before sentences. Also dyslexics showed no masking difference at before word transitions. There was no indication of longer or more frequent pauses as a result of masked text. 
 
 \blandscape
 ```{r maskingeffect, results = 'asis'}
@@ -34,7 +34,7 @@ file <- list.files(path = "../../stanout/gunnexp2",
 d_gunn <- read_csv(file) %>% 
   filter(param %in% c("beta", "delta", "theta")) %>% 
   mutate(across(value, ~ifelse(param == "theta", .*-1, value)),
-         ds = "gunnexp2",
+         ds = "GE2",
          across(param, ~recode(., "prob" = "theta")),
          group = "non dyslexic") %>% 
   rename(mask = xn)

@@ -80,7 +80,7 @@ ps_gunn <- ps %>% filter(param != "beta") %>%
                                lower = lower, 
                                upper = upper), .names = "{.fn}"),
             .by = c(location, xn, name)) %>% 
-  mutate(ds = "GUNNEXP2") %>% 
+  mutate(ds = "GE2") %>% 
   rename(group = xn)
 
 file <- list.files(path = "../../stanout/lift", 
@@ -187,7 +187,7 @@ ps <- bind_rows(ps_cato, ps_c2l1, ps_gunn, ps_lift, ps_plantra, ps_spl2)
 
 # Key-combination effect (unconstrained mixture model)
 
-The analysed datasets differ to the extent that keystroke intervals at before sentence location sometimes did (PLanTra, LIFT) or did not (CATO, C2L1, SPL2, GUNNEXP2) scope over the character following the shift key. In other words, the pause before sentences sumed across two key intervals in the PLanTra and LIFT data, namely `_^[shift]^C` but only involved one key interval, namely `_^[shift]` for the remaining datasets. Therefore, longer or more frequent pauses at before-sentence locations compared to before-word locations can be explained without reference to linguistic edges. Also there is a possibility that some inconsistencies in our findings can be explained on the basis of including the keystroke following shift. 
+The analysed datasets differ to the extent that keystroke intervals at before sentence location sometimes did (PLanTra, LIFT) or did not (CATO, C2L1, SPL2, GE2) scope over the character following the shift key. In other words, the pause before sentences sumed across two key intervals in the PLanTra and LIFT data, namely `_^[shift]^C` but only involved one key interval, namely `_^[shift]` for the remaining datasets. Therefore, longer or more frequent pauses at before-sentence locations compared to before-word locations can be explained without reference to linguistic edges. Also there is a possibility that some inconsistencies in our findings can be explained on the basis of including the keystroke following shift. 
 
 Therefore we compared whether the different patterns can be explain on the basis of the additional keystroke involved in before-sentence transitions. We compared the SPL2 data including and excluding the keystroke after shift. Although we modelled all transition locations, we present only before-sentence transitions below as there was, as one would expect, no difference at word locations. The results of this comparison can be found in Table \ref{tab:shiftcellmeans2}. 
 
@@ -251,11 +251,11 @@ write_csv(tmp, "../tables/shift_effect_cellmeans.csv")
 
 apa_table(tmp[,-1],
           align = c("l", "r", "r", "r", "r"), 
-          caption = "Mixture model estimates for key transitions. Cell means are shown for transitions that do and do not involve the transition to the character following shift in msecs for fluent key-transitions, the slowdown for long transitions and the probability of hesitant transitions. The difference for including the transition duration to the character after shift is shown on log scale (for transition durations) and logit scale for probability of hesitant transitions. 95% PIs in brackets.",
+          caption = "Mixture model estimates for interkey intervals. Cell means are shown for interkey intervals that do and do not involve the transition to the character following shift in msecs for fluent interkey intervals, the slowdown for long interkey intervals and the probability of hesitant interkey intervals. The difference for including the interkey intervals to the character after shift is shown on log scale (for interkey intervals) and logit scale for probability of hesitant interkey intervals. 95% PIs in brackets.",
           note = "PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.",
           font_size = "footnotesize",
           longtable = T,
-          stub_indents = list("Fluent transitions" = 1:2,
+          stub_indents = list("Fluent interkey intervals" = 1:2,
                               "Hesitation duration" = 3:4,
                               "Hesitation probability" = 5:6) )
 

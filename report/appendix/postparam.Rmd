@@ -3,7 +3,7 @@
 
 ```{r}
 # get posterior
-file <- list.files(path = "../stanout/cato", 
+file <- list.files(path = "../../stanout/cato", 
                    pattern = "mogbetaun.+.csv$",
                    full.names = T)
 
@@ -24,7 +24,7 @@ ps_cato <- read_csv(file) %>%
          ds = "CATO") %>% 
   select(-task)
 
-file <- list.files(path = "../stanout/c2l1", 
+file <- list.files(path = "../../stanout/c2l1", 
                    pattern = "mogbetaun.*.csv$",
                    full.names = T)
 
@@ -45,7 +45,7 @@ ps_c2l1 <- read_csv(file) %>%
          group = "1") 
 
 
-file <- list.files(path = "../stanout/gunnexp2", 
+file <- list.files(path = "../../stanout/gunnexp2", 
                    pattern = "mogbetaun.*.csv$",
                    full.names = T)
 
@@ -62,11 +62,11 @@ ps_gunn <- read_csv(file) %>%
                                lower = lower, 
                                upper = upper), .names = "{.fn}"),
             .by = c(location, xn, name)) %>% 
-  mutate(ds = "GUNNEXP2") %>% 
+  mutate(ds = "GE2") %>% 
   rename(group = xn)
 
 
-file <- list.files(path = "../stanout/lift", 
+file <- list.files(path = "../../stanout/lift", 
                    pattern = "mogbetaun.+.csv$",
                    full.names = T)
 
@@ -87,7 +87,7 @@ ps_lift <- read_csv(file) %>%
          ds = "LIFT") %>% 
   select(-topic, -genre)
 
-file <- list.files(path = "../stanout/plantra", 
+file <- list.files(path = "../../stanout/plantra", 
                    pattern = "mogbetaun.+.csv$",
                    full.names = T)
 
@@ -110,11 +110,11 @@ ps_plantra <- read_csv(file) %>%
   mutate(ds = "PLanTra") %>% 
   rename(group = task)
 
-file1 <- list.files(path = "../stanout/spl2", 
+file1 <- list.files(path = "../../stanout/spl2", 
                     pattern = "mogbetaun.+.csv$",
                     full.names = T)
 
-file2 <- list.files(path = "../stanout/spl2_shift", 
+file2 <- list.files(path = "../../stanout/spl2_shift", 
                     pattern = "mogbetaun.+.csv$",
                     full.names = T)
 
@@ -274,13 +274,13 @@ plot_fin_1 <- plot_param[[1]] / plot_param[[2]] / plot_param[[3]]
 plot_fin_1 <- grid.arrange(patchworkGrob(plot_fin_1), 
                            left = "Posterior estimate with 95% PIs",
                            bottom = "Transition location")
-ggsave("figures/psplots1.pdf", plot_fin_1, height = 8, width = 7)
+ggsave("../figures/psplots1.pdf", plot_fin_1, height = 8, width = 7)
 
 plot_fin_2 <- plot_param[[4]] / plot_param[[5]] / plot_param[[6]]
 plot_fin_2 <- grid.arrange(patchworkGrob(plot_fin_2), 
                            left = "Posterior estimate with 95% PIs",
                            bottom = "Transition location")
-ggsave("figures/psplots2.pdf", plot_fin_2, height = 8, width = 7)
+ggsave("../figures/psplots2.pdf", plot_fin_2, height = 8, width = 7)
 ```
 
 

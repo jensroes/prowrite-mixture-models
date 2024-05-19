@@ -1,6 +1,6 @@
 ## Model comparisons
 
-To compare the out-of-sample predictive performance of our models we used leave-one-out cross-validation based on Pareto smoothed importance-sampling [@vehtari2015pareto; @vehtari2017practical]. Predictive performance was estimated as the sum of the expected log predictive density ($\widehat{elpd}$) and compared by the difference between models $\Delta\widehat{elpd}$. We also summarised this difference as normalised over its standard error $\mid\frac{\Delta\widehat{elpd}}{\text{SE}}\mid$, hence the *z*-score of the difference between models [@sivula2020uncertainty]. Similar to other cross-validation techniques, the advantage of leave-one-out cross-validation is that more complex models -- models with more parameters -- are penalised to prevent overfit.
+
 
 ```{r}
 files <- list.files(
@@ -17,9 +17,9 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
          across(where(is.numeric), ~round(., 0)),
          across(where(is.numeric), ~format(., big.mark = ",")),
          across(everything(), ~str_trim(.))) %>%
-  filter(dataset != "spl2_shift") %>% 
+  filter(dataset != "spl2_shift",
+         model != "M4 -- M5") %>% 
   transmute(
-    Comparison = model,
     elpd_diff_ratio,
     across(dataset, ~recode(., 
                             "cato" = "CATO",
@@ -28,11 +28,12 @@ table <- purrr::map_dfr(files, ~read_csv(.) %>%
                             "plantra" = "PLanTra",
                             "lift" = "LIFT",
                             "c2l1" = "C2L1",
-                            "gunnexp2" = "GUNNEXP2")),
-    Distribution = case_when(str_detect(model, "M2$") ~ "Single log-Gaussian (M2)",
-                             str_detect(model, "M3$") ~ "Single log-Gaussian (unequal variance; M3)",
-                             str_detect(model, "M4$") ~ "Mixture of two log-Gaussians (constrained; M4)",
-                             str_detect(model, "M5$") ~ "Mixture of two log-Gaussians (unconstrained; M5)"),
+                            "gunnexp2" = "GE2")),
+    Comparison = case_when(str_detect(model, "M2$") ~ "Single log-Gaussian (M1 -- M2)",
+                               str_detect(model, "M3$") ~ "Single log-Gaussian (unequal variance; M2 -- M3)",
+                               str_detect(model, "M4$") ~ "Mixture of two log-Gaussians (M3 -- M4)",
+                             #str_detect(model, "M5$") ~ "Mixture of two log-Gaussians (unconstrained; M5)"
+                             ),
     across(elpd_diff, ~str_c(., " (", se_diff, ")"))) 
 
 table_ratios <- table %>% select(dataset, Comparison, elpd_diff_ratio) 
@@ -45,186 +46,265 @@ table_ratios <- table_ratios %>%
   summarise(across(elpd_diff_ratio, list(min = min, max = max), .names = "{.fn}"), .by = Comparison) %>% 
   mutate(range = str_c("[", min, ", ", max, "]"))
 
-tr_m2 <- filter(table_ratios, str_detect(Comparison, "M2$")) %>% pull(range)
-tr_m3 <- filter(table_ratios, str_detect(Comparison, "M3$")) %>% pull(range)
-tr_m4 <- filter(table_ratios, str_detect(Comparison, "M4$")) %>% pull(range)
-tr_m5 <- filter(table_ratios, str_detect(Comparison, "M5$")) %>% pull(range)
+tr_m2 <- filter(table_ratios, str_detect(Comparison, "M2\\)$")) %>% pull(range)
+tr_m3 <- filter(table_ratios, str_detect(Comparison, "M3\\)$")) %>% pull(range)
+tr_m4 <- filter(table_ratios, str_detect(Comparison, "M4\\)$")) %>% pull(range)
+tr_m5 <- filter(table_ratios, str_detect(Comparison, "M5\\)$")) %>% pull(range)
 
 ```
 
-Model differences are shown in Table \ref{tab:loos}. All datasets revealed the same pattern. Importantly, the constrained two-distributions mixture model rendered a higher predictive performance compared to the unequal variance single-distribution model; the difference $\Delta\widehat{elpd}$ between models ranged within `r tr_m4` standard errors, indicating a substantially higher predictive performance for the two-distributions model. The unconstrained mixture model M5 rendered a higher predictive performance than the constrained model M4 which did not allow the distribution of fluent keystroke-intervals to vary by transition location; the difference in predictive performance was between `r tr_m5` standard errors higher for the unconstrained model. Among the single distribution models we found higher predictive performance for the unequal variance model compared to the log-Gaussian model; the difference $\Delta\widehat{elpd}$ ranged within `r tr_m3` standard errors. The weakest model was the single distribution Gaussian which had -- compared the single distribution log-Gaussian -- a lower predictive performance in a range of `r tr_m2` standard errors.
 
-\blandscape
+The differences in the predictive performance of models for all datasets are shown in Table \ref{tab:loos}. For all six dataset the two-distributions mixture model (M4) provided greater predictive performance than all three single-distribution models. Differences in predictive performance ($\Delta\widehat{elpd}$) between models M4 and the nearest competing single-distribution model (M3) ranged between `r tr_m4` standard errors, indicating a substantially higher predictive performance for the two-distributions model. Among the single distribution models we found higher predictive performance for the unequal variance model and the lowest predictive performance for the single distribution Gaussian. Comparisons showing the fit of model predictions to the data can be found in Appendix \ref{fit-to-data} and echo the findings in Table \ref{tab:loos}. Data predicted by the two-distribution mixture model closely align with the observed data; data predicted by single distribution Gaussian models showed an inferior fit to the data.
+
 
 ```{r loos, results='asis'}
-#names(table)[-1] <- c("Model", "Description", rep(c("$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$"), 1))
-#names(table) <- c("Model", "Description", rep(c("$\\Delta\\widehat{elpd}$"), 1))
-
 table %>% 
   arrange(desc(Comparison)) %>% 
-  apa_table(caption = "Model comparisons. Models were compared incrementally from the simplest to the most complex model. The comparison is shown along with the distribution type of the more complex model. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model.  Standard error is shown in parentheses.",
-            align =c("p{1.5cm}", "p{5cm}", rep("r", 6)), 
+  pivot_longer(-Comparison, names_to = "Dataset") %>% 
+  pivot_wider(names_from = Comparison, values_from = value) %>% 
+  relocate(Dataset, ends_with("M4)")) %>% 
+  apa_table(caption = "Model comparisons. Models were compared incrementally from the simplest to the most complex model. The comparison is shown along with the distribution type of model with the higher predictive performance. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model. Standard error is shown in parentheses.",
+            align =c("p{1.75cm}", rep("p{4cm}", 3)), 
             escape = FALSE,
+            row.names = T,
+            col.names = c("Dataset", "Mixture of two log-Gaussians (M3 -- M4)", "Single log-Gaussian (unequal variance; M2 -- M3)", "Single log-Gaussian (M1 -- M2)"),
             longtable = T,
-            font_size = "footnotesize",
+            font_size = "small",
             note = "$\\Delta\\widehat{elpd}$ = difference in predictive performance -- estimated as expected log pointwise predictive density")
-#                col_spanners = list(" " = 1:2,
-#                     "\\textbf{CL21}" = 1:5,
-#                     "\\textbf{CATO}" = 6:10,
-#                     "\\textbf{GUNNEXP2}" = 11:15, 
-#                     "\\textbf{LIFT}" = 16:20,
-#                     "\\textbf{PLanTra}" = 21:25,
-#                     "\\textbf{SPL2}" = 26:30))
-#      stub_indents = list(
-#                     "\\textbf{CL21}" = 1:5,
-#                     "\\textbf{CATO}" = 6:10,
-#                     "\\textbf{GUNNEXP2}" = 11:15, 
-#                     "\\textbf{LIFT}" = 16:20,
-#                    "\\textbf{PLanTra}" = 21:25,
-#                     "\\textbf{SPL2}" = 26:30))
-#                     "\\textbf{SPL2 (shift + C)}" = 31:35)) 
 
 ```
 
-\elandscape
-
-We also tested to what extent model predictions fit observed data. Comparisons can be found in Appendix \ref{fit-to-data} and echo the findings in Table \ref{tab:loos}. Data predicted by the two-distribution mixture models are similar to observed data; data predicted by single distribution Gaussian models showed a poor fit to the data.
 
 ## Transition location effect
 
-As demonstrated in the model comparisons, the two-distributions mixture-models is a better statistical representation on the underlying process generating keystroke data than compared to any of the single-distribution models. Information about this process is captured by the posterior estimates of the models' parameter values. To reiterate, there are three conceptually important parameters: (1) the magnitude of the slowdown for transition hesitations (represented as $\delta$ in equation \ref{eq:bimodcon2}), (2) the probability of hesitant transitions (represented as $\theta$ in equation \ref{eq:bimodcon2}), and (3) the duration of fluent transitions (the typing speed, which was indicated as $\beta$ in equation \ref{eq:bimodcon2}).
 
-Figure \ref{fig:mixmodel} illustrates the mixture model approach on the basis of the posterior of the constrained implementation applied to the CATO data: for each transition durations we obtain two posterior probability distributions, one associated with fluent transitions between keys and another for key transitions where upstream difficulty result in hesitant transitions. The hesitation probability is indicated as the relative height of either distribution. The transition locations are characterized by the hesitation parameters: as we illustrate the constrained mixture model, the distributions of fluent transitions -- indicated in grey -- are constant across transition location but their height differs as the probability of fluent transition is the inverse of the height of hesitant transitions; i.e. $1 - \theta$. More interesting are the distributions associated with hesitations; indicated in yellow: Within word transitions have a negligibly small hesitation probability barely visible in the visualisation. Hesitations before words and sentences are both roughly equally likely than fluent transitions. In other words, half of the time participants did not pause before a word or sentence; we explore this below. However when hesitations occurred, these are longer at before-sentence transitions compared to before word transitions.
-
-```{r mixmodel, fig.cap='Mixture model plot for each transition location. Shown are the distributions for both mixture components (fluent and hesitant transitions) and their weighting. Posterior of CATO data.', fig.height=6}
+Figure \ref{fig:mixmodel} illustrates the mixture model results for every dataset: for each interkey interval we obtained two posterior probability distributions, one associated with fluent transitions between keys and another for interkey intervals where upstream difficulty resulted in hesitant interkey intervals. The hesitation probability -- the probability of  interkey intervals associated with hesitations -- is indicated as the height of the distribution shown in yellow (on the right of each panel). The transition locations are characterised by the hesitation parameters: as we illustrate the mixture model, the distributions of fluent transitions -- indicated in grey -- are constant across transition location (within each dataset) but their height differs as the probability of fluent interkey intervals is the inverse of the height of hesitant interkey intervals; i.e. $1 - \theta$. Within-word interkey intervals have a negligibly small hesitation probability barely visible in the visualisation. Hesitations before words and sentences are both roughly equally likely than fluent transitions. In other words, half of the time participants did not pause before a word or sentence; we explore this below. However, when hesitations occurred, these are longer at before-sentence interkey intervals compared to before word interkey intervals. The slowdown for hesitant interkey intervals -- represented earlier as $\delta$ -- is the distance between the distribution of fluent interkey intervals ($\beta$) shown in grey and the distribution of hesitant interkey intervals shown in yellow.
 
 
-ps <- read_csv("../../stanout/cato/mog_constr_posterior_for_densityplot.csv") 
-# Extract parameters
-alpha <- filter(ps, param == 'beta') %>% pull(est)
-alpha2_bs <- filter(ps, param == 'delta', loc == 'before sentence') %>% pull(est)
-alpha2_bw <- filter(ps, param == 'delta', loc == 'before word') %>% pull(est)
-alpha2_ww <- filter(ps, param == 'delta', loc == 'within word') %>% pull(est)
 
-theta_bs <- filter(ps, param == 'prob',  loc == 'before sentence') %>% pull(est)
-theta_bw <- filter(ps, param == 'prob',  loc == 'before word') %>% pull(est)
-theta_ww <- filter(ps, param == 'prob',  loc == 'within word') %>% pull(est)
-
-sigma <- filter(ps, param == 'sigma') %>% pull(est)
-sigmap_bs <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'before sentence')) %>% pull(est) %>% sum()
-sigmap_bw <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'before word')) %>% pull(est) %>% sum()
-sigmap_ww <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'within word')) %>% pull(est) %>% sum()
+```{r mixmodel, fig.cap='Mixture model plot for each transition location. Shown are the distributions for both mixture components (fluent and hesitant interkey intervals) and their weighting. Interkey intervals are shown in seconds on log scaled intervals.', fig.height=8, fig.width=7}
 
 # Data grid
-data <- tibble(x = c(0, 20))
+data <- tibble(x = c(0, 100))
 
+# plotting details
 colours <- c("Fluent" = "#000000", "Hesitant" = "#E69F00")
+ylims <- c(0, .7)
+xbreaks <- log(c(1, 10, 100, 1000, 10000))
+xlims <- log(c(10, 50000))
+subtitle_bs <- "Before sentence"
+subtitle_bw <- "Before word"
+subtitle_ww <- "Within word"
 
-# Create density plot
-plot_bs <- ggplot(data, aes(x)) +
-  stat_function(aes(colour = "Fluent"),
-                geom = "line", 
-                linewidth = .25,
-                fun = plot_mix_comps,
-                args = list(alpha, sigma, lam = 1 - theta_bs)) +
-  stat_function(aes(colour = "Hesitant"),
-                geom = "line", 
-                linewidth = .25,
-                fun = plot_mix_comps, 
-                args = list(alpha2_bs, sigmap_bs, lam = theta_bs)) +
-  stat_function(aes(fill = "Fluent"),
-                geom = "area", 
-                fun = plot_mix_comps, 
-                alpha = .25, 
-                args = list(alpha, sigma, lam = 1 - theta_bs)) +
-  stat_function(aes(fill = "Hesitant"),
-                geom = "area", 
-                fun = plot_mix_comps, 
-                alpha = .25, 
-                args = list(alpha2_bs, sigmap_bs, lam = theta_bs)) +
-  scale_x_continuous(labels = exp, 
-                     breaks = log(c(1, 10, 100, 1000, 10000)), 
-                     limits = log(c(10, 50000))) +
-  scale_colour_manual(values = colours) +
-  scale_fill_manual(values = colours) +
-  labs(y = "", x = "", 
-       subtitle = "Before-sentence transitions",
-       colour = "Mixture\ncomponent",
-       fill = "Mixture\ncomponent") +
-  theme(legend.position = "right",
-        legend.justification = "top")
+# get files
+files <- list.files("../../stanout", pattern = "mog_constr_posterior_for_densityplot.csv", recursive = T, full.names = T)
 
-plot_bw <- ggplot(data, aes(x)) +
-  stat_function(aes(colour = "Fluent"),
-                linewidth = .25,
-                geom = "line", 
-                fun = plot_mix_comps,
-                args = list(alpha, sigma, lam = 1 - theta_bw)) +
-  stat_function(aes(colour = "Hesitant"),
-                geom = "line", 
-                linewidth = .25,
-                fun = plot_mix_comps, 
-                args = list(alpha2_bw, sigmap_bw, lam = theta_bw)) +
-  stat_function(aes(fill = "Fluent"),
-                geom = "area", 
-                linewidth = .25,
-                fun = plot_mix_comps, 
-                alpha = .25, 
-                args = list(alpha, sigma, lam = 1 - theta_bw)) +
-  stat_function(aes(fill = "Hesitant"),
-                geom = "area", 
-                fun = plot_mix_comps, 
-                alpha = .25, 
-                args = list(alpha2_bw, sigmap_bw, lam = theta_bw)) +
-  scale_x_continuous(labels = exp, 
-                     breaks = log(c(1, 10, 100, 1000, 10000)), 
-                     limits = log(c(10, 50000))) +
-  scale_colour_manual(values = colours) +
-  scale_fill_manual(values = colours) +
-  labs(y = "Density", x = "", 
-       subtitle = "Before-word transitions",
-       colour = "Mixture\ncomponent",
-       fill = "Mixture\ncomponent") +
-  theme(legend.position = "none")
+# load all posteriors
+ps_all <- map_dfr(files, ~read_csv(.) %>% mutate(dataset = .x)) %>% 
+  mutate(dataname = case_when(str_detect(dataset, "spl2") ~ "SPL2",
+                              str_detect(dataset, "lift") ~ "LIFT",
+                              str_detect(dataset, "plantra") ~ "PLanTra",
+                              str_detect(dataset, "gunnexp2") ~ "GE2",
+                              str_detect(dataset, "cato") ~ "CATO",
+                              str_detect(dataset, "c2l1") ~ "C2L1"))
 
-plot_ww <- ggplot(data, aes(x)) +
-  stat_function(aes(colour = "Fluent"),
-                geom = "line", 
-                fun = plot_mix_comps,
-                linewidth = .25,
-                args = list(alpha, sigma, lam = 1 - theta_ww)) +
-  stat_function(aes(colour = "Hesitant"),
-                geom = "line", 
-                fun = plot_mix_comps, 
-                linewidth = .25,
-                args = list(alpha2_ww, sigmap_ww, lam = theta_ww)) +
-  stat_function(aes(fill = "Fluent"),
-                geom = "area", 
-                fun = plot_mix_comps, 
-                alpha = .25, 
-                args = list(alpha, sigma, lam = 1 - theta_ww)) +
-  stat_function(aes(fill = "Hesitant"),
-                geom = "area", 
-                fun = plot_mix_comps, 
-                alpha = .25, 
-                args = list(alpha2_ww, sigmap_ww, lam = theta_ww)) +
-  scale_x_continuous(labels = exp, 
-                     breaks = log(c(1, 10, 100, 1000, 10000)), 
-                     limits = log(c(10, 50000))) +
-  scale_colour_manual(values = colours) +
-  scale_fill_manual(values = colours) +
-  labs(subtitle = "Within-word transitions", 
-       y = "", x = "Transition duration [in msecs]",
-       colour = "Mixture\ncomponent",
-       fill = "Mixture\ncomponent") +
-  theme(legend.position = "none") 
+# plot counter
+plot_id <- 0
 
-plot_bs / plot_bw / plot_ww 
+for(i in files){
+  
+  if(plot_id == 0){
+    # template for output
+    plot_bs <- list()
+    plot_bw <- list()
+    plot_ww <- list()
+  } 
+  
+  plot_id <- plot_id + 1
+  
+  # select dataset
+  ps <- filter(ps_all, dataset == i)
+  
+  # add data name
+  data <- mutate(data, dataname = unique(pull(ps, dataname)))
+  
+  # Extract parameters
+  alpha <- filter(ps, param == 'beta') %>% pull(est)
+  alpha2_bs <- filter(ps, param == 'delta', loc == 'before sentence') %>% pull(est)
+  alpha2_bw <- filter(ps, param == 'delta', loc == 'before word') %>% pull(est)
+  alpha2_ww <- filter(ps, param == 'delta', loc == 'within word') %>% pull(est)
+  
+  theta_bs <- filter(ps, param == 'prob',  loc == 'before sentence') %>% pull(est)
+  theta_bw <- filter(ps, param == 'prob',  loc == 'before word') %>% pull(est)
+  theta_ww <- filter(ps, param == 'prob',  loc == 'within word') %>% pull(est)
+  
+  sigma <- filter(ps, param == 'sigma') %>% pull(est)
+  sigmap_bs <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'before sentence')) %>% pull(est) %>% sum()
+  sigmap_bw <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'before word')) %>% pull(est) %>% sum()
+  sigmap_ww <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'within word')) %>% pull(est) %>% sum()
+  
+  # Create density plot
+  plot_bs[[plot_id]] <- ggplot(data, aes(x)) +
+    stat_function(aes(colour = "Fluent"),
+                  geom = "line", 
+                  linewidth = .25,
+                  fun = plot_mix_comps,
+                  args = list(alpha, sigma, lam = 1 - theta_bs)) +
+    stat_function(aes(colour = "Hesitant"),
+                  geom = "line", 
+                  linewidth = .25,
+                  fun = plot_mix_comps, 
+                  args = list(alpha2_bs, sigmap_bs, lam = theta_bs)) +
+    stat_function(aes(fill = "Fluent"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha, sigma, lam = 1 - theta_bs)) +
+    stat_function(aes(fill = "Hesitant"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha2_bs, sigmap_bs, lam = theta_bs)) +
+    scale_x_continuous(labels = ~exp(.) / 1000, 
+                       breaks = xbreaks, 
+                       limits = xlims) +
+    scale_y_continuous(limits = ylims) +
+    scale_colour_manual(values = colours) +
+    scale_fill_manual(values = colours) +
+    labs(colour = "Mixture component",
+         fill = "Mixture component") 
+  
+  
+  plot_bw[[plot_id]] <- ggplot(data, aes(x)) +
+    stat_function(aes(colour = "Fluent"),
+                  linewidth = .25,
+                  geom = "line", 
+                  fun = plot_mix_comps,
+                  args = list(alpha, sigma, lam = 1 - theta_bw)) +
+    stat_function(aes(colour = "Hesitant"),
+                  geom = "line", 
+                  linewidth = .25,
+                  fun = plot_mix_comps, 
+                  args = list(alpha2_bw, sigmap_bw, lam = theta_bw)) +
+    stat_function(aes(fill = "Fluent"),
+                  geom = "area", 
+                  linewidth = .25,
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha, sigma, lam = 1 - theta_bw)) +
+    stat_function(aes(fill = "Hesitant"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha2_bw, sigmap_bw, lam = theta_bw)) +
+    scale_x_continuous(labels = ~exp(.) / 1000, 
+                       breaks = xbreaks, 
+                       limits = xlims) +
+    scale_y_continuous(limits = ylims) +
+    scale_colour_manual(values = colours) +
+    scale_fill_manual(values = colours) +
+    labs(colour = "Mixture component",
+         fill = "Mixture component") 
+  
+  if(plot_id != 6){
+    plot_bs[[plot_id]] <- plot_bs[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
+    plot_bw[[plot_id]] <- plot_bw[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
+  } else if(plot_id == 6){
+    plot_bs[[plot_id]] <- plot_bs[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())
+    plot_bw[[plot_id]] <- plot_bw[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())
+  }
 
+  
+  plot_ww[[plot_id]] <- ggplot(data, aes(x)) +
+    stat_function(aes(colour = "Fluent"),
+                  geom = "line", 
+                  fun = plot_mix_comps,
+                  linewidth = .25,
+                  args = list(alpha, sigma, lam = 1 - theta_ww)) +
+    stat_function(aes(colour = "Hesitant"),
+                  geom = "line", 
+                  fun = plot_mix_comps, 
+                  linewidth = .25,
+                  args = list(alpha2_ww, sigmap_ww, lam = theta_ww)) +
+    stat_function(aes(fill = "Fluent"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha, sigma, lam = 1 - theta_ww)) +
+    stat_function(aes(fill = "Hesitant"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha2_ww, sigmap_ww, lam = theta_ww)) +
+    scale_x_continuous(labels = ~exp(.) / 1000, 
+                       breaks = xbreaks, 
+                       limits = xlims) +
+    scale_y_continuous(limits = ylims) +
+    scale_colour_manual(values = colours) +
+    scale_fill_manual(values = colours) +
+    facet_grid(dataname~.) +
+    labs(colour = "Mixture component",
+         fill = "Mixture component") 
+  
+   if(plot_id != 6){
+    plot_ww[[plot_id]] <- plot_ww[[plot_id]] + 
+      theme(legend.position = "top",
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
+  } else{
+    plot_ww[[plot_id]] <- plot_ww[[plot_id]] + 
+      theme(legend.position = "top",
+            axis.title = element_blank(), 
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())
+  }
+}
+
+bs_lab <- ggplot(mapping = aes(x = 0, y = 0, label = subtitle_bs)) + 
+  geom_text() +
+  theme_void()
+
+bw_lab <- ggplot(mapping = aes(x = 0, y = 0, label = subtitle_bw)) + 
+  geom_text() +
+  theme_void()
+
+ww_lab <- ggplot(mapping = aes(x = 0, y = 0, label = subtitle_ww)) + 
+  geom_text() +
+  theme_void()
+
+# combine plots
+plots_fin <- wrap_plots(
+  wrap_plots(bs_lab, wrap_plots(plot_bs, ncol = 1), heights = c(.025, .975)),
+  wrap_plots(bw_lab, wrap_plots(plot_bw, ncol = 1), heights = c(.025, .95)),
+  wrap_plots(ww_lab, wrap_plots(plot_ww, ncol = 1), heights = c(.025, .975)), guides =  "collect")
+
+# add axes titles
+grid.arrange(patchworkGrob(plots_fin), 
+                          left = "Density",
+                          bottom = "Interkey interval in secs")
+#ggsave("mixdists.png", plots_fin, width = 12, height = 6)
 
 ```
 
-We evaluate the posterior of the constrained mixture model; however we also summarise the posterior of the unconstrained mixture model below and the full analysis can be found in Appendix \ref{transition-location-effect-unconstrained-mixture-model}. We demonstrated above that the predictive performance of the unconstrained mixture model was substantially higher than the predictive performance of the constrained mixture model. However, the constrained mixture model is the theoretically more parsimonious model of the cascading view; in other words, differences between transition locations for the component of fluent transitions were to some extent speculative and unexpected. We therefore present the posterior parameter values for the constrained two-distributions mixture model in the following.
+
+<!-- We evaluate the posterior of the constrained mixture model; however we also summarise the posterior of the unconstrained mixture model below and the full analysis can be found in Appendix \ref{transition-location-effect-unconstrained-mixture-model}. We demonstrated above that the predictive performance of the unconstrained mixture model was substantially higher than the predictive performance of the constrained mixture model. However, the constrained mixture model is the theoretically more parsimonious model of the cascading view; in other words, differences between transition locations for the component of fluent transitions were to some extent speculative and unexpected. We therefore present the posterior parameter values for the constrained two-distributions mixture model in the following. -->
 
 ```{r}
 files <- list.files(str_c("../../stanout/", 
@@ -237,7 +317,7 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(data, ~recode_factor(., 
                 "cato" = "CATO",# (non-dyslexic, unmasked)",
-                "gunnexp2" = "GUNNEXP2",# (unmasked)",
+                "gunnexp2" = "GE2",# (unmasked)",
                 "spl2" = "SPL2", # (L1)", 
 #                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
                 "plantra" = "PLanTra",
@@ -247,7 +327,7 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   filter(!(str_detect(data, "SPL2") & lang == "ES" & !is.na(lang)),
          !(str_detect(data, "CATO") & group == "dyslexic" & !is.na(group)),
          !(str_detect(data, "CATO") & task == "masked" & !is.na(task)),
-         !(str_detect(data, "GUNNEXP2") & xn == "masked" & !is.na(xn))) 
+         !(str_detect(data, "GE2") & xn == "masked" & !is.na(xn))) 
 
 ps_beta <- filter(ps, param == "beta") %>% 
   rename(beta = value) %>%
@@ -274,17 +354,15 @@ ps <- filter(ps, param != "beta")  %>%
   filter(name %in% c("beta", "beta2", "delta", "prob"))
 ```
 
-The mixture-model posterior parameter estimates for all datasets is visualised in Figure \ref{fig:crossstudypost2}. Although models were fitted with all data set-specific conditions, we aggregated the posterior across conditions[^2], and excluded conditions that might conflate comparisons[^3]. For posteriors of all conditions within data sets see Appendix \ref{posterior-parameter-estimates}. The resulting posterior allows us to examine differences and similarities associated with transition locations for all dataset. In particular we can see how the linguistic location in the text is associated with hesitation duration and probability. The estimate for fluent transitions is shown by dataset, across transition location.
+Figure \ref{fig:mixmodel} highlighted how model parameters relate to each other in pairs of distributions but to compare the effect of transition location on model parameters we need to compare the posterior distribution of the three parameters of interest individually. Therefore Figure \ref{fig:crossstudypost2} visualises the same posterior as Figure \ref{fig:mixmodel} but expressed directly in terms of posterior probability distributions of the individual mixture-model parameters. These are shown for all datasets by transition location. Although models were fitted with all dataset-specific conditions, we aggregated the posterior across conditions^[We aggregated across pre and post tests for the PLanTra dataset as well as genre and topic of the LIFT data set. We demonstrate in Appendix \ref{pre-post-test-plantra} and \ref{genre-effect-lift}, respectively, that there is negligible evidence for differences between these conditions.], and excluded conditions that might confound comparisons^[We removed the masked writing condition in the GE2 and CATO, the dyslexic group in the CATO data set, and L2 writing in the SPL2 data set. There was evidence for L2 writing effects (see Appendix \ref{l2-effect-spl2}); evidence for marking effects was weak (see Appendix \ref{masking-effect-cato-ge2}).]. For posteriors of all conditions within datasets see Appendix \ref{posterior-parameter-estimates}. The resulting posterior allows us to examine differences and similarities associated with transition locations for all datasets. In particular we can see how transition location in the text is associated with hesitant interkey intervals and hesitation probability. For completeness we also report the estimate for fluent interkey intervals.
 
-[^2]: We aggregated across pre-post test for the PLanTra dataset as well as genre and topic of the LIFT data set. We demonstrate in Appendix \ref{pre-post-test-plantra} and \ref{genre-effect-lift}, respectively, that there is negligible evidence for differences between these conditions.
 
-[^3]: We removed the masked writing condition in the GUNNEXP2 and CATO, the dyslexic group in the CATO data set, and L2 writing in the SPL2 data set. There was evidence for L2 writing effects (see Appendix \ref{l2-effect-spl2}); evidence for marking effects was weak (see Appendix \ref{masking-effect-cato-gunnexp2}).
 
-```{r crossstudypost2, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GUNNEXP2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group."}
+```{r crossstudypost2, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group."}
 
 posd <- position_dodge(.5)
 dotsize <- 2.75
-grouplabel <- "Data set:"
+grouplabel <- "Dataset:"
 shapes <- c(1, 4, 6, 7, 8, 9, 11)
 width <- 0
 linewidth <- .35
@@ -373,12 +451,76 @@ grid.arrange(patchworkGrob(plot),
 
 ```
 
-Figure \ref{fig:crossstudypost2} shows largely the same patterns (with caveats) for all datasets. We summarise the results of the pairwise comparisons for transitions locations; full results and parameter estimates can be found in Appendix \ref{transition-location-effect-constrained-mixture-model}. We found that hesitations were more frequent -- higher hesitation probability -- before words than within words (BFs \> 100 for all datasets) but only for half of the data sets also longer (GUNNEXP2: BF = 27; PLanTra: BF = 56; SPL2: BF = 9.1; negligible evidence for C2L1: BF = 0.1; CATO: BF = 0.2; LIFT: BF = 0.4). Hesitations were equally likely before sentences and words (C2L1 and CATO: BFs = 0.7; PLanTra: BF = 0.3; LIFT: BF = 1.6; except for GUNNEXP2 and SPL2, both BFs \> 100) but longer (all BFs \> 100, except for C2L1: BF = 1.11 and LIFT = 0.5).
+Figure \ref{fig:crossstudypost2} shows largely the same patterns (with caveats) for all datasets. We summarise the evidence for differences between transitions locations in Table \ref{tab:loceffectconbf}. We found that hesitations were more frequent -- higher hesitation probability -- before words than within words (BFs > 100 for all datasets) but only for half of the datasets hesitation durations were longer (GE2: BF = 27; PLanTra: BF = 56; SPL2: BF = 9.1; negligible evidence for C2L1: BF = 0.1; CATO: BF = 0.2; LIFT: BF = 0.4). Hesitations were equally likely before sentences and words (C2L1 and CATO: BFs = 0.7; PLanTra: BF = 0.3; LIFT: BF = 1.6; except for GE2 and SPL2; both BFs > 100) but longer (all BFs > 100, except for C2L1: BF = 1.11 and LIFT = 0.5). Full results and parameter estimates can be found in Appendix \ref{transition-location-effect}. 
 
-To reiterate, for most datasets we found that pauses are before sentences are longer but not necessarily more likely than before words (except for datasets SPL2 and GUNNEXP2). In fact, LIFT showed some indication that pauses were less likely before sentences than words. This is interesting because it is generally believed that pausing behaviour is associated with linguistic boundaries such that more and longer pauses are predicted for key transitions at larger linguistic edges. It is less clear in which contexts pre-sentence pausing is more likely than pausing before words.
 
-Differences between datasets could, to some extent, be explained by the fact that two datasets (PLanTra, LIFT) defined before-sentence transitions as the sum of transitions between space, shift and the sentence-initial character while the remaining data sets measured before-sentence transitions as the difference between space key and shift. To control for the use of complex key combinations, we addressed this possibility for the SPL2 dataset and showed that including the character following the shift key substantially increased the hesitation probability (BFs \> 100) but it did not affect the duration of fluent or hesitant transitions (BFs \< 0.3); see Appendix \ref{key-combination-effect-constrained-mixture-model}. This conflicts the earlier finding that before-sentence hesitations were not more likely than before-word hesitations for datasets that did included the character following shift (PLanTra, LIFT). In other words, patterns in our results cannot be explained on the basis of how before-sentence key-transitions were operationalised.
+```{r loceffectconbf, results='asis'}
 
-Finally, the duration of fluent transitions was not distinguished by location in the constrained distribution model. Figure \ref{fig:crossstudypost2} highlights that two datasets (C2L1, CATO) show substantially longer fluent transitions. This is presumably reflecting that these data were sampled from was the youngest and least experienced population of writers in our data pool. Hesitation duration and probability followed the same patterns as the majority of datasets.
+files <- list.files(str_c("../../stanout/", 
+                          c("lift", "spl2", "gunnexp2", "plantra", "cato", "c2l1")), pattern = "mogbetacon.+.csv", full.names = T) # "spl2_shift",
 
-The predictive performance of the unconstrained model was higher compared to the constrained model (see Table \ref{tab:loos}). We, therefore, summarise briefly differences in the results for the transition-location effects; full results can be found in Appendix \ref{transition-location-effect-unconstrained-mixture-model}. Higher predictive performance for the unconstrained model suggests that variability across transition locations for fluent transition durations; in particular fluent before-word transitions were longer compared to mid-word transitions (all BFs \> 100) but not before-sentence compared to before-word transitions (all BFs \< 0.08, but SPL2 and GUNNEXP2: BFs \> 100). Patterns for hesitation probability was generally similar in both the constrained and unconstrained model. However, for hesitation durations the unconstrained model showed evidence for longer durations at before-word locations compared to within-word location in all but one dataset (all BFs \> 10, except for LIFT: BF = 0.7); differences in hesitation duration for before-sentence transitions compared to before-word transitions was similar to the constrained model.
+ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>% 
+                                 mutate(data = .x)) %>% 
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(data, ~recode(., 
+                              "cato" = "CATO",
+                              "spl2" = "SPL2", 
+                              "gunnexp2" = "GE2",
+                              #                "spl2_shift" = "*SPL2* (L1; shift + C)", 
+                              "plantra" = "PLanTra",
+                              "lift" = "LIFT",
+                              "c2l1" = "C2L1"))) %>% 
+  filter(!(str_detect(data, "SPL2") & lang == "ES"),
+         !(str_detect(data, "CATO") & group == "dyslexic"),
+         !(str_detect(data, "CATO") & task == "masked"),
+         !(str_detect(data, "GE2") & xn == "masked"),
+         param %in% c("delta", "theta")) %>%
+  select(param, location, data, value) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
+  pivot_wider(names_from = location, values_from = value) %>%
+  unnest(-c(data, param)) %>% 
+  mutate(diff.1 = `before sentence` - `before word`,
+         diff.2 = `before word` - `within word`) %>% 
+  summarise(across(starts_with("diff"), 
+                   list(mean = mean, 
+                        lower = lower, 
+                        upper = upper, 
+                        BF = BF)),
+            .by = c(data, param)) 
+
+tmp <- ps_loc_diffs %>% 
+  pivot_longer(starts_with("diff"), names_to = c("diffid", ".value"), names_sep = "_") %>% 
+  mutate(across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2))))) %>% 
+  select(-mean, -lower, -upper) %>% 
+  pivot_wider(names_from = c(diffid, param), values_from = BF) %>% 
+  select(data, contains("delta"), contains("theta")) %>% 
+  arrange(data)
+
+apa_table(tmp,
+          align = c("l", rep("p{3cm}", 4)), 
+#          font_size = "small",
+          longtable = T,
+          escape = FALSE,
+          row.names = T,
+          col.names = c("Dataset", rep(c("before sentence vs word", "before vs within word"), 2)),
+          col_spanners = list(" " = c(1),
+                              "Hesitation slowdown" = c(2, 3), 
+                              "Hesitation probability" = c(4, 5)),
+          note = "BF = evidence in favour of the alternative hypothesis over the null hypothesis.",
+          caption = "BFs for the effect of transition location on interkey intervals shown for the hesitation slowdown and hesitation probability. Comparisons for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group.") 
+
+```
+
+
+To reiterate, for most datasets we found that pauses before sentences are longer but not always more likely than before words (except for SPL2 and GE2). In fact, LIFT showed some indication that pauses were less likely before sentences than words. This is interesting because it is generally believed that pausing behaviour is associated with linguistic boundaries such that more and longer pauses are predicted for interkey intervals at larger linguistic edges (see Introduction section). It is less clear in which contexts pre-sentence pausing is more likely than pausing before words.
+
+Differences between datasets could, to some extent, be explained by the fact that two datasets (PLanTra, LIFT) defined before-sentence transitions as the sum of transitions between space, shift and the sentence-initial character, while the remaining data sets measured before-sentence transitions as the interval between space key and shift. To test to what extent complex key combinations affects the parameter estimates, we addressed this possibility for the SPL2 dataset and showed that including the character following the shift key substantially increased the hesitation probability for sentence-initial transitions (BFs > 100) but it did not affect the duration hesitant interkey intervals (BFs < 0.3); see Appendix \ref{key-combination-effect}. This conflicts with the earlier finding that before-sentence hesitations were not more likely than before-word hesitations for datasets that did include the character following shift (PLanTra, LIFT). In other words, patterns in our results cannot be explained on the basis of how sentence-initial key transitions were operationalised.
+
+Finally, Figure \ref{fig:crossstudypost2} highlights that fluent interkey intervals in two datasets (C2L1, CATO) were substantially longer than for other datasets. This is presumably reflecting that these data were sampled from the youngest and least experienced population of writers in our data pool. Interestingly, however, hesitation duration and hesitation probability followed the same patterns as the majority of datasets.
+
+
+
+
+
+
+<!-- The predictive performance of the unconstrained model was higher compared to the constrained model (see Table \ref{tab:loos}). We, therefore, summarise briefly differences in the results for the transition-location effects; full results can be found in Appendix \ref{transition-location-effect-unconstrained-mixture-model}. Higher predictive performance for the unconstrained model suggests that variability across transition locations for fluent transition durations; in particular fluent before-word transitions were longer compared to mid-word transitions (all BFs > 100) but not before-sentence compared to before-word transitions (all BFs < 0.08, but SPL2 and GE2: BFs > 100). Patterns for hesitation probability were generally similar in both the constrained and unconstrained model. However, for hesitation durations the unconstrained model showed evidence for longer durations at before-word locations compared to within-word location in all but one dataset (all BFs > 10, except for LIFT: BF = 0.7); differences in hesitation duration for before-sentence transitions compared to before-word transitions was similar to the constrained model.  -->

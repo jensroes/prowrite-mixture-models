@@ -11,7 +11,7 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(data, ~recode_factor(., 
                 "cato" = "CATO",# (non-dyslexic, unmasked)",
-                "gunnexp2" = "GUNNEXP2",# (unmasked)",
+                "gunnexp2" = "GE2",# (unmasked)",
                 "spl2" = "SPL2", # (L1)", 
 #                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
                 "plantra" = "PLanTra",
@@ -21,7 +21,7 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   filter(!(str_detect(data, "SPL2") & lang == "ES"),
          !(str_detect(data, "CATO") & group == "dyslexic"),
          !(str_detect(data, "CATO") & task == "masked"),
-         !(str_detect(data, "GUNNEXP2") & xn == "masked")) %>% 
+         !(str_detect(data, "GE2") & xn == "masked")) %>% 
   pivot_wider(names_from = param, 
               values_from = value) %>% 
   unnest(cols = beta:theta) %>% 
@@ -49,7 +49,7 @@ We present the mixture-model posterior estimates for each of the three parameter
 
 
 
-```{r crossstudypost, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GUNNEXP2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group. Axes for transitions durations are log-scaled for visability."}
+```{r crossstudypost, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group. Axes for interkey intervals are log-scaled for visability."}
 
 posd <- position_dodge(.5)
 dotsize <- 2.75
@@ -160,7 +160,7 @@ ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>%
          across(data, ~recode(., 
                               "cato" = "*CATO* (non-dyslexic\nunmasked)",
                               "spl2" = "*SPL2* (L1)", 
-                              "gunnexp2" = "*GUNNEXP2* (unmasked)",
+                              "gunnexp2" = "*GE2* (unmasked)",
                               #                "spl2_shift" = "*SPL2* (L1; shift + C)", 
                               "plantra" = "*PLanTra*",
                               "lift" = "*LIFT*",
@@ -168,7 +168,7 @@ ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>%
   filter(!(str_detect(data, "SPL2") & lang == "ES"),
          !(str_detect(data, "CATO") & group == "dyslexic"),
          !(str_detect(data, "CATO") & task == "masked"),
-         !(str_detect(data, "GUNNEXP2") & xn == "masked"),
+         !(str_detect(data, "GE2") & xn == "masked"),
          param %in% c("beta", "delta", "theta")) %>%
   select(param, location, data, value) %>% 
   mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
@@ -205,7 +205,7 @@ apa_table(tmp[,-1],
           col.names = c("Comparison", rep(c("Est. [95\\% PIs]", "BF"), 3)),
           stub_indents = list(`\\textbf{C2L1}` = 1:2, 
                               `\\textbf{CATO (non-dyslexic, unmasked)}`= 3:4,
-                              `\\textbf{GUNNEXP2 (unmasked)}` = 5:6,
+                              `\\textbf{GE2 (unmasked)}` = 5:6,
                               `\\textbf{LIFT}` = 7:8,
                               `\\textbf{PLanTra}` = 9:10,
                               `\\textbf{SPL2 (L1)}` = 11:12),
