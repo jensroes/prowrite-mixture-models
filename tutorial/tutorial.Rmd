@@ -388,7 +388,7 @@ loo_R2(fit_lgaus)
 
 # Two-distributions log-Gaussian mixed-effects mixture model
 
-The mixture model captures the writing process as a combination of three parameters: the average typing speed of fluent interkey intervals ($\beta$), the slowdown for hesitant interkey intervals ($\delta$) and the probability of hesitant interkey intervals ($\theta$). In the model below, these are estimated each level of a categorical predictor `location` for the $i^\text{th}$ interkey intervals. 
+The mixture model captures the writing process as a combination of three parameters: the average typing speed of fluent interkey intervals ($\beta$), the slowdown for hesitant interkey intervals ($\delta$) and the probability of hesitant interkey intervals ($\theta$). In the model below, the latter two are estimated separately for each level of the categorical prediction `location` (i.e. transition location) for the $i^\text{th}$ observation. 
 
 $$
 \begin{align}
@@ -407,7 +407,7 @@ The parameters of this equation are visualised in Figure \@ref(fig:mixturemodel)
 
 
 
-```{r mixturemodel, echo = F, fig.cap="What's a mixture model for interkey intervals? The parameters of the mixture model explained visually. Each of the three parameters can determined for each transition location."}
+```{r mixturemodel, echo = F, fig.cap="What's a mixture model for interkey intervals? The parameters of the mixture model explained visually."}
 
 plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
 
@@ -485,7 +485,7 @@ data {
 ```
 
 
-Participants and conditions are expected to represent indices in the Stan code. In the code below we use `factor` in combination with `as.numeric` to ensure that there are no empty indices for participants and conditions. We create vectors with participant identifiers `ppts` (numbers $1$ through $I$ where $I$ is the number of participants) and a numeric identifier `condition` for each level of the transition location (levels: before-sentence = 1, before-word = 2, within-word = 3).  The returned values are indices for the parameters in the model: For example, for the location identifier, `beta[1]` is the population estimate for non-hesitant typing intervals at before-sentence transition locations, `beta[2]` for before-word transition locations; `theta[1]` and `theta[2]` are the hesitation probability (on the logit scale) for before-sentence and before-word transition locations, respectively.
+Participants and conditions are expected to represent indices in the Stan code. In the code below we use `factor` in combination with `as.numeric` to ensure that there are no empty indices for participants and conditions. We create vectors with participant identifiers `ppts` (numbers $1$ through $I$ where $I$ is the number of participants) and a numeric identifier `condition` for each level of the transition location (levels: before sentence = 1, before word = 2, within word = 3). The returned values are indices for the parameters in the model: For example, for the location identifier, `delta[1]` is the population estimate for the slowdown for hesitant interkey intervals at before sentence transition locations, `delta[2]` for before word locations; `theta[1]` and `theta[2]` are the hesitation probability (on the logit scale) for before-sentence and before-word transition locations, respectively.
 
 ```{r}
 ppts <- pull(data, participant) %>% factor() %>% as.numeric()
@@ -1239,7 +1239,7 @@ posterior_ppts_long_diff_summary %>%
              y = mean, 
              ymin = lower, 
              ymax = upper)) +
-  geom_hline(yintercept = 0, colour = "red", linetype = "dashed") +
+  geom_hline(yintercept = 0, colour = "black", linetype = "dotted") +
   geom_pointrange() +
   facet_wrap(~difference) +
   coord_flip() +

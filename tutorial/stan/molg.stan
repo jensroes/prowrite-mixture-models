@@ -15,18 +15,13 @@ data {
 
 
 parameters {
-  vector<lower=0>[K] delta;
-  real beta;
+  real beta; // fluent interkey intervals
+  vector<lower=0>[K] delta; // slowdown for long interkey intervals
+  vector[K] theta; // hesitation probability
 
-  real theta_mu;
-  vector[K] theta_raw;
-  matrix[K, nS] theta_s;
-  real<lower = 0> tau;
-  
-  real<lower=0> theta_sigma;
-
-  real<lower=0> sigma;		// residual sd
-  vector<lower=0>[K] sigma_diff;
+  real<lower = 0> tau; // error for hesitation probability
+  real<lower=0> sigma; // residual sd
+  vector<lower=0>[K] sigma_diff; 
 
    // For random effects
 	vector[nS] u; //subj intercepts
@@ -35,7 +30,6 @@ parameters {
 }
 
 transformed parameters{
-  vector[K] theta = theta_mu + theta_sigma * theta_raw;
   vector<lower=0>[K] sigmap_e = sigma + sigma_diff;
   vector<lower=0>[K] sigma_e = sigma - sigma_diff;
   matrix[K, nS] log_theta_s_1 = log_inv_logit(theta_s);
@@ -52,10 +46,8 @@ model {
   beta ~ normal(5, 1);
   sigma ~ cauchy(0, 2.5);
   sigma_diff ~ normal(0, 1);
-  delta ~ normal(0, .5);
-  theta_mu ~ normal(0, 1);
-  theta_sigma ~ cauchy(0, 1);
-  theta_raw ~ normal(0, .5);
+  delta ~ normal(0, 1);
+  theta ~ normal(0, 1);
   tau ~ cauchy(0, .5);
     
   for(s in 1:nS){
