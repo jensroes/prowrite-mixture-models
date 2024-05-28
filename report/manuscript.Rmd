@@ -1,12 +1,12 @@
 ---
-title             : "Ideas cascade in parallel into keystrokes -- modelling writing hesitations as finite mixture process"
-shorttitle        : "Ideas cascade in parallel into keystrokes"
+title             : "Typing in tandem: finite mixture models reveal fundamental parallelism in multi-sentence text composition"
+shorttitle        : "Typing in tandem"
 
 csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
 documentclass     : "apa7"
 output            : 
   papaja::apa6_pdf:
-    keep_tex: FALSE
+    keep_tex: TRUE
 
 author: 
   - name          : "Jens Roeser"
@@ -14,29 +14,36 @@ author:
     address       : "50 Shakespeare St, Nottingham NG1 4FQ"
     corresponding : yes 
     email         : "jens.roeser@ntu.ac.uk"
-  - name          : "Mark Torrance"
-    affiliation   : "1"
   - name          : "Rianne Conijn"
     affiliation   : "2"
-  - name          : "Gunn Helen Ofstad"
-    affiliation   : "3"
   - name          : "Evgeny Chukharev"
+    affiliation   : "3"
+  - name          : "Gunn Helen Ofstad"
     affiliation   : "4"
+  - name          : "Mark Torrance"
+    affiliation   : "1"
 
 affiliation:
   - id            : "1"
     institution   : "Department of Psychology, Nottingham Trent University, United Kingdom"
   - id            : "2"
-    institution   : "Artificial Intelligence Systems Institute, Eindhoven University of Technology, The Netherlands"
+    institution   : "Human-Technology Interaction Group, Eindhoven University of Technology, The Netherlands"
   - id            : "3"
-    institution   : "Educational Sciences and Humanities, University of Stavanger, Norway"
-  - id            : "4"
     institution   : "Department of English, Iowa State University, Iowa"
+  - id            : "4"
+    institution   : "Educational Sciences and Humanities, University of Stavanger, Norway"
 
 
-abstract: "Classical serial models view the process of producing a text as a chain of discrete pauses, during which the next span of text is planned, and bursts of activity during which this text is output onto the page or computer screen. In contrast, semi-parallel models of writing assume that planning is not complete at production onset and operates in parallel with execution. Across six datasets from participants composing multi-sentence texts we instantiated these assumptions in two sets of Bayesian mixed effects models: (1) single-distribution models as assumed by the serial processing account, and (2) a finite (two-distribution) mixture model as assumed by the parallel processing account. We analysed interkey intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the parallel view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that interkey intervals at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial processing but are in line with the semi-parallel view of writing."
 
-keywords: "Cascading semi-parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
+# We are grateful for all authors who made their available (to us), in particular Nina Vandermeulen, Alessandra Rossetti, and colleagues. This work was supported by the National Science Foundation under Grant No. 2016868: "ProWrite: Biometric feedback for improving college students' writing processes." and UKRI ESRC under Grant No. ES/W011832/1: "Can you use it in a sentence?: Establishing how word-production difficulties shape text formation."
+# 
+# Data and analysis scripts written in R and Stan can be found on OSF (https://osf.io/z65dw/; Roeser et al., 2024). For a tutorial on Bayesian mixture-model analysis in the context of keystroke data see https://rpubs.com/jensroes/mixture-models-tutorial.
+
+
+
+abstract: 'Classical serial models view the process of producing a text as a chain of discrete pauses, during which the next span of text is planned, and bursts of activity during which this text is output onto the page or computer screen. In contrast, semi-parallel models of writing assume that planning is not complete at production onset and operates in parallel with execution. Across six datasets from participants composing multi-sentence texts we instantiated these assumptions in two sets of Bayesian mixed effects models: (1) single-distribution models as assumed by the serial processing account, and (2) a finite (two-distribution) mixture model as assumed by the parallel processing account. We analysed interkey intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the parallel view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that interkey intervals at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial processing but are in line with the semi-parallel view of writing.'
+
+keywords: "Cascade; parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
 
 bibliography      : ["references.bib"]
 

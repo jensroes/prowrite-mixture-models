@@ -120,9 +120,9 @@ labs <- map(datasets, ~filter(ps, ds == .x) %>%
 # Combine parameter plots 
 plot_param <- list()
 
-beta_plots[c(2,3,5,6)] <- map(c(2,3,5,6), ~beta_plots[[.]] + theme(strip.text = element_blank()))
-delta_plots[c(2,3,5,6)] <- map(c(2,3,5,6), ~delta_plots[[.]] + theme(strip.text = element_blank()))
-theta_plots[c(2,3,5,6)] <- map(c(2,3,5,6), ~theta_plots[[.]] + theme(strip.text = element_blank()))
+beta_plots[c(1,3,5,6)] <- map(c(1,3,5,6), ~beta_plots[[.]] + theme(strip.text = element_blank()))
+delta_plots[c(1,3,5,6)] <- map(c(1,3,5,6), ~delta_plots[[.]] + theme(strip.text = element_blank()))
+theta_plots[c(1,3,5,6)] <- map(c(1,3,5,6), ~theta_plots[[.]] + theme(strip.text = element_blank()))
 
 beta_plots[c(1,2,4,5)] <- map(c(1,2,4,5), ~beta_plots[[.]] + theme(axis.text.x = element_blank(),
                                                                    axis.ticks.x = element_blank()))
@@ -151,7 +151,7 @@ plot_param[[6]] <- plot_param[[6]] & guides(colour=guide_legend(nrow=1,byrow=TRU
                                             shape = guide_legend(nrow=1,byrow=TRUE))
 
 
-plot_fin_1 <- plot_param[[1]] / plot_param[[2]] / plot_param[[3]]
+plot_fin_1 <-  plot_param[[2]] / plot_param[[1]] / plot_param[[3]]
 plot_fin_1 <- grid.arrange(patchworkGrob(plot_fin_1), 
                            left = "Posterior estimate with 95% PIs",
                            bottom = "Transition location")

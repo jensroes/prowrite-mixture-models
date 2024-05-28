@@ -53,7 +53,6 @@ tr_m5 <- filter(table_ratios, str_detect(Comparison, "M5\\)$")) %>% pull(range)
 
 ```
 
-
 The differences in the predictive performance of models for all datasets are shown in Table \ref{tab:loos}. For all six dataset the two-distributions mixture model (M4) provided greater predictive performance than all three single-distribution models. Differences in predictive performance ($\Delta\widehat{elpd}$) between models M4 and the nearest competing single-distribution model (M3) ranged between `r tr_m4` standard errors, indicating a substantially higher predictive performance for the two-distributions model. Among the single distribution models we found higher predictive performance for the unequal variance model and the lowest predictive performance for the single distribution Gaussian. Comparisons showing the fit of model predictions to the data can be found in Appendix \ref{fit-to-data} and echo the findings in Table \ref{tab:loos}. Data predicted by the two-distribution mixture model closely align with the observed data; data predicted by single distribution Gaussian models showed an inferior fit to the data.
 
 
@@ -63,23 +62,21 @@ table %>%
   pivot_longer(-Comparison, names_to = "Dataset") %>% 
   pivot_wider(names_from = Comparison, values_from = value) %>% 
   relocate(Dataset, ends_with("M4)")) %>% 
-  apa_table(caption = "Model comparisons. Models were compared incrementally from the simplest to the most complex model. The comparison is shown along with the distribution type of model with the higher predictive performance. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model. Standard error is shown in parentheses.",
-            align =c("p{1.75cm}", rep("p{4cm}", 3)), 
+  arrange(Dataset) %>% 
+  apa_table(caption = "Model comparisons. Models were compared incrementally from the simplest to the most complex model. Comparison are shown with the distribution type of the model with the higher predictive performance. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model; standard error shown in parentheses.",
+            align =c("p{1.75cm}", "p{4cm}", "p{4.25cm}", "p{3.5cm}"), 
             escape = FALSE,
             row.names = T,
             col.names = c("Dataset", "Mixture of two log-Gaussians (M3 -- M4)", "Single log-Gaussian (unequal variance; M2 -- M3)", "Single log-Gaussian (M1 -- M2)"),
-            longtable = T,
+            longtable = FALSE,
             font_size = "small",
             note = "$\\Delta\\widehat{elpd}$ = difference in predictive performance -- estimated as expected log pointwise predictive density")
 
 ```
 
-
 ## Transition location effect
 
-
 Figure \ref{fig:mixmodel} illustrates the mixture model results for every dataset: for each interkey interval we obtained two posterior probability distributions, one associated with fluent transitions between keys and another for interkey intervals where upstream difficulty resulted in hesitant interkey intervals. The hesitation probability -- the probability of  interkey intervals associated with hesitations -- is indicated as the height of the distribution shown in yellow (on the right of each panel). The transition locations are characterised by the hesitation parameters: as we illustrate the mixture model, the distributions of fluent transitions -- indicated in grey -- are constant across transition location (within each dataset) but their height differs as the probability of fluent interkey intervals is the inverse of the height of hesitant interkey intervals; i.e. $1 - \theta$. Within-word interkey intervals have a negligibly small hesitation probability barely visible in the visualisation. Hesitations before words and sentences are both roughly equally likely than fluent transitions. In other words, half of the time participants did not pause before a word or sentence; we explore this below. However, when hesitations occurred, these are longer at before-sentence interkey intervals compared to before word interkey intervals. The slowdown for hesitant interkey intervals -- represented earlier as $\delta$ -- is the distance between the distribution of fluent interkey intervals ($\beta$) shown in grey and the distribution of hesitant interkey intervals shown in yellow.
-
 
 
 ```{r mixmodel, fig.cap='Mixture model plot for each transition location. Shown are the distributions for both mixture components (fluent and hesitant interkey intervals) and their weighting. Interkey intervals are shown in seconds on log scaled intervals.', fig.height=8, fig.width=7}
@@ -316,13 +313,13 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   mutate(data = .x)) %>% 
   mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
          across(data, ~recode_factor(., 
+                "c2l1" = "C2L1",
                 "cato" = "CATO",# (non-dyslexic, unmasked)",
                 "gunnexp2" = "GE2",# (unmasked)",
+                "lift" = "LIFT",
+                "plantra" = "PLanTra",
                 "spl2" = "SPL2", # (L1)", 
 #                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
-                "plantra" = "PLanTra",
-                "lift" = "LIFT",
-                "c2l1" = "C2L1",
                 .ordered = TRUE))) %>% 
   filter(!(str_detect(data, "SPL2") & lang == "ES" & !is.na(lang)),
          !(str_detect(data, "CATO") & group == "dyslexic" & !is.na(group)),
@@ -355,7 +352,6 @@ ps <- filter(ps, param != "beta")  %>%
 ```
 
 Figure \ref{fig:mixmodel} highlighted how model parameters relate to each other in pairs of distributions but to compare the effect of transition location on model parameters we need to compare the posterior distribution of the three parameters of interest individually. Therefore Figure \ref{fig:crossstudypost2} visualises the same posterior as Figure \ref{fig:mixmodel} but expressed directly in terms of posterior probability distributions of the individual mixture-model parameters. These are shown for all datasets by transition location. Although models were fitted with all dataset-specific conditions, we aggregated the posterior across conditions^[We aggregated across pre and post tests for the PLanTra dataset as well as genre and topic of the LIFT data set. We demonstrate in Appendix \ref{pre-post-test-plantra} and \ref{genre-effect-lift}, respectively, that there is negligible evidence for differences between these conditions.], and excluded conditions that might confound comparisons^[We removed the masked writing condition in the GE2 and CATO, the dyslexic group in the CATO data set, and L2 writing in the SPL2 data set. There was evidence for L2 writing effects (see Appendix \ref{l2-effect-spl2}); evidence for marking effects was weak (see Appendix \ref{masking-effect-cato-ge2}).]. For posteriors of all conditions within datasets see Appendix \ref{posterior-parameter-estimates}. The resulting posterior allows us to examine differences and similarities associated with transition locations for all datasets. In particular we can see how transition location in the text is associated with hesitant interkey intervals and hesitation probability. For completeness we also report the estimate for fluent interkey intervals.
-
 
 
 ```{r crossstudypost2, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group."}
@@ -451,7 +447,8 @@ grid.arrange(patchworkGrob(plot),
 
 ```
 
-Figure \ref{fig:crossstudypost2} shows largely the same patterns (with caveats) for all datasets. We summarise the evidence for differences between transitions locations in Table \ref{tab:loceffectconbf}. We found that hesitations were more frequent -- higher hesitation probability -- before words than within words (BFs > 100 for all datasets) but only for half of the datasets hesitation durations were longer (GE2: BF = 27; PLanTra: BF = 56; SPL2: BF = 9.1; negligible evidence for C2L1: BF = 0.1; CATO: BF = 0.2; LIFT: BF = 0.4). Hesitations were equally likely before sentences and words (C2L1 and CATO: BFs = 0.7; PLanTra: BF = 0.3; LIFT: BF = 1.6; except for GE2 and SPL2; both BFs > 100) but longer (all BFs > 100, except for C2L1: BF = 1.11 and LIFT = 0.5). Full results and parameter estimates can be found in Appendix \ref{transition-location-effect}. 
+Figure \ref{fig:crossstudypost2} shows largely the same patterns (with caveats) for all datasets. We summarise the evidence for differences between transitions locations in Table \ref{tab:loceffectconbf}. We found that hesitations were more frequent -- higher hesitation probability -- before words than within words (BFs > 100 for all datasets) but only for half of the datasets hesitation durations were longer (GE2: BF = 27; PLanTra: BF = 56; SPL2: BF = 9.1; negligible evidence for C2L1: BF = 0.1; CATO: BF = 0.2; LIFT: BF = 0.4). Hesitations were equally likely before sentences and words (C2L1 and CATO: BFs = 0.7; PLanTra: BF = 0.3; LIFT: BF = 1.6; except for GE2 and SPL2; both BFs > 100) but longer (all BFs > 100, except for C2L1: BF = 1.11 and LIFT = 0.5). Full results and parameter estimates can be found in Appendix \ref{transition-location-effect-1}. 
+
 
 
 ```{r loceffectconbf, results='asis'}
@@ -499,7 +496,7 @@ tmp <- ps_loc_diffs %>%
 apa_table(tmp,
           align = c("l", rep("p{3cm}", 4)), 
 #          font_size = "small",
-          longtable = T,
+          longtable = FALSE,
           escape = FALSE,
           row.names = T,
           col.names = c("Dataset", rep(c("before sentence vs word", "before vs within word"), 2)),
@@ -517,6 +514,7 @@ To reiterate, for most datasets we found that pauses before sentences are longer
 Differences between datasets could, to some extent, be explained by the fact that two datasets (PLanTra, LIFT) defined before-sentence transitions as the sum of transitions between space, shift and the sentence-initial character, while the remaining data sets measured before-sentence transitions as the interval between space key and shift. To test to what extent complex key combinations affects the parameter estimates, we addressed this possibility for the SPL2 dataset and showed that including the character following the shift key substantially increased the hesitation probability for sentence-initial transitions (BFs > 100) but it did not affect the duration hesitant interkey intervals (BFs < 0.3); see Appendix \ref{key-combination-effect}. This conflicts with the earlier finding that before-sentence hesitations were not more likely than before-word hesitations for datasets that did include the character following shift (PLanTra, LIFT). In other words, patterns in our results cannot be explained on the basis of how sentence-initial key transitions were operationalised.
 
 Finally, Figure \ref{fig:crossstudypost2} highlights that fluent interkey intervals in two datasets (C2L1, CATO) were substantially longer than for other datasets. This is presumably reflecting that these data were sampled from the youngest and least experienced population of writers in our data pool. Interestingly, however, hesitation duration and hesitation probability followed the same patterns as the majority of datasets.
+
 
 
 

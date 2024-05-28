@@ -62,7 +62,6 @@ apa_table(tmp[,-1],
           caption = "Mixture model estimates for language effect. Cell means are shown the slowdown for hesitant interkey intervals when writing in L1 and L2 and the probability of hesitant keyintervals. The language difference is shown on log scale (for durations) and logit scale for probability of hesitant key intervals. 95% PIs in brackets.",
           note = "PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.",
           font_size = "small",
-          placement = "b",
           stub_indents = list("Hesitation showdown" = 1:3,
                               "Hesitation probability" = 4:6) )
 
