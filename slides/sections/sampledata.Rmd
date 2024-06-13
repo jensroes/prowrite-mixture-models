@@ -1,0 +1,52 @@
+
+
+## Some sample data
+
+Essay-writing task from ProWrite project [e.g. @dux2022automating] without deletions and spaces.
+
+```{r eval = F}
+read_csv('tutorial/data/process_data_by_event.csv') %>% 
+  filter(location != "post-paragraph", 
+         !is.na(location),
+         next_event_type == "production",
+         event_type == "production",
+         event_duration > 50,
+         event_duration < 30000,
+         session_no == 1) %>%
+  drop_na(text) %>%
+  mutate(across(text, str_to_lower)) %>% 
+  filter(text %in% letters) %>% 
+  mutate(.by = c(token, location), 
+         idx = sample(n())) %>% 
+  filter(idx <= 50) %>% 
+  select(participant, iki = event_duration, location, pretext, text) %>% 
+  mutate(across(location, ~recode(., 
+                                  "within-word" = "within word",
+                                  "post-word" = "before word",
+                                  "post-sentence" = "before sentence"))) %>% 
+  filter(participant %in% sample(unique(participant), 10)) %>% 
+  mutate(recent_text = substr(pretext, 
+                              start = nchar(pretext) - 40,
+                              stop = nchar(pretext))) %>% 
+  select(-pretext) %>% 
+  rename(new_letter = text) %>% 
+  relocate(participant, location, recent_text, new_letter, iki) %>% 
+  write_csv("slides/data/sampledata.csv")
+```
+
+```{r}
+data <- read_csv("slides/data/sampledata.csv")
+slice(data, sample(nrow(data), size = 10))
+```
+
+
+## How are these data distributed?
+
+```{r fig.width=10, fig.height=6}
+ggplot(data, aes(x = iki, colour = location, fill = location)) +
+  geom_density(alpha = .25) +
+  scale_colour_colorblind() +
+  scale_fill_colorblind() +
+  scale_x_log10() 
+```
+

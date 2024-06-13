@@ -1,0 +1,151 @@
+```{r loossim, results='asis'}
+table <- read_csv("../../mixture-model-sim/stanout/modelcomparison.csv") %>% 
+  select(1:6) %>% 
+  mutate(
+#    elpd_se_ratio = abs(elpd_diff / se_diff),
+    across(ends_with("diff"), ~round(., 1)),
+    across(ends_with("loo"), ~round(., 0)),
+    across(where(is.numeric), ~format(., big.mark = ",")),
+    across(everything(), ~as.character(.)),
+    across(everything(), ~str_trim(.)),
+    across(everything(), ~str_replace_all(., "NaN", "--")),
+    across(elpd_diff, ~str_c(., " (", se_diff, ")")),
+    across(elpd_loo, ~str_c(., " (", se_elpd_loo, ")")),
+    across(elpd_diff, ~str_replace_all(., "0.0 \\(0.0\\)", "--")),
+    across(c(data, model), ~recode(., mog = "Two-distribution mixture model",
+                                      lm = "Single-distribution model"))) %>% 
+  select(data, model, starts_with("elpd")) 
+
+# names(table) <- c("Data", "Model", "$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}$")
+# 
+# table %>% 
+#   select(-Data) %>% 
+#   kable(align = c("l", "r", "r")) %>% 
+#   kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+#                 full_width = T, 
+#                 position = "right",
+#                 font_size = 16) %>% 
+#   group_rows("Two-distributions data", 1, 2) %>% 
+#   group_rows("Single-distribution data", 3, 4) 
+mixturedata <- table %>% filter(str_detect(data, "Two"), elpd_diff != "--") %>% pull(elpd_diff)
+singledata <- table %>% filter(str_detect(data, "Single"), elpd_diff != "--") %>% pull(elpd_diff)
+```
+
+## Simulation {.smaller}
+
+<div style="float: left; width: 43%;">
+\
+\
+
+- Simulate data from a single log-normal distribution
+- Simulate data from a mixture of to log-normal distribution
+- Data simulated with mixture process: 
+  - Advantage for mixture model over single process model: $\Delta\widehat{elpd} =$ `r mixturedata`
+- Data simulated with single process: 
+  - Negligible difference between models: $\Delta\widehat{elpd} =$ `r singledata`
+
+</div>
+
+
+<div style="float: right; width: 50%;">
+```{r simdata, fig.cap= "", fig.width=4, fig.height=4, out.width = "90%"}
+files <- list.files("../../mixture-model-sim/data", full.names = T)
+
+map_dfr(files, ~read_csv(.) %>% 
+        mutate(Dataset = str_remove_all(.x, "\\../|/|mixture-model-sim/data|/|\\.|csv"))) %>%
+  mutate(across(Dataset, ~recode(., mogdata = "two distributions", lmdata = "single distribution"))) %>% 
+  ggplot(aes(x = value, colour = Dataset, fill = Dataset)) +
+  geom_density(alpha = .25, 
+               linewidth = .25) +
+  scale_colour_colorblind() + 
+  scale_fill_colorblind() +
+  scale_x_log10(labels = ~format(., big.mark = ",")) +
+  theme(text = element_text(size = 10),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(colour = "Data", 
+       fill = "Data", 
+       x = "y")
+```
+</div>
+
+
+```{r eval = F}
+## Parameter estimates
+
+mog1 <- read_csv("../../mixture-model-sim/stanout/mog_mogdata.csv") %>% 
+  mutate(data = "mog")
+mog2 <- read_csv("../../mixture-model-sim/stanout/mog_lmdata.csv") %>% 
+  mutate(data = "lm")
+lm1 <- read_csv("../../mixture-model-sim/stanout/lm_lmdata.csv") %>% 
+  mutate(data = "lm")
+lm2 <- read_csv("../../mixture-model-sim/stanout/lm_mogdata.csv") %>% 
+  mutate(data = "mog")
+
+mog_sim <- bind_rows(mog1, mog2) %>% 
+  summarise(across(value, list(est = mean,
+                               lo = lower,
+                               up = upper),
+                   .names = "{.fn}"),
+            .by = c(name, data)) %>% 
+  mutate(across(where(is.numeric), ~round(., 2)),
+         across(where(is.numeric), ~ifelse(str_detect(name, "prob"), dezero(., 2), .)),
+         across(est, ~str_c(., " [", lo, ", ", up, "]")),
+         across(name, ~str_c("\\", .)),
+         across(name, ~str_replace(., "a_e", "a^2_1")),
+         across(name, ~str_replace(., "ap_e", "a^2_2"))) %>%
+  select(-lo, -up) %>% 
+  pivot_wider(names_from = data, values_from = est) %>% 
+  mutate(true = c(5, 1, .35, .25, .5),
+         across(true, ~ifelse(str_detect(name, "prob"), dezero(., 2), .)),
+         across(name, ~str_replace(., "prob", "theta"))) %>% 
+  relocate(name, true) %>% 
+  unite("name", name:true, sep = " = ")
+
+lm_sim <- bind_rows(lm1, lm2) %>% 
+  summarise(across(value, list(est = mean,
+                               lo = lower,
+                               up = upper),
+                   .names = "{.fn}"),
+            .by = c(name, data)) %>% 
+  mutate(across(where(is.numeric), ~round(., 2)),
+         across(est, ~str_c(., " [", lo, ", ", up, "]")),
+         across(name, ~str_c("\\", .)),
+         across(name, ~str_replace(., "a_e", "a^2_1")),
+         across(name, ~str_replace(., "ap_e", "a^2_2"))) %>% 
+  select(-lo, -up) %>%
+  pivot_wider(names_from = data, values_from = est) %>% 
+  mutate(true = as.character(c(5, .25))) %>% 
+  relocate(name, true) %>% 
+  unite("name", name:true, sep = " = ")
+
+```
+
+
+```{r simparam, results='asis', eval = F}
+table <- bind_rows(mog_sim %>% mutate(model = "mog"),
+                   lm_sim %>% mutate(model = "lm")) %>% 
+  relocate(model) %>% 
+  mutate(across(name, ~str_c("$", ., "$")))
+
+names(table) <- c("Model", "Parameter values used in simulation", "Two-distributions model", "Single-distributions model")
+
+table %>% 
+  select(-Model) %>% 
+  kable(align = c("l", "r", "r")) %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 16) %>% 
+  group_rows("Two-distributions data", 1, 5) %>% 
+  group_rows("Single-distribution data", 6, 7) %>% 
+  add_header_above(c(" " = 1,
+                     "Estimate with 95\\% PI" = 2))
+
+
+```
+
+
+
+

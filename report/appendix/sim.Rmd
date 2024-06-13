@@ -75,8 +75,8 @@ The parameter values used for each of the two data simulations can be found in T
 files <- list.files("../../mixture-model-sim/data", full.names = T)
 
 map_dfr(files, ~read_csv(.) %>% 
-        mutate(Dataset = str_remove_all(.x, "../mixture-model-sim/data|/|.csv" ))) %>%
-  mutate(across(Dataset, ~recode(., mogdata = "two distributions", lmdata = "single distributions"))) %>% 
+        mutate(Dataset = str_remove_all(.x, "\\../|/|mixture-model-sim/data|/|\\.|csv"))) %>%
+  mutate(across(Dataset, ~recode(., mogdata = "two distributions", lmdata = "single distribution"))) %>% 
   ggplot(aes(x = value, colour = Dataset, fill = Dataset)) +
   geom_density(alpha = .25, 
                linewidth = .25) +

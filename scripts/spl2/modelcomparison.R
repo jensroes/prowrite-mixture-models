@@ -1,3 +1,4 @@
+rm(list = ls())
 # Load packages
 library(loo)
 library(tidyverse)
@@ -19,7 +20,7 @@ for(file in files){
 # Compare all models
 (loos <- ls(pattern = "loo_.*"))
 mc1 <- do.call(what = loo_compare, args = lapply(loos[2:1], as.name))
-mc2 <- do.call(what = loo_compare, args = lapply(loos[2:3], as.name))
+mc2 <- do.call(what = loo_compare, args = lapply(loos[c(1,3)], as.name))
 mc3 <- do.call(what = loo_compare, args = lapply(loos[3:4], as.name))
 mc4 <- do.call(what = loo_compare, args = lapply(loos[4:5], as.name))
 
@@ -29,8 +30,6 @@ mcs <- map_dfr(.x = list(mc1, mc2, mc3, mc4), ~as.data.frame(.x) %>%
                  slice(2)) %>%
   mutate(model = c("M1 -- M2", "M2 -- M3", "M3 -- M4", "M4 -- M5"),
          elpd_diff_ratio = abs(elpd_diff / se_diff))
-
-glimpse(mcs)
 
 write_csv(mcs, "stanout/spl2/modelcomparison.csv")
 

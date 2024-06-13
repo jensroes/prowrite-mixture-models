@@ -1,0 +1,51 @@
+## Model fit to data
+
+```{r getdensity, eval = F}
+theme_set(ggthemes::theme_few(base_size = 8) +
+              theme(strip.background = element_blank(),
+                    legend.position = "top",
+                    panel.grid = element_blank(),
+                    panel.background = element_rect(fill = "transparent"), # bg of the panel
+                    plot.background = element_rect(fill = "transparent", color = NA),
+                    axis.text.y = element_blank(),
+                    axis.ticks.y = element_blank(),
+                    axis.title = element_blank()))
+
+file <- list.files("../../stanout", pattern = "sims", full.names = T, recursive = T)
+ds <- str_remove_all(file, "\\.|\\/|stanout|all_sims.csv") %>% 
+    str_to_upper() %>% 
+    str_replace(., "PLANTRA", "PLanTra") %>%
+    str_replace(., "GUNNEXP2", "GE2")
+
+# remove the shift model
+ds <- ds[!str_detect(ds, "SHIFT")]
+
+# get all density plots
+plots <- map(1:length(ds), ~get_pdens_plot(file[.], max_iki = 5000)) 
+
+# remove strips after first row
+plots[2:length(ds)] <- map(2:length(ds), ~plots[[.]] + theme(strip.text = element_blank()))
+
+# create labels for datasets
+labs <- map(ds, ~ggplot(mapping = aes(x = 0, y = 0, label = .x)) + 
+  geom_text(angle = 270, size = 2.5) +
+  theme_void())
+
+# add names for data sets on the right
+plots_labs <- map(1:length(ds), ~plots[[.]] + labs[[.]] + plot_layout(widths = c(.95, .05)))
+
+# combine legends
+plots_ledg <- wrap_plots(plots_labs, guides = "collect", ncol = 1) 
+
+# add axe titles
+plots_fin <- grid.arrange(patchworkGrob(plots_ledg), 
+                            left = "Density", bottom = "Interkey interval in secs")
+
+ggsave("../misc/gfx/fit.png", plot = plots_fin, width = 6.25, height = 8.5)
+
+```
+
+```{r fitplot, fig.cap="", eval = T}
+include_graphics("../misc/gfx/fit.png")
+```
+

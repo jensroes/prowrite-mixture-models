@@ -1,0 +1,379 @@
+## How do we produce texts?
+
+```{r fig.width=10}
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",3), 
+                         rep("Orthographic",3)),
+               start = c(0,  6,  10, 
+                         6,  10, 14,
+                         10, 14, 16)) %>%
+  mutate(end = lead(start,3),
+         end = ifelse(is.na(end), start + 2, end),
+         item = c(rep(3,3),rep(2,3), rep(1,3)),
+         end = end - .05,
+         activity = "planning") %>%
+  mutate(.by = c(stage),
+         chunk = 1:n()) %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ "PLANE",
+                           chunk == 2 & item == 3 ~ "'NEXT TO'",
+                           chunk == 3 & item == 3 ~ "BUTTERFLY",
+                           chunk == 1 & item != 3 ~ "italic('n')",
+                           chunk != 1 & item != 3 ~ str_c("italic('n')~+~", chunk-1))) 
+
+ggplot(casc, aes(x = start, 
+                               xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  scale_colour_viridis_d("", begin = .5) +
+  labs(x = "Time", y = "Planning\nstages") + 
+  geom_segment(size = 14, show.legend = F, colour = "white") +
+  geom_segment(aes(x = end, xend = end, 
+               y = item -.2, 
+               yend = item - .75),
+               show.legend = F, 
+               linewidth = .25,
+               arrow = arrow(length = unit(0.2, "cm"),
+                               type = "closed"),  colour = "white") +
+  theme_classic() +
+  scale_x_continuous(limits = c(0,22), breaks = 19, labels = "the plane") +
+  theme(axis.text.x = element_text(colour = "white"),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+
+```
+
+## Planning text
+
+```{r fig.width=10}
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",3), 
+                         rep("Orthographic",3)),
+               start = c(0,  6,  10, 
+                         6,  10, 14,
+                         10, 14, 16)) %>%
+  mutate(end = lead(start,3),
+         end = ifelse(is.na(end), start + 8, end),
+         item = c(rep(3,3),rep(2,3), rep(1,3)),
+         end = end - .05,
+         activity = "planning") %>%
+  mutate(.by = c(stage),
+         chunk = c(1, NA, NA))  %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ "PLANE",
+                           chunk == 1 & item == 2 ~ "italic('the plane')",
+                           chunk == 1 & item == 1 ~ "italic('<t><h><e> <p><l><a><n><e>')")) %>% 
+  drop_na()
+
+ggplot(casc, aes(x = start, 
+                               xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  geom_segment(size = 14, show.legend = F) +
+  geom_segment(aes(x = end, xend = end, 
+               y = item -.2, 
+               yend = item - .75),
+               show.legend = F, 
+               colour = "grey60", 
+               linewidth = .25,
+               arrow = arrow(length = unit(0.2, "cm"),
+                               type = "closed")) +
+  geom_text(aes(x = (start + end) / 2 , label = label), 
+                  size = 4, colour = "white", parse = TRUE) +
+  scale_colour_viridis_d("", begin = .5) +
+  scale_x_continuous(limits = c(0,22), breaks = 19, labels = "the plane") +
+  labs(x = "Time", y = "Planning\nstages") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "italic"),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+```
+
+## Classic (serial) view of writing
+
+
+```{r fig.width=10}
+
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",3), 
+                         rep("Orthographic",3)),
+               start = c(0,  6,  10, 
+                         8,  10, 14,
+                         17, 14, 16)) %>%
+  mutate(end = lead(start,3),
+         end = ifelse(is.na(end), start + 12, end),
+         item = c(rep(3,3),rep(2,3), rep(1,3)),
+         end = end - .05,
+         activity = "planning") %>%
+  mutate(.by = c(stage),
+         chunk = c(1, NA, NA))  %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ "PLANE~NEXT~TO~HAT",
+                           chunk == 1 & item == 2 ~ "italic('the plane is next to the hat')",
+                           chunk == 1 & item == 1 ~ "italic('<t><h><e> <p><l><a><n><e> <i><s> ...')")) %>% 
+  drop_na()
+
+ggplot(casc, aes(x = start, 
+                               xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  geom_segment(size = 14, show.legend = F) +
+  geom_segment(aes(x = end, xend = end, 
+               y = item -.2, 
+               yend = item - .75),
+               show.legend = F, 
+               colour = "grey60", 
+               linewidth = .25,
+               arrow = arrow(length = unit(0.2, "cm"),
+                               type = "closed")) +
+  geom_text(aes(x = (start + end) / 2 , label = label), 
+                  size = 3, colour = "white", parse = TRUE) +
+  scale_colour_viridis_d("", begin = .5) +
+  scale_x_continuous(limits = c(0,32), breaks = 29, 
+                     labels = "the plane is next ...") +
+  labs(x = "Time", y = "Planning\nstages") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "italic", hjust = 0),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+```
+
+
+## Classic (serial) view of writing
+
+
+```{r fig.width=10}
+
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",3), 
+                         rep("Orthographic",3)),
+               start = c(0, 8, 15, 
+                         4, 11, 17,
+                         6, 13, 19)) %>%
+  mutate(end = lead(start,3),
+         end = ifelse(is.na(end), start + 2, end),
+         item = c(rep(3,3),rep(2,3), rep(1,3)),
+         end = end - .05,
+         activity = "planning") %>%
+  mutate(.by = c(stage),
+         chunk = 1:n()) %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ "PLANE",
+                           chunk == 2 & item == 3 ~ "'NEXT TO'",
+                           chunk == 3 & item == 3 ~ "HAT",
+                           chunk == 1 & item != 3 ~ "",
+                           chunk != 1 & item != 3 ~ "")) 
+
+ggplot(casc, aes(x = start, 
+                               xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  geom_segment(size = 14, show.legend = F) +
+  geom_segment(aes(x = end, xend = end, 
+               y = item -.2, 
+               yend = item - .75),
+               show.legend = F, 
+               colour = "grey60", 
+               linewidth = .25,
+               arrow = arrow(length = unit(0.2, "cm"),
+                               type = "closed")) +
+  geom_text(aes(x = (start + end) / 2 , label = label), 
+                  size = 4, colour = "white", parse = TRUE) +
+  scale_colour_viridis_d("", begin = .5) +
+  scale_x_continuous(limits = c(0,22), 
+                     breaks = c(9, 16, 22), 
+                     labels = c("the plane",
+                                "is next to", 
+                                "the hat")) +
+  labs(x = "Time", y = "Planning\nstages") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "italic"),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+```
+
+
+## Parallel view of writing [@olive2014toward]
+
+```{r fig.width=10}
+
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",3), 
+                         rep("Orthographic",3)),
+               start = c(0,  6,  10, 
+                         6,  10, 14,
+                         10, 14, 16)) %>%
+  mutate(end = lead(start,3),
+         end = ifelse(is.na(end), start + 2, end),
+         item = c(rep(3,3),rep(2,3), rep(1,3)),
+         end = end - .05,
+         activity = "planning") %>%
+  mutate(.by = c(stage),
+         chunk = 1:n()) %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ "PLANE",
+                           chunk == 2 & item == 3 ~ "'NEXT TO'",
+                           chunk == 3 & item == 3 ~ "HAT",
+                           chunk == 1 & item != 3 ~ "",
+                           chunk != 1 & item != 3 ~ "")) 
+
+ggplot(casc, aes(x = start, 
+                 xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  geom_segment(size = 14, show.legend = F, colour = "white") +
+  geom_segment(aes(x = end, xend = end, 
+               y = item -.2, 
+               yend = item - .75),
+               show.legend = F, 
+               linewidth = .25,
+               arrow = arrow(length = unit(0.2, "cm"),
+                               type = "closed"), colour = "white") +
+  scale_colour_viridis_d("", begin = .5) +
+  scale_x_continuous(limits = c(0, 20), 
+                     breaks = c(13, 17, 19), 
+                     labels = c("the plane", "is next to", "the hat")) +
+  labs(x = "Time", y = "Planning\nstages") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "italic", colour = "white"),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+```
+
+
+## Parallel view of writing [@olive2014toward]
+
+```{r fig.width=10}
+
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",3), 
+                         rep("Orthographic",3)),
+               start = c(0,  6,  10, 
+                         6,  10, 14,
+                         10, 14, 16)) %>%
+  mutate(end = lead(start,3),
+         end = ifelse(is.na(end), start + 2, end),
+         item = c(rep(3,3),rep(2,3), rep(1,3)),
+         end = end - .05,
+         activity = "planning") %>%
+  mutate(.by = c(stage),
+         chunk = 1:n()) %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ "PLANE",
+                           chunk == 2 & item == 3 ~ "'NEXT TO'",
+                           chunk == 3 & item == 3 ~ "HAT",
+                           chunk == 1 & item != 3 ~ "",
+                           chunk != 1 & item != 3 ~ "")) 
+
+ggplot(casc, aes(x = start, 
+                 xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  geom_segment(size = 14, show.legend = F) +
+  geom_segment(aes(x = end, xend = end, 
+               y = item -.2, 
+               yend = item - .75),
+               show.legend = F, 
+               colour = "grey60", 
+               linewidth = .25,
+               arrow = arrow(length = unit(0.2, "cm"),
+                               type = "closed")) +
+  geom_text(aes(x = (start + end) / 2 , label = label), 
+                  size = 4, colour = "white", parse = TRUE) +
+  scale_colour_viridis_d("", begin = .5) +
+  scale_x_continuous(limits = c(0, 20), 
+                     breaks = c(13, 17, 19), 
+                     labels = c("the plane", "is next to", "the hat")) +
+  labs(x = "Time", y = "Planning\nstages") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "italic"),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+```
+
+## Parallel view of writing [@olive2014toward]
+
+```{r fig.width=10}
+
+casc <- tibble(stage = c(rep("Semantic",3), 
+                         rep("Linguistic",2), 
+                         rep("Orthographic",1)),
+               activity = c(rep("Planning", 2), 
+                            "Buffering", 
+                            "Planning", 
+                            "Buffering", 
+                            "Spelling difficulty"), 
+               start = c(0, 6,  10, 6,  10, 10),
+               end =   c(6, 10, 18, 10, 18, 18)) %>%
+  mutate(item = c(rep(3,3),rep(2,2), rep(1,1)),
+         end = end - .05) %>%
+  mutate(.by = c(stage),
+         chunk = 1:n()) %>% 
+  mutate(label = case_when(chunk == 1 & item == 3 ~ str_to_upper("xylophone"),
+                           chunk == 2 & item == 3 ~ "'NEXT TO'",
+                           chunk == 3 & item == 3 ~ "HAT",
+                           chunk == 1 & item == 2 ~ "",
+                           chunk == 2 & item == 1 ~ "",
+                           chunk %in% c(2, 3) & item == 2 ~ "(buffering)",
+                           item == 3 & activity == "Buffering" ~ "(buffering)",
+                           item == 4 & activity == "Buffering" ~ "(buffering)",
+                           activity == "Spelling difficulty" ~ "(spelling~difficulty)")) 
+
+ggplot(casc, aes(x = start, xend = end, 
+                 y = reorder(stage,item),
+                 yend = reorder(stage,item),
+                 colour = activity)) + 
+  geom_segment(size = 14, show.legend = F) +
+  geom_segment(aes(x = end, 
+                   xend = end, 
+                   y = item -.2, 
+                   yend = item - .75),
+                   show.legend = F, colour = "grey60", linewidth = .25,
+                   arrow = arrow(length = unit(0.2, "cm"),
+                             type = "closed")) +
+  geom_text(aes(x = (start + end) / 2 , label = label), 
+            size = 4, colour = "white", parse = TRUE) +
+  scale_colour_viridis_d("", begin = .1, end = .9) +
+  scale_x_continuous(limits = c(0,20), breaks = 19,labels = "the xylophone") +
+  labs(x = "Time", y = "Planning\nstage") + 
+  theme_classic() +
+  theme(axis.text.x = element_text(face = "italic"),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(hjust = 0),
+        axis.title.y = element_text(hjust = 1, angle = 360),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top",
+        legend.justification = "right")
+```
+

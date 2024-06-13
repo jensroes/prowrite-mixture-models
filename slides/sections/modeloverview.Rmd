@@ -1,0 +1,21 @@
+## Model overview
+
+```{r models, results = 'asis'}
+tibble(Models = str_c("M",1:4),
+       Type = c("LMM", "LMM", "LMM", "MoG"),
+       Description = c("Single distribution Gaussian",
+                       "Single distribution log-Gaussian",
+                       "Single distribution log-Gaussian with different variance components per text location",
+                       "Two-distributions mixture of log-Gaussians.")) %>% 
+  select(Models, Description) %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 18) %>% 
+  group_rows("Serial", 1, 3) %>% 
+  group_rows("Parallel", 4, 4) %>% 
+  row_spec(0:4, extra_css = "line-height: 2.25;")  %>% 
+  column_spec(1, width = "3cm")
+
+```

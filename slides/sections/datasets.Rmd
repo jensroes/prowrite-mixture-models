@@ -1,0 +1,47 @@
+## Data sets
+
+
+```{r}
+tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT", "GE2"),
+                Source = c("@ronneberg2022process", # "Rønneberg et al. (2022)",
+                            "@torrance2016adolescent", # "Torrance et al. (2016)",
+                           "@torrancea",#  "Torrance et al. (n.d.)",
+                          "@rossetti2022text",#   "Rossetti and Van Waes (2022b)",
+                          "@vandermeulen2020mapping",#  "Vandermeulen et al. (2020)", 
+                           "@torranceb"), # "Torrance and Ofstad (n.d)"),
+                Keylogger = c("EyeWrite", 
+                           "EyeWrite", 
+                           "CyWrite", 
+                           "InputLog", 
+                           "InputLog",
+                           "EyeWrite"),
+                Task = c("Argumentative", 
+                                 "Expository",
+                                 "Argumentative",
+                                 "Text simplification",
+                                 "Synthesis", 
+                                 "Argumentative"),
+                 N = as.character(c(126, 26*2, 39, 47, 658, 45)),
+#                n_texts = c(1, 2, 2, 2, NA),
+#                n_sentences = c(),
+#                n_words = c(),
+                 Age = c(11.8, 16.9, 20.6, 23, 17.0, 19),
+                 Sample = c("6th graders", "Secondary school students (dyslexic, non dyslexic)", "Undergraduate students", "Master students", "Secondary school students", "Undergraduate students"),
+                 Country = c("Norway", "Norway", "USA", "Belgium", "The Netherlands", "UK"),
+                 Language = c( "Norwegian", 
+                               "Norwegian", 
+                               "English", 
+                               "English (L2)", 
+                               "Dutch",
+                               "English")) %>% 
+  arrange(Dataset) %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 12) %>% 
+  row_spec(0:6, extra_css = "line-height: 2.25;")  
+  
+
+```
+

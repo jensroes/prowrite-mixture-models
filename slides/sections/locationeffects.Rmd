@@ -1,0 +1,450 @@
+## Mixture distributions
+
+```{r mixmodel, fig.cap='', fig.height=12, fig.width=10, message=FALSE}
+# Data grid
+data <- tibble(x = c(0, 100))
+
+# plotting details
+colours <- c("Fluent" = "#000000", "Hesitant" = "#E69F00")
+ylims <- c(0, .7)
+xbreaks <- log(c(1, 10, 100, 1000, 10000))
+xlims <- log(c(10, 50000))
+subtitle_bs <- "Before sentence"
+subtitle_bw <- "Before word"
+subtitle_ww <- "Within word"
+
+# get files
+files <- list.files("../../stanout", pattern = "mog_constr_posterior_for_densityplot.csv", recursive = T, full.names = T)
+
+# load all posteriors
+ps_all <- map_dfr(files, ~read_csv(.) %>% mutate(dataset = .x)) %>% 
+  mutate(dataname = case_when(str_detect(dataset, "spl2") ~ "SPL2",
+                              str_detect(dataset, "lift") ~ "LIFT",
+                              str_detect(dataset, "plantra") ~ "PLanTra",
+                              str_detect(dataset, "gunnexp2") ~ "GE2",
+                              str_detect(dataset, "cato") ~ "CATO",
+                              str_detect(dataset, "c2l1") ~ "C2L1"))
+
+# plot counter
+plot_id <- 0
+
+for(i in files){
+  
+  if(plot_id == 0){
+    # template for output
+    plot_bs <- list()
+    plot_bw <- list()
+    plot_ww <- list()
+  } 
+  
+  plot_id <- plot_id + 1
+  
+  # select dataset
+  ps <- filter(ps_all, dataset == i)
+  
+  # add data name
+  data <- mutate(data, dataname = unique(pull(ps, dataname)))
+  
+  # Extract parameters
+  alpha <- filter(ps, param == 'beta') %>% pull(est)
+  alpha2_bs <- filter(ps, param == 'delta', loc == 'before sentence') %>% pull(est)
+  alpha2_bw <- filter(ps, param == 'delta', loc == 'before word') %>% pull(est)
+  alpha2_ww <- filter(ps, param == 'delta', loc == 'within word') %>% pull(est)
+  
+  theta_bs <- filter(ps, param == 'prob',  loc == 'before sentence') %>% pull(est)
+  theta_bw <- filter(ps, param == 'prob',  loc == 'before word') %>% pull(est)
+  theta_ww <- filter(ps, param == 'prob',  loc == 'within word') %>% pull(est)
+  
+  sigma <- filter(ps, param == 'sigma') %>% pull(est)
+  sigmap_bs <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'before sentence')) %>% pull(est) %>% sum()
+  sigmap_bw <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'before word')) %>% pull(est) %>% sum()
+  sigmap_ww <- filter(ps, str_detect(param, 'sigma'), loc %in% c('overall', 'within word')) %>% pull(est) %>% sum()
+  
+  # Create density plot
+  plot_bs[[plot_id]] <- ggplot(data, aes(x)) +
+    stat_function(aes(colour = "Fluent"),
+                  geom = "line", 
+                  linewidth = .25,
+                  fun = plot_mix_comps,
+                  args = list(alpha, sigma, lam = 1 - theta_bs)) +
+    stat_function(aes(colour = "Hesitant"),
+                  geom = "line", 
+                  linewidth = .25,
+                  fun = plot_mix_comps, 
+                  args = list(alpha2_bs, sigmap_bs, lam = theta_bs)) +
+    stat_function(aes(fill = "Fluent"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha, sigma, lam = 1 - theta_bs)) +
+    stat_function(aes(fill = "Hesitant"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha2_bs, sigmap_bs, lam = theta_bs)) +
+    scale_x_continuous(labels = ~exp(.) / 1000, 
+                       breaks = xbreaks, 
+                       limits = xlims) +
+    scale_y_continuous(limits = ylims) +
+    scale_colour_manual(values = colours) +
+    scale_fill_manual(values = colours) +
+    labs(colour = "Mixture component",
+         fill = "Mixture component") 
+  
+  
+  plot_bw[[plot_id]] <- ggplot(data, aes(x)) +
+    stat_function(aes(colour = "Fluent"),
+                  linewidth = .25,
+                  geom = "line", 
+                  fun = plot_mix_comps,
+                  args = list(alpha, sigma, lam = 1 - theta_bw)) +
+    stat_function(aes(colour = "Hesitant"),
+                  geom = "line", 
+                  linewidth = .25,
+                  fun = plot_mix_comps, 
+                  args = list(alpha2_bw, sigmap_bw, lam = theta_bw)) +
+    stat_function(aes(fill = "Fluent"),
+                  geom = "area", 
+                  linewidth = .25,
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha, sigma, lam = 1 - theta_bw)) +
+    stat_function(aes(fill = "Hesitant"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha2_bw, sigmap_bw, lam = theta_bw)) +
+    scale_x_continuous(labels = ~exp(.) / 1000, 
+                       breaks = xbreaks, 
+                       limits = xlims) +
+    scale_y_continuous(limits = ylims) +
+    scale_colour_manual(values = colours) +
+    scale_fill_manual(values = colours) +
+    labs(colour = "Mixture component",
+         fill = "Mixture component") 
+  
+  if(plot_id != 6){
+    plot_bs[[plot_id]] <- plot_bs[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
+    plot_bw[[plot_id]] <- plot_bw[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
+  } else if(plot_id == 6){
+    plot_bs[[plot_id]] <- plot_bs[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())
+    plot_bw[[plot_id]] <- plot_bw[[plot_id]] + 
+      theme(legend.position = "none",
+            axis.title = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())
+  }
+
+  
+  plot_ww[[plot_id]] <- ggplot(data, aes(x)) +
+    stat_function(aes(colour = "Fluent"),
+                  geom = "line", 
+                  fun = plot_mix_comps,
+                  linewidth = .25,
+                  args = list(alpha, sigma, lam = 1 - theta_ww)) +
+    stat_function(aes(colour = "Hesitant"),
+                  geom = "line", 
+                  fun = plot_mix_comps, 
+                  linewidth = .25,
+                  args = list(alpha2_ww, sigmap_ww, lam = theta_ww)) +
+    stat_function(aes(fill = "Fluent"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha, sigma, lam = 1 - theta_ww)) +
+    stat_function(aes(fill = "Hesitant"),
+                  geom = "area", 
+                  fun = plot_mix_comps, 
+                  alpha = .25, 
+                  args = list(alpha2_ww, sigmap_ww, lam = theta_ww)) +
+    scale_x_continuous(labels = ~exp(.) / 1000, 
+                       breaks = xbreaks, 
+                       limits = xlims) +
+    scale_y_continuous(limits = ylims) +
+    scale_colour_manual(values = colours) +
+    scale_fill_manual(values = colours) +
+    facet_grid(dataname~.) +
+    labs(colour = "Mixture component",
+         fill = "Mixture component") 
+  
+   if(plot_id != 6){
+    plot_ww[[plot_id]] <- plot_ww[[plot_id]] + 
+      theme(legend.position = "top",
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
+  } else{
+    plot_ww[[plot_id]] <- plot_ww[[plot_id]] + 
+      theme(legend.position = "top",
+            axis.title = element_blank(), 
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank())
+  }
+}
+
+bs_lab <- ggplot(mapping = aes(x = 0, y = 0, label = subtitle_bs)) + 
+  geom_text() +
+  theme_void()
+
+bw_lab <- ggplot(mapping = aes(x = 0, y = 0, label = subtitle_bw)) + 
+  geom_text() +
+  theme_void()
+
+ww_lab <- ggplot(mapping = aes(x = 0, y = 0, label = subtitle_ww)) + 
+  geom_text() +
+  theme_void()
+
+# combine plots
+plots_fin <- wrap_plots(
+  wrap_plots(bs_lab, wrap_plots(plot_bs, ncol = 1), heights = c(.025, .975)),
+  wrap_plots(bw_lab, wrap_plots(plot_bw, ncol = 1), heights = c(.025, .95)),
+  wrap_plots(ww_lab, wrap_plots(plot_ww, ncol = 1), heights = c(.025, .975)), guides =  "collect")
+
+# add axes titles
+grid.arrange(patchworkGrob(plots_fin), 
+                          left = "Density",
+                          bottom = "Interkey interval in secs")
+#ggsave("mixdists.png", plots_fin, width = 12, height = 6)
+
+```
+
+
+## Location estimates by model parameter
+
+
+```{r message=FALSE}
+files <- list.files(str_c("../../stanout/", 
+                          c("lift", "spl2", "plantra", "cato", "c2l1", "gunnexp2")), 
+                    pattern = "mogbetaco.+.csv", 
+                    full.names = T)
+
+ps <- purrr::map_dfr(files, ~read_csv(.x) %>% 
+  mutate(data = .x)) %>% 
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(data, ~recode_factor(., 
+                "c2l1" = "C2L1",
+                "cato" = "CATO",# (non-dyslexic, unmasked)",
+                "gunnexp2" = "GE2",# (unmasked)",
+                "lift" = "LIFT",
+                "plantra" = "PLanTra",
+                "spl2" = "SPL2", # (L1)", 
+#                "spl2 (shift + C)" = "SPL2 (L1; shift + C)", 
+                .ordered = TRUE))) %>% 
+  filter(!(str_detect(data, "SPL2") & lang == "ES" & !is.na(lang)),
+         !(str_detect(data, "CATO") & group == "dyslexic" & !is.na(group)),
+         !(str_detect(data, "CATO") & task == "masked" & !is.na(task)),
+         !(str_detect(data, "GE2") & xn == "masked" & !is.na(xn))) 
+
+ps_beta <- filter(ps, param == "beta") %>% 
+  rename(beta = value) %>%
+  mutate(idx = 1:n(), .by = data) %>% 
+  select(idx, beta, data) 
+
+ps <- filter(ps, param != "beta")  %>% 
+  pivot_wider(names_from = param, 
+              values_from = value) %>% 
+  unnest(cols = beta2:theta) %>%
+  mutate(idx = 1:n(), .by = c(data, location, task, xn, genre, topic, lang)) %>% 
+#  summarise(across(idx, list(max = max)), .by = c(location, data, task))
+  left_join(ps_beta, by = c("data", "idx")) %>%
+  mutate(across(c(beta, beta2), ~exp(.)),
+         delta = beta2 - beta,
+         across(location, ~str_replace(., " ", "\n"))) %>% 
+  pivot_longer(c(beta, beta2, delta, prob)) %>% 
+  summarise(across(value, 
+                   list(mean = mean, 
+                        lower = lower, 
+                        upper = upper),
+                   .names = "{.fn}"), 
+            .by = c(data, location, name)) %>% 
+  filter(name %in% c("beta", "beta2", "delta", "prob"))
+```
+
+
+
+```{r crossstudypost2, fig.cap="", fig.height=4.5, fig.width=10}
+
+posd <- position_dodge(.5)
+dotsize <- 2.75
+grouplabel <- "Dataset:"
+shapes <- c(1, 4, 6, 7, 8, 9, 11)
+width <- 0
+linewidth <- .35
+nrow <- 1
+beta <- filter(ps, name == "beta", 
+               location == "before\nword") %>%
+  mutate(name = beta_label,
+         location = "overall") %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = data,
+             group = interaction(data))) +
+  facet_grid(~name, scales = "free_x") +
+  scale_shape_manual(values = shapes) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.title = element_blank()) +
+  labs(colour = grouplabel,
+       shape = grouplabel) +
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
+
+delta <- filter(ps, name == "delta") %>% 
+  mutate(name = delta_label,
+         across(c(mean, lower, upper), ~./1000)) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = data,
+             group = interaction(data))) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(colour = grouplabel,
+       shape = grouplabel) +
+  theme(axis.title = element_blank()) +
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
+
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = location,
+             shape = data,
+             group = interaction(data))) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(colour = grouplabel,
+       shape = grouplabel) +
+  theme(axis.title = element_blank(),
+        legend.position = "top") +
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
+
+plot <- beta + delta + theta + plot_layout(guides = "collect",
+                                           widths = c(.5, 1, 1))
+
+grid.arrange(patchworkGrob(plot), 
+             left = "Posterior estimate with 95% PIs",
+             bottom = "Key location in text")
+
+```
+
+
+
+## Location estimates by model parameter
+
+
+```{r crossstudypost3, fig.cap="", fig.height=4.5, fig.width=10}
+beta <- beta +
+  geom_line(linewidth = linewidth, 
+            alpha = .75, 
+            position = posd) +
+  geom_errorbar(width = width, alpha = .75, position = posd) +
+  geom_point(aes(colour = data), 
+            size = dotsize, 
+            position = posd) 
+
+delta <- delta + 
+  geom_line(linewidth = linewidth, alpha = .75, position = posd) +
+  geom_errorbar(width = width, alpha = .75, position = posd) +
+  geom_point(aes(colour = data), 
+            size = dotsize, 
+            position = posd) 
+
+
+theta <- theta + 
+  geom_line(linewidth = linewidth, alpha = .75, position = posd) +
+  geom_errorbar(width = width, alpha = .75, position = posd) +
+  geom_point(aes(colour = data), 
+            size = dotsize, 
+            position = posd) 
+
+plot <- beta + delta + theta + plot_layout(guides = "collect",
+                                           widths = c(.5, 1, 1))
+
+grid.arrange(patchworkGrob(plot), 
+             left = "Posterior estimate with 95% PIs",
+             bottom = "Key location in text")
+
+```
+
+
+## Location estimates by model parameter
+
+
+```{r loceffectconbf, results='asis'}
+
+files <- list.files(str_c("../../stanout/", 
+                          c("lift", "spl2", "gunnexp2", "plantra", "cato", "c2l1")), pattern = "mogbetacon.+.csv", full.names = T) # "spl2_shift",
+
+ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>% 
+                                 mutate(data = .x)) %>% 
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(data, ~recode(., 
+                              "cato" = "CATO",
+                              "spl2" = "SPL2", 
+                              "gunnexp2" = "GE2",
+                              #                "spl2_shift" = "*SPL2* (L1; shift + C)", 
+                              "plantra" = "PLanTra",
+                              "lift" = "LIFT",
+                              "c2l1" = "C2L1"))) %>% 
+  filter(!(str_detect(data, "SPL2") & lang == "ES"),
+         !(str_detect(data, "CATO") & group == "dyslexic"),
+         !(str_detect(data, "CATO") & task == "masked"),
+         !(str_detect(data, "GE2") & xn == "masked"),
+         param %in% c("delta", "theta")) %>%
+  select(param, location, data, value) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
+  pivot_wider(names_from = location, values_from = value) %>%
+  unnest(-c(data, param)) %>% 
+  mutate(diff.1 = `before sentence` - `before word`,
+         diff.2 = `before word` - `within word`) %>% 
+  summarise(across(starts_with("diff"), 
+                   list(mean = mean, 
+                        lower = lower, 
+                        upper = upper, 
+                        BF = BF)),
+            .by = c(data, param)) 
+
+tmp <- ps_loc_diffs %>% 
+  pivot_longer(starts_with("diff"), names_to = c("diffid", ".value"), names_sep = "_") %>% 
+  mutate(across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2))))) %>% 
+  select(-mean, -lower, -upper) %>% 
+  pivot_wider(names_from = c(diffid, param), values_from = BF) %>% 
+  select(data, contains("delta"), contains("theta")) %>% 
+  arrange(data)
+
+tmp %>% 
+  kable(col.names = c("Dataset", rep(c("before sentence vs word", "before vs within word"), 2)),
+        caption = "Values indicate BFs in support of the alternative hypothesis over the null hypothesis.", align = c("l", rep("r", 4))) %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 14) %>% 
+  add_header_above(c(" " = 1,
+                     "Hesitation slowdown" = 2,
+                     "Hesitation probability" = 2))
+
+```

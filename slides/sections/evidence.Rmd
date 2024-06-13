@@ -1,0 +1,25 @@
+## Serial view 
+
+- Interkey intervals are longer at larger linguistic edges following relatively fluent production bursts [@chenoweth2001fluency; @hayes2012evidence; @kaufer1986composing].
+- Mean pause duration before a writer starts a sentence is typically longer than before a mid-sentence word and these are, in turn, longer than between mid-word key presses [e.g. @conijn2019understanding]. 
+- Planning message and syntax for the next sentence adds to the time required to prepare the upcoming word, and the motor planning required to produce the first keystroke [@baaijen2012keystroke; @roeser2018advance].
+
+## Parallel view
+
+- Writers often do not hesitate before sentence (or word) onset.
+- In some cases sentences are not planned, planning was postponed until after sentence onset, or planning was completed in parallel with previous output [@not10; dam09; @roeser2018advance].
+- Sentence initial durations are often shorter than what one would expect if sentence-initial pauses reflect planning.
+  - @medimorec2017pauses: 71% of sentence-initial interkey intervals shorter than 1 sec. 
+  - @ronneberg2022process: 50% sentence-initial intervals were around 430 msecs but 1.2 secs for the remainder. 
+  <!-- - For comparison, these short pauses are less than mean written naming response latency for single objects [@torrance2018timed] and     longer pauses were similar to response latencies for short sentences when describing arrays of images [@roeser2018advance].  -->
+- Fluent output is maintained by a cascade of processes that run in parallel [@olive2014toward;@van1991handwriting].
+
+
+## Two distinct data-generating processes leading to a mixture of two distributions of interkey intervals [@roeser2021modelling]. 
+
+- Minimum interkey intervals for executing motor movements; 100-150 msecs [@conijn2019understanding;@waes2019].
+- If upstream processes provide output more slowly, then interkey intervals are determined by time taken to complete upstream processes and not on finger movement. 
+- Neither process (or distribution of keystrokes) can be explained on the basis of the keystroke location in the text.
+
+
+

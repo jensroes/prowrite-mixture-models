@@ -1,0 +1,169 @@
+
+---
+  
+::: {style="margin-top:-20px; width: 96%;"}
+```{r contpred}
+inputPanel(
+  sliderInput("beta_0", "Fluent typing", min = 100, max = 500, value = 150, ticks = FALSE),
+  sliderInput("delta", "Hesitation slowdown", min = 50, max = 300, value = 100, ticks = FALSE),
+  sliderInput("theta", "Hesitation probability", min = .001, max = .999, value = .3, ticks = FALSE),  
+  switchInput("params", 
+              size = "mini", 
+              label = "Show means",
+              onLabel = "on", 
+              offLabel = "off", 
+              labelWidth = "50%",
+              width = "50%")
+)
+
+renderPlot({
+  theme_set(theme_bw(base_size = 16) +
+              theme(legend.position = "bottom",
+                    legend.justification = "right",
+                    legend.key.width = unit(.75, "cm"),
+                    panel.grid = element_blank(),
+                    axis.title = element_text(hjust = 0)))
+  
+  plot_mix_comps <- function(x, mu, sigma, lam) lam * dlnorm(x, mu, sigma)
+  size <- .25
+  alpha <- .25
+  
+  beta_0 <- log(200)
+  beta_0 <- log(input$beta_0)
+  delta <- 100
+  delta <- input$delta
+  theta <- .01
+  theta <- input$theta
+  beta_1 <- log(exp(beta_0) + delta)
+  sigma <- .3
+  sigma_diff <- .01
+  sigmae <- sigma
+  sigmae_p <- sigma + sigma_diff
+  data <- data.frame(x = c(0, 1500))
+  
+  
+  
+  # Formula shown in plot
+  formula <- list(~'iki'[i]~"~"~theta~paste("\u00B7")~  "logN("*beta~+~delta*","~sigma[2]^2*")",
+                  ~+~"(1" - theta*")"~paste("\u00B7")~"logN("*beta*","~sigma[1]^2*")")
+  
+  p2 <- ggplot() +
+    annotate("text", 
+             x = 1.5, 
+             y = seq(1, .25, 
+                     length = length(formula)),
+             label = formula, 
+             parse = TRUE, 
+             size = 6) +
+    geom_rect(aes(xmin = -Inf, 
+                  xmax = Inf, 
+                  ymin = -Inf, 
+                  ymax = Inf), 
+              fill = "blue", 
+              alpha = 0.05, 
+              color = "black") +
+    theme_void() +
+    coord_cartesian(xlim = c(0, 3), ylim = c(-2.25, 2.4))
+  
+  if(input$params){
+    beta_value <- round(exp(beta_0),0)
+    theta_value <- dezero(theta, 2)
+    delta_value <- round(delta, 2)
+    beta_label <- substitute(beta==beta0, list(
+      beta0 = beta_value))
+    theta_label <- substitute(theta==theta_value, list(
+      theta_value = theta_value))
+    delta_label <- substitute(delta==delta_value, list(
+      delta_value = delta_value))
+    
+    
+    p2 <- p2 + 
+      annotate("text",
+               x = 2.25,
+               y = -1,
+               label = deparse(beta_label), 
+               parse = TRUE, 
+               size = 6) +
+      annotate("text",
+               x = 2.25,
+               y = -1.5,
+               label = deparse(theta_label), 
+               parse = TRUE, 
+               size = 6) +
+      annotate("text",
+               x = 2.25,
+               y = -2,
+               label = deparse(delta_label), 
+               parse = TRUE, 
+               size = 6)
+    
+  }
+  
+  
+  
+  p1 <- ggplot(data, aes(x)) +
+    stat_function(geom = "line", fun = plot_mix_comps,
+                  size = size,
+                  args = list(beta_0, sigmae, lam = 1 - theta)) +
+    stat_function(geom = "line", fun = plot_mix_comps,
+                  size = size,
+                  args = list(beta_1, sigmae_p, lam = theta)) +
+    geom_area(stat = "function", 
+              fun = plot_mix_comps, 
+              show.legend = T, 
+              alpha = alpha, 
+              size = size, 
+              aes(fill = "Fluent typing"), 
+              args = list(beta_0, sigmae, lam = 1 - theta)) +
+    geom_area(stat = "function", 
+              fun = plot_mix_comps, 
+              show.legend = T, 
+              alpha = alpha, 
+              size = size,
+              aes(fill = 'Hesitation ("Pause")'), 
+              args = list(beta_1, sigmae_p, lam = theta)) +
+    geom_segment(x = exp(beta_0), 
+                 y = 0, 
+                 xend = exp(beta_0), 
+                 yend = Inf, 
+                 colour = "darkred", 
+                 size = 1,
+                 alpha = alpha) +
+    geom_segment(x = exp(beta_1), 
+                 y = 0, 
+                 xend = exp(beta_1), 
+                 yend = Inf, 
+                 colour = "darkred", 
+                 size = 1,
+                 alpha = alpha) +
+    geom_segment(x = exp(beta_0),
+                 y = 0.0065, 
+                 xend = exp(beta_1), 
+                 yend = 0.0065, 
+                 colour = "blue", 
+                 alpha = alpha,
+                 size = 1,
+                 arrow = arrow(length = unit(0.3, "cm"), 
+                               ends = "both", 
+                               type = "closed")) +
+    scale_fill_manual(breaks = c("Fluent typing", 'Hesitation ("Pause")'),
+                      values = c("#000000","#009E73")) +
+    scale_x_continuous(labels = scales::comma, breaks = seq(0, 2500, 200)) +
+    coord_cartesian(ylim = c(0, .007), 
+                    xlim = c(0, 800)) +
+    labs(title = "",
+         fill = "Mixture components",
+         x = "Inter-keystroke interval [in msecs]",
+         y = "Density") 
+  
+  p1 + p2 + 
+    plot_layout(widths = c(3, 1.25)) + 
+    plot_layout(guides = 'collect')
+  
+})
+
+
+```
+:::
+  
+  

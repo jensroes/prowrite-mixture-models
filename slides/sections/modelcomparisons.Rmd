@@ -1,0 +1,104 @@
+<!-- ## Model comparisons -->
+
+
+```{r loadloos, warning=FALSE, message=FALSE}
+files <- list.files(
+  str_c("../../stanout/",
+        c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1", "gunnexp2")),
+  pattern = "model.+.csv",
+  full.names = T)
+
+mc <- purrr::map_dfr(files, ~read_csv(.) %>%
+                          mutate(dataset = .x)) %>%
+  mutate(across(dataset, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .))) %>%
+  filter(dataset != "spl2_shift",
+         model != "M4 -- M5") %>%
+  mutate(across(dataset, ~recode(.,
+                            "cato" = "CATO",
+                            "spl2" = "SPL2",
+                            #                "spl2_shift" = "SPL2 (shift + C)",
+                            "plantra" = "PLanTra",
+                            "lift" = "LIFT",
+                            "c2l1" = "C2L1",
+                            "gunnexp2" = "GE2")),
+         across(model, ~case_when(str_detect(., "M2$") ~ "Single process (M1 vs M2)",
+                               str_detect(., "M3$") ~ "Single process (unequal var.; M2 vs M3)",
+                               str_detect(., "M4$") ~ "Mixture process (M3 vs M4)",
+                             )),
+         across(model, ~factor(., levels = unique(model), ordered = T)))
+```
+
+
+<!-- ```{r modelcomp, fig.cap="Shown is the difference in predictive performance of models."} -->
+<!-- plot <- mc %>%  -->
+<!--   mutate(value = elpd_diff, -->
+<!--          se = se_diff, -->
+<!--          lower = value - 2 * se, -->
+<!--          upper = value + 2 * se) %>%  -->
+<!--   select(model, dataset, value, lower, upper) %>%  -->
+<!--   ggplot(aes(x = reorder(dataset, value), -->
+<!--              y = value,  -->
+<!--              ymin  = lower,  -->
+<!--              ymax = upper, -->
+<!--              colour = model)) + -->
+<!--   facet_wrap(~model, scales = "free_x", nrow = 2) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   scale_y_continuous(labels = scales::comma) + -->
+<!--   ggthemes::scale_color_colorblind() + -->
+<!--   labs(y = bquote(Delta*widehat(elpd)~"with 2 \u00D7 SE")) + -->
+<!--   theme(axis.title.y = element_blank(), -->
+<!--         axis.ticks.y = element_blank()); plot -->
+<!-- ``` -->
+<!-- ## Model comparisons -->
+
+
+<!-- ```{r modelcomp2, fig.cap="Shown is the difference in predictive performance of models."} -->
+<!-- plot + geom_pointrange(show.legend = F) -->
+<!-- ``` -->
+
+
+## Model comparisons
+
+```{r loos, results='asis'}
+mc %>% 
+  select(dataset, Comparison = model, elpd_diff_ratio) %>%
+  pivot_wider(names_from = Comparison, values_from = elpd_diff_ratio) %>%
+  mutate(across(-dataset, ~" ")) %>% 
+  rename(`Data set` = dataset) %>% 
+  select(1, 4, 3, 2) %>% 
+  kable(align = c("l", rep("r", 3)),
+        caption = "Vales are the absolute ratio of the difference in predictive performance measured as $\\widehat{elpd}$ and its standard error $\\mid\\frac{\\Delta\\widehat{elpd}}{\\text{SE}}\\mid$ which corresponds to the $z$-score of the difference between models [@sivula2020uncertainty].") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 14) %>% 
+  row_spec(0:6, extra_css = "line-height: 2.25;")  
+```
+
+## Model comparisons
+
+```{r loos2, results='asis'}
+mc %>% 
+  select(dataset, Comparison = model, elpd_diff_ratio) %>%
+  pivot_wider(names_from = Comparison, values_from = elpd_diff_ratio) %>%
+  rename(`Data set` = dataset) %>% 
+  select(1, 4, 3, 2) %>% 
+  kable(align = c("l", rep("r", 3)),
+        caption = "Vales are the absolute ratio of the difference in predictive performance measured as $\\widehat{elpd}$ and its standard error $\\mid\\frac{\\Delta\\widehat{elpd}}{\\text{SE}}\\mid$ which corresponds to the $z$-score of the difference between models [@sivula2020uncertainty].") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 14) %>% 
+  row_spec(0:6, extra_css = "line-height: 2.25;")  
+```
+
+
+```{r eval = F}
+mc %>% 
+  select(dataset, model, elpd = elpd_diff_ratio) %>% 
+  ggplot(aes(y = elpd, x = model, colour = dataset, group = dataset)) +
+  geom_point() +
+  geom_line()
+```
+

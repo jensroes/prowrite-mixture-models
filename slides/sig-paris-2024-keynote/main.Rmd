@@ -1,0 +1,220 @@
+---
+title: '<span style="font-size: 50px; font-face: bold">Modelling cascaded planning in written production as Bayesian hierarchical mixture process</span>'
+author: '<span style="font-size: 30px; font-face: bold">Jens Roeser (Nottingham Trent University)</span>'
+output: 
+  ioslides_presentation:
+    incremental: false
+    transition: slower
+    widescreen: true
+    css: ../misc/slides.css
+    self_contained: true
+#    logo: ../misc/gfx/ntu.png
+runtime: shiny
+bibliography      : ["../../report/references.bib"]
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      eval = TRUE, 
+                      message = FALSE, 
+                      comment=NA,
+                      fig.align = "right")
+options("kableExtra.html.bsTable" = T, digits = 2)
+options(pillar.print_min = 5, pillar.print_max = 10)
+library(shiny)
+library(shinyWidgets)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(patchwork)
+library(ggthemes)
+library(polspline)
+source("../../scripts/functions.R")
+source("../scripts/get_pdens_plot.R")
+
+beta_label <- "Fluent interkey\nintervals (in msecs)"
+delta_label <- "Slowdown for hesitant\ninterkey intervals (in secs)"
+theta_label <- "Probability of hesitant\ninterkey intervals"
+
+
+theme_set(theme_few(base_size = 12) +
+            theme(strip.background = element_blank(),
+                  legend.position = "top",
+                  legend.justification = "right",
+                  panel.grid = element_blank(),
+                  panel.background = element_rect(fill = "transparent"), # bg of the panel
+                  plot.background = element_rect(fill = "transparent", color = NA)))
+```
+
+
+## Keystroke interval data
+
+```{r}
+data_pseq_1 <- read_csv('tutorial/data/process_data_by_event.csv') %>% 
+  filter(location != "post-paragraph", 
+         !is.na(location),
+         next_event_type == "production",
+         event_type == "production",
+         event_duration > 50,
+         session_no == 1) %>% 
+  filter(participant == unique(participant)[1], 
+         pseq_id == 10, 
+         session_no == 1) %>% 
+  select(text, iki = event_duration, location) %>% 
+  rowid_to_column("id")
+```
+
+
+```{r fig.width=10, fig.height=6}
+d <- data_pseq_1 %>% 
+  mutate(
+    across(location, ~str_replace(., "post-", "before ")),
+    across(location, ~str_replace(., "-", " ")),
+    across(text, ~replace_na(., " ")))
+
+ggplot(d, aes(y = iki, x = id, group = 1)) +
+  geom_path() +
+  geom_point(aes(colour = location, shape = location), size = 3.5) +
+  theme_classic(base_size = 14) +
+  labs(y = "Interkey intervals (in msecs)") +
+  scale_x_continuous(breaks = d$id, labels = d$text) +
+  scale_colour_colorblind() +
+  scale_shape_manual(values = c(8, 17, 16)) +
+  scale_y_log10() +
+  labs(colour = "text locations",
+       shape = "text locations") +
+#  scale_y_continuous(limits = c(0, 1100)) +
+  theme(axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position = "bottom")
+```
+
+
+# How are the processes that generate and sequences keystrokes mentally coordinated?
+
+
+```{r intro, child = "../sections/introduction.Rmd"}
+```
+
+```{r intro, child = "../sections/evidence.Rmd"}
+```
+
+```{r intro, child = "../sections/sampledata.Rmd"}
+```
+
+
+
+## Usual practice
+
+```{r echo = T}
+data_with_pause <- data %>% 
+  mutate(is_pause_500 = iki > 1000,
+         is_pause_1k = iki > 1000,
+         is_pause_2k = iki > 2000)
+data_with_pause
+```
+
+```{r echo = T}
+data_with_pause %>% 
+  summarise(across(starts_with("is_pause"), list(avg = mean)), .by = location)
+```
+
+
+
+## Usual practice
+
+```{r echo = T}
+data_with_pause %>% 
+  filter(!is_pause_500) %>% 
+  summarise(iki_avg = mean(iki),
+            iki_sd = sd(iki), 
+            .by = location)
+```
+
+
+# How can we represent these models statistcally?
+
+## Problems
+
+- Pause thresholds are in principle arbitrary.
+- Separation of distributions does not capture the process that generates keystroke data.
+
+
+
+```{r data, child = "../sections/statisticalmodels.Rmd"}
+```
+
+```{r intro, child = "../sections/mog_app.Rmd"}
+```
+
+
+# How can we apply these formulae to data?
+
+## Single process models
+
+
+
+
+
+## Why Bayesian models?
+
+
+```{r}
+
+# mixture models map directly on parallel cascaded architecture of typing
+
+# how did people usually deal with pauses -> log, threshold
+
+# Why Bayesian framework?
+
+# start with normal models and lm, lmer, brms
+
+# show Bayesian inference
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Thank you!
+
+This work was supported by UKRI ESRC under Grant No. ES/W011832/1: "Can you use it in a sentence?: Establishing how word-production
+difficulties shape text formation." (Nottingham Trent University)
+
+Data and analysis scripts written in R and Stan can be found on OSF https://osf.io/z65dw/ [@roeser2024osf].
+
+For a tutorial on Bayesian mixture-model analysis in the context of keystroke data see
+https://rpubs.com/jensroes/mixture-models-tutorial.
+
+"Ideas cascading into keystrokes -- Modelling writing hesitations as Bayesian mixture process" June 27 Session D7 (D 321) 10.30am-12.00pm
+
+Roeser, J., De Maeyer, S., Leijten, M., & Van Waes, L. (2024). Modelling typing disfluencies as finite mixture process. *Reading and Writing*, 37(2), 359-384.
+
+
+
+## References {.smaller}
+
+<style>
+slides > slide { overflow: scroll; }
+slides > slide:not(.nobackground):after {
+  content: '';
+}
+</style>
+
+

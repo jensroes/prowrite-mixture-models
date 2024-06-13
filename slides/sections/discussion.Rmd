@@ -1,0 +1,9 @@
+## Planning text unfolds in parallel to production!
+
+- Writers do not necessarily pause but plan utterances in parallel to writing.
+- Evidenced by 
+  - stronger predictive performance of mixture models [@roeser2021modelling].
+  - pauses are generally equally likely before before sentences compare to before words (but often longer).
+- Largely consistent for populations with different levels of writing experience, languages (e.g. young / L2 writers, students), composition tasks. 
+- First robust evidence that written composition is largely a parallel process.
+

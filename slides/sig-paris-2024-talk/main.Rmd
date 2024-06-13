@@ -1,0 +1,169 @@
+---
+title: '<span style="font-size: 50px; font-face: bold">Ideas cascading into keystrokes -- Modelling writing hesitations as Bayesian mixture process</span>'
+author:  '<span style="font-size: 25px; font-face: bold">Jens Roeser, Mark Torrance (both Nottingham Trent University), Rianne Conijn (Eindhoven University of Technology), Evgeny Chukharev (Iowa State University)</span>'
+output: 
+  ioslides_presentation:
+    incremental: false
+    transition: slower
+    widescreen: true
+    css: ../misc/slides.css
+    self_contained: true
+#    logo: ../misc/gfx/ntu.png
+bibliography      : ["../../report/references.bib"]
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      eval = TRUE, 
+                      message = FALSE, 
+                      comment=NA,
+                      fig.align = "right")
+options("kableExtra.html.bsTable" = T, digits = 2)
+options(pillar.print_min = 5, pillar.print_max = 6)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(patchwork)
+library(ggthemes)
+library(polspline)
+source("../../scripts/functions.R")
+source("../scripts/get_pdens_plot.R")
+
+beta_label <- "Fluent interkey\nintervals (in msecs)"
+delta_label <- "Slowdown for hesitant\ninterkey intervals (in secs)"
+theta_label <- "Probability of hesitant\ninterkey intervals"
+
+
+theme_set(theme_few(base_size = 12) +
+            theme(strip.background = element_blank(),
+                  legend.position = "top",
+                  legend.justification = "right",
+                  panel.grid = element_blank(),
+                  panel.background = element_rect(fill = "transparent"), # bg of the panel
+                  plot.background = element_rect(fill = "transparent", color = NA)))
+```
+
+
+##
+
+
+
+
+<div style="float: left; width: 70%;">
+\
+\
+
+```{r fig.width=7}
+target <- str_split_1("These are keystroke intervals", pattern = "")
+x <- 1:length(target)
+y <- c(900,
+       rnorm(9, 200, 50), 500, 
+       rnorm(9, 200, 50), 400, 
+       rnorm(8, 200, 50))
+
+ggplot(data = NULL,aes(y = y, x = x)) +
+  geom_path() +
+  geom_point(size = 5, shape = 21) +
+  theme_classic(base_size = 14) +
+  labs(x= "Produced key", 
+       y = "Interkey intervals (in msecs)") +
+  scale_x_continuous(breaks = x, labels = target) +
+  scale_y_continuous(limits = c(0, 1100)) +
+  theme(axis.ticks = element_blank())
+```
+
+</div>
+
+<div style="float: right; width: 25%;">
+\
+\
+
+- Understanding factors that influence interkey intervals requires a theory of how keystrokes are sequenced.
+- Which processes are required and how are they coordinated?
+
+</div>
+
+# How do we produce texts?
+
+```{r intro, child = "../sections/introduction.Rmd"}
+```
+
+```{r intro, child = "../sections/evidence.Rmd"}
+```
+
+
+# How can we represent these models statistcally?
+
+```{r data, child = "../sections/statisticalmodels.Rmd"}
+```
+
+
+# How can we evaluate these models?
+
+```{r data, child = "../sections/datasets.Rmd"}
+```
+
+```{r textloc, child = "../sections/textlocations.Rmd"}
+```
+
+```{r modeloverview, child = "../sections/modeloverview.Rmd"}
+```
+
+```{r implementation, child = "../sections/implementation.Rmd"}
+```
+
+
+# Which model showed better performance?
+
+```{r modelcompresults, child = "../sections/modelcomparisons.Rmd"}
+```
+
+```{r fittodata, child = "../sections/modelfit.Rmd"}
+```
+
+# How do text locations affect the mixture process?
+
+```{r locresults, child = "../sections/locationeffects.Rmd"}
+```
+
+
+# Planning text unfolds in parallel to production!
+
+```{r sim, child = "../sections/discussion.Rmd"}
+```
+
+
+# "Maybe mixture models just always fit bettter?" 
+
+```{r sim, child = "../sections/simulation.Rmd"}
+```
+
+
+## Thank you!
+
+We are grateful for all authors who made their available (to us), in particular Nina Vandermeulen, Alessandra Rossetti, and colleagues. This work was supported by 
+
+- National Science Foundation under Grant No. 2016868: "ProWrite: Biometric feedback for improving college students' writing processes." (Iowa State University)
+- UKRI ESRC under Grant No. ES/W011832/1: "Can you use it in a sentence?: Establishing how word-production
+difficulties shape text formation." (Nottingham Trent University)
+
+Data and analysis scripts written in R and Stan can be found on OSF https://osf.io/z65dw/ [@roeser2024osf].
+
+For a tutorial on Bayesian mixture-model analysis in the context of keystroke data see
+https://rpubs.com/jensroes/mixture-models-tutorial.
+
+
+## References {.smaller}
+
+<style>
+slides > slide { overflow: scroll; }
+slides > slide:not(.nobackground):after {
+  content: '';
+}
+</style>
+
+

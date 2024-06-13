@@ -2,7 +2,7 @@
 
 
 
-```{r}
+```{r message=FALSE}
 files <- list.files(
   str_c("../../stanout/", 
         c("lift", "spl2", "spl2_shift", "plantra", "cato", "c2l1", "gunnexp2")), 

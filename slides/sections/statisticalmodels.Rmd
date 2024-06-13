@@ -1,0 +1,282 @@
+## Serial view: single-process model {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+```
+</div>
+
+
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_i \sim\text{ } \text{log}\mathcal{N}(\beta, \sigma_{e}^2)
+$$
+
+</div>
+
+## Serial view: single-process model  {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+linewidth <- .35
+data <- data.frame(x = c(200, 1500))
+word_mean <- 800
+sent_mean <- 950
+sd <- c(40, 60)
+word_lbl <- "word initial"
+sent_lbl <- "sentence initial"
+
+ggplot(data = data, aes(x)) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = word_mean, sd = sd[1]), 
+                linewidth = linewidth,
+                aes(colour = "word initial"), show.legend = F) +
+  geom_area(stat = "function", fun = dnorm, aes(fill = word_lbl), alpha = .25, 
+            args = list(mean = word_mean, sd = sd[1])) +
+  scale_color_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_fill_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_y_continuous(limits = c(0, .012)) +
+  scale_x_continuous(labels = scales::comma, limits = c(650, 1150)) +
+  labs(x = "Interkey intervals [in ms]", 
+       colour = "Text location",
+       fill = "Text location") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+
+```
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_i \sim\text{ } \text{log}\mathcal{N}(\beta, \sigma_{e}^2)
+$$
+
+</div>
+
+
+
+
+## Serial view: single-process model  {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+ggplot(data = data, aes(x)) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = word_mean, sd = sd[1]), 
+                linewidth = linewidth,
+                aes(colour = "word initial")) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = sent_mean, sd = sd[2]), 
+                linewidth = linewidth,
+                aes(colour = "sentence initial"), show.legend = F) +
+  geom_area(stat = "function", fun = dnorm, aes(fill = word_lbl), alpha = .25, 
+            args = list(mean = word_mean, sd = sd[1])) +
+  geom_area(stat = "function", fun = dnorm, aes(fill = sent_lbl), alpha = .25, 
+            args = list(mean = sent_mean, sd = sd[2])) +
+  geom_curve(aes(x = word_mean, xend = sent_mean, y = 0.01, yend = 0.00675),
+             curvature = -0.2, 
+             size = .25,
+             arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate("text", x=(sent_mean+word_mean)/2, y=.0105, label=paste0("beta[diff]"), size = 4, parse=TRUE) +
+  scale_color_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_fill_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_y_continuous(limits = c(0, .012)) +
+  scale_x_continuous(labels = scales::comma, limits = c(650, 1150)) +
+  labs(x = "Interkey intervals [in ms]", 
+       colour = "Text location",
+       fill = "Text location") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_i \sim\text{ } \text{log}\mathcal{N}(\beta_\text{textlocation[i]}, \sigma_{e_\text{textlocation[i]}}^2)
+$$
+
+</div>
+
+
+
+
+
+## Parallel view: mixture of two processes {.smaller}
+
+<div style="float: left; width: 40%;">
+
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_{i} \sim\text{ } \theta \times \text{log}\mathcal{N}(\beta + \delta, \sigma_{e'}^2) + \\
+   (1 - \theta) \times \text{log}\mathcal{N}(\beta, \sigma_{e}^2)
+$$
+
+</div>
+
+
+
+
+
+## Parallel view: mixture of two processes {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+# function for mixture models
+plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
+
+# Parameters
+data <- data.frame(x = c(50, 1500))
+theta_conj <- .3
+theta_simp <- .1
+alpha <- 250
+delta <- c(250, 500)
+alpha2_w <- alpha + delta[1]
+alpha2_s <- alpha + delta[2]
+sigma <- 40
+sigma_diff <- c(30, 60)
+sigmae <- sigma
+sigmae_p_w <- sigma + sigma_diff[1]
+sigmae_p_s <- sigma + sigma_diff[2]
+
+ggplot(data, aes(x)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  scale_color_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_fill_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_x_continuous(labels = scales::comma, 
+                     limits = c(50, 1000), 
+                     breaks = seq(0, 1500, 200)) +
+  labs(x = "Interkey intervals [in ms]", 
+       colour = "Text location",
+       fill = "Text location") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_{i} \sim\text{ } \theta \times \text{log}\mathcal{N}(\beta + \delta, \sigma_{e'}^2) + \\
+   (1 - \theta) \times \text{log}\mathcal{N}(\beta, \sigma_{e}^2)
+$$
+
+</div>
+
+
+
+## Parallel view: mixture of two processes {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+ggplot(data, aes(x)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = sent_lbl),
+                linewidth = linewidth,
+                args = list(alpha, sigmae, lam = 1 - theta_conj)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = sent_lbl),
+                linewidth = linewidth,
+                args = list(alpha2_s, sigmae_p_s, lam = theta_conj)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = sent_lbl), alpha = .15,
+            args = list(alpha, sigmae, lam = 1 - theta_conj)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = sent_lbl), alpha = .15,
+            args = list(alpha2_s, sigmae_p_s, lam = theta_conj)) +
+  geom_curve(aes(x = alpha2_w, 
+                 xend = alpha2_s, y = 0.0008, yend = 0.0015),
+             curvature = -0.2, 
+             size = .15,
+             arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate("text", 
+           x = (alpha2_w + alpha2_s)/2,
+           y=.0022, 
+           label=paste0("theta[diff]", "~and~", "delta[diff]"), size = 4, parse=TRUE) +
+  scale_color_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_fill_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_x_continuous(labels = scales::comma, 
+                     limits = c(50, 1000), 
+                     breaks = seq(0, 1500, 200)) +
+  labs(x = "Interkey intervals [in ms]", 
+       colour = "Text location",
+       fill = "Text location") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_{i} \sim\text{ } \theta_\text{location[i]} \times \text{log}\mathcal{N}(\beta + \delta_\text{location[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+   (1 - \theta_\text{location[i]}) \times \text{log}\mathcal{N}(\beta, \sigma_{e_\text{location[i]}}^2)
+$$
+
+
+</div>
+

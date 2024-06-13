@@ -1,0 +1,19 @@
+## Text location classifications
+
+```{r keyloc, results='asis'}
+tibble(`Transition type` = c("Within word", "Below word", "Before sentence"),
+                Description = c("Transitions between any letter",
+                                "Keypress after space followed by any letter",
+                                "Keypress following a space preceding any letter"),
+                Example = c("T$^{\\wedge}$h$^{\\wedge}$e c$^{\\wedge}$a$^{\\wedge}$t m$^{\\wedge}$e$^{\\wedge}$o$^{\\wedge}$w$^{\\wedge}$e$^{\\wedge}$d. T$^{\\wedge}$h$^{\\wedge}$a$^{\\wedge}$t[bsp][bsp]e$^{\\wedge}$n i$^{\\wedge}$t s$^{\\wedge}$l$^{\\wedge}$e$^{\\wedge}$p$^{\\wedge}$t.", 
+                            "The $^{\\wedge}$cat $^{\\wedge}$meowed. That[bsp][bsp]en $^{\\wedge}$it $^{\\wedge}$slept.", 
+                            "The cat meowed. $^{\\wedge}$That[bsp][bsp]en it slept.")) %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 16) %>% 
+  add_footnote("Note: Key intervals that terminated in a revision were removed.") %>% 
+  row_spec(0:3, extra_css = "line-height: 3.25;")  # Adjust the number for more spacing
+
+```

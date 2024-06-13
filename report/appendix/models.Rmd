@@ -23,7 +23,7 @@ The resulting model is shown in equation \ref{eq:unimodgaus} and represents a Ga
 \end{aligned}
 \end{equation}
 
-where $i$ iterates over every interkey interval $i \in 1 \dots N$ with $N$ being the total number of interkey intervals; thus $\text{location[i]}$ is the transition location associated with the $i$^\text{th} keystroke and $\text{participant[i]}$ is the participant associated with the $i$^\text{th} keystroke.
+where $i$ iterates over every interkey interval $i \in 1 \ldots N$ with $N$ being the total number of interkey intervals; thus $\text{location[i]}$ is the transition location associated with the $i$^\text{th} keystroke and $\text{participant[i]}$ is the participant associated with the $i$^\text{th} keystroke.
 
 Standard-deviation parameters were constrained to be positive because standard deviations can never be negative. 
 
