@@ -484,12 +484,12 @@ The data must be transformed into a list to feed them into Stan. The information
 // Do not run
 // Data chunk of Stan code
 data {
-  int<lower=1> N;                    // number of observations
-  int<lower=1> nS;                   // number of ppts
-  int<lower=1, upper=nS> ppt[N];     // ppts identifier
-  int<lower=1> K;                    // number of conditions
-  int<lower=1> condition[N];         // condition identifiers
-  vector[N] y;                       // outcome
+	int<lower=1> N;               // Number of observations
+  int<lower=1> nS;              // Number of subjects
+  int<lower=1, upper=nS> ppt[N];// Participant identifiers
+  int<lower=1> K;               // Number of conditions
+  int<lower=1> condition[N];    // Condition identifiers
+  vector[N] y;                  // Outcome: interkey intervals
 }
 ```
 
@@ -865,7 +865,6 @@ posterior_diffs <- posterior_in_msecs %>%
   pivot_longer(delta:theta, names_to = "parameter") %>%
   mutate(id = row_number(), .by = location) %>%
   pivot_wider(names_from = location, values_from = value) %>%
-  select(-id) %>% # drop id column
   transmute(parameter = str_c(parameter, "[diff]"),
             diff_sent = `before sentence` - `before word`, # compare sentences to word
             diff_word = `before word` - `within word`)     # compare within to before word
@@ -1076,13 +1075,7 @@ theta_diff_sent <- filter(posterior_diffs, str_detect(parameter, "theta")) %>% p
 theta_diff_word <- filter(posterior_diffs, str_detect(parameter, "theta")) %>% pull(diff_word)
 ```
 
-and then apply the `BF` function from above first to the difference between before-sentence and before-word transitions. For interpretation it is important to remember that $\theta$ is a probability (which we transformed from logit to probability above); hence the difference between two probabilities can only range between -1 and 1 (in the most extreme case). In other words, a prior SD of 1 is saying anything goes (which is not helpful). Similar to the calculations of the ROPE above, it is useful to contemplate which prior distribution appropriately reflects the null hypothesis for the scale the difference is on (e.g. logit, probability, log msecs, msecs). SDs of 1 and .5 render very weakly informative prior distributions (flat, really) as they assign about the same prior probability to differences across the board. An SD of .1 is a more realistic representation for the distribution of null differences.^[For `brms` fits the `hypothesis` function calculates the BFs indicated as evidence ratio in the output. For a model such as `y ~ 1 + condition`, `hypothesis` can calculate the evidence for the hypothesis that the effect for `condition` is, for example, equal to 0. `hypothesis` can then be applied to the model with a statement that describes the hypothesis that should be evaluated.
-
-```{r eval = F}
-hypothesis(brm_model, "conditionb = 0")
-```
-
-To calculate the evidence ratio the argument `sample_prior = TRUE` (or `sample_prior = 'yes'`) needs to be specified in `brm`.]
+and then apply the `BF` function from above first to the difference between before-sentence and before-word transitions. For interpretation it is important to remember that $\theta$ is a probability (which we transformed from logit to probability above mostly for ease of explanation; in practice it is a better idea to work with the logit scaled values); hence the difference between two probabilities can only range between -1 and 1 (in the most extreme case). In other words, a prior SD of 1 is saying anything goes (which is not helpful). Similar to the calculations of the ROPE above, it is useful to contemplate which prior distribution appropriately reflects the null hypothesis for the scale the difference is on (e.g. logit, probability, log msecs, msecs). SDs of 1 and .5 render very weakly informative prior distributions (flat, really) as they assign about the same prior probability to differences across the board. An SD of .1 is a more realistic representation for the distribution of null differences.^[For `brms` fits the `hypothesis` function calculates the BFs indicated as evidence ratio in the output. For a model such as `y ~ 1 + condition`, `hypothesis` can calculate the evidence for the hypothesis that the effect for `condition` is, for example, equal to 0. `hypothesis` can then be applied to the model with a statement that describes the hypothesis that should be evaluated, for example `hypothesis(brm_model, "conditionb = 0")` for a null hypothesis. To calculate the evidence ratio the argument `sample_prior = TRUE` (or `sample_prior = 'yes'`) needs to be specified in `brm`.]
 
 ```{r}
 # Prior with sd of 1

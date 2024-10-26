@@ -4,6 +4,7 @@ The pre-post test effect for the PLanTra dataset is reported in Table \ref{tab:r
 
 ```{r retesteffect, results = 'asis'}
 cellmeans <- ps_plantra %>% 
+  mutate(across(name, ~recode(., beta2 = "delta"))) %>% 
   mutate(across(location, ~str_replace(., "\\n", " "))) %>% 
   pivot_wider(names_from = name, 
               values_from = c(mean, lower, upper)) %>% 
@@ -50,7 +51,7 @@ write_csv(tmp, "../tables/posttest_effect_cellmeans_constr.csv")
 
 apa_table(tmp[,-1],
           align = c("l", "r", "r", "r", "r"), 
-          caption = "Mixture model estimates for post-test effect. Cell means are shown for the pre-test and post-test in msecs for the slowdown for hesitant interkey intervals (hesitation duration) and the probability of hesitant interkey intervals. The effect for post-test is shown on log scale (for interkey intervals) and logit scale for probability of hesitant interkey intervals. 95% PIs in brackets.",
+          caption = "Mixture model estimates for post-test effect. Cellmeans are shown for pre and post-test for the duration of hesitant interkey intervals in msecs and its probability. Differences are shown on the log scale for hesitation duration and on the logit scale for the hesitation probability; 95% PIs in brackets.",
           note = "PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.",
           longtable = T,
           font_size = "footnotesize",

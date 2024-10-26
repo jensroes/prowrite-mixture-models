@@ -1,25 +1,25 @@
 # Simulation
 
-A possible concern with these results -- substantially better predictive performance for two-distribution mixture models -- is that, in principle, as the mixture model has more parameters it might always lead to a better fit. We addressed this concern before by using cross-validation techniques for model comparison which is preventing overfitting models. To address this concern we repeated a comparison for a single distribution model and a two-distributions mixture model for two sets of simulated data that were simulated either with a single distribution or two-distributional process at heart. In other words, this allows us to test the predictive performance of our models in a context where we know the true underlying data generating process -- single distribution vs two distributions -- and we can test whether these models can successfully uncover the true parameter value.
+A possible concern with our results -- the substantially better predictive performance for two-distribution mixture models -- is that, in principle, as the mixture model has more parameters it might always outperform single-distribution models. We addressed this concern before by using cross-validation techniques for model comparison which prevent overfit by penalising models with more parameters. To further address this concern we evaluated models -- similar to the ones used in the main text -- for two sets of simulated data. Data were simulated using two random number generators, one that samples data from a single distribution and another that samples data from a weighted combination of two distributions. These simulated datasets allow us to test the predictive performance of our models in a context where we know the true underlying data generating process.
 
-In particular, the first data set was simulated using a two-distributions mixture model with two mixture components similar to the process described above (equation \ref{eq:bimodcon}). This process and the corresponding Bayesian model is summarised in equation \ref{eq:simmog}.
+The first dataset was simulated from a weighted mixture of two log-normal distributions similar to the process described above (equation \ref{eq:bimodcon}). This process and the corresponding Bayesian model that we used to parameter estimation is summarised in equation \ref{eq:simmog}.
 
 \begin{equation}
 \begin{aligned}
 (\#eq:simmog)
-\text{y} \sim\text{ } & \theta \times \text{log}\mathcal{N}(\beta + \delta, \sigma^2_1) +\\
-& (1 - \theta) \times \text{log}\mathcal{N}(\beta, \sigma^2_2)\\
+\text{y} \sim\text{ } & \theta \times \log\mathcal{N}(\beta + \delta, \sigma^2_1) +\\
+& (1 - \theta) \times \log\mathcal{N}(\beta, \sigma^2_2)\\
 \text{constraint: } & \delta, \sigma_\text{2}^2, \sigma_\text{1}^2>0\\
 		& \sigma_{1}^2 > \sigma_{2}^2
 \end{aligned}
 \end{equation}
 
-This model is largely identical to the models before but reduced to its main parameters (but not mixed effects for participants). The model includes two log-normal distributions with a mixing proportion $\theta$ of which the distribution of shorter values has a mean of $\beta$ and a standard deviation $\sigma^2_2$; the second distribution of longer values is constrained to have a mean that is larger by a factor of $\delta$ and has a larger standard deviation $\sigma^2_1$.
+The equivalent Bayesian model is largely identical to the model used in the main text but does not assume different parameters for transition locations and does not include random effects for participants. This is because we neither simulated data for different transition locations (or other factors) or repeated measures for participants. The model assumes two data generating processes with each assuming a log-normal distribution with a mixing proportion $\theta$. The distribution of smaller values has a mean $\beta$ and a standard deviation $\sigma^2_2$; the second distribution of larger values is constrained to have a mean that is $\delta$ units larger than $\beta$ and has a standard deviation $\sigma^2_1$ larger than the distribution with the central tendency $\beta$.
 
-In R, data that follow the model in equation \ref{eq:simmog} can be simulate using a helper function called `molg` (mixture of log Gaussians).
+In R we can simulate data for equation \ref{eq:simmog} using the helper function below.
 
 ```{r eval = F, echo = T}
-# Function for a mixture of log Gaussians
+# Function for a mixture of two log-Gaussians
 molg <- function(n, theta, mu1, mu2, sigma1, sigma2) {
   y0 <- rlnorm(n, mean = mu1, sd = sigma1)
   y1 <- rlnorm(n, mean = mu2, sd = sigma2)
@@ -27,13 +27,13 @@ molg <- function(n, theta, mu1, mu2, sigma1, sigma2) {
   y <- y0 * (1 - mix) + y1 * mix 
 }
 
-N <- 1000 # number of subjects
-beta <- 5 # mean of fluent key intervals (in log)
-delta <- 1 # slowdown for hesitant interkey intervals (in log)
-theta <- .35 # propotion of hesitations
-sigma <- c(.25, .5) # trial-by-trial error
+N <- 1000 # number of participants
+beta <- 5 # mean of fluent interkey intervals (in log)
+delta <- 1 # increment for hesitant interkey intervals (in log)
+theta <- .35 # proportion of hesitations
+sigma <- c(.25, .5) # error variance
 
-# Generate data from a mixture of two log-Gaussians
+# Simulate data from a mixture of two log-Gaussians
 y <- molg(n = N, 
           theta = theta,
           mu1 = beta,
@@ -44,34 +44,34 @@ y <- molg(n = N,
 ```
 
 
+A second dataset was simulated coming from a single log-normal distribution following equation \ref{eq:simuv}. An equivalent Bayesian model was implemented for parameter estimation.
 
-The second data set was generated with a single distribution log-Gaussian process. The model and its corresponding Bayesian model is summarised in equation \ref{eq:simuv}.
 
 \begin{equation}
 \begin{aligned}
 (\#eq:simuv)
-\text{y} \sim\text{ }& \text{log}\mathcal{N}(\beta, \sigma^2)\\
+\text{y} \sim\text{ }& \log\mathcal{N}(\beta, \sigma^2)\\
 \text{constraint: } & \sigma^2>0
 \end{aligned}
 \end{equation}
 
-Data following the distirbution in equation \ref{eq:simuv} can be simulated using a few lines of R code:
+Data following the distribution in equation \ref{eq:simuv} can be simulated using the following R code:
 
 ```{r echo = T, eval=F}
-N <- 1000 # number of subjects
-beta <- 5 # Population mean
-sigma <- .25 # trial-by-trial error
+N <- 1000 # number of participants
+beta <- 5 # population mean
+sigma <- .25 # error variance
 
-# Generate data from a log normal distribution
+# Simulate data from a single log-normal distribution
 y <- rlnorm(n = N, mean = beta, sd = sigma)
 ```
 
 
-Again, this model is a simplified version of the single distribution models used in the main analysis. The model assumes a log-Gaussian distribution with a mean parameter $\beta$ and a standard deviation $\sigma^2$.
+Again, the Bayesian model corresponding to this process is a simplified version of the single-distribution model used in the main text. The model assumes a log-Gaussian distribution with a mean $\beta$ and a standard deviation $\sigma^2$.
 
-The parameter values used for each of the two data simulations can be found in Table \ref{tab:simparam}. The simulated data are visualised in Figure \ref{fig:simdata}. Parameter values were chosen so that the simulated data are roughly similarly distributed to keystroke transitions.
+Both simulated datasets are visualised in Figure \ref{fig:simdata}. The parameter values used for each of the two data simulations can be seen in Table \ref{tab:simparam}. Parameter values were chosen so that the simulated data are distributed roughly similar to interkey interval data.
 
-```{r simdata, fig.cap= "Data simulated with a two-distribution (grey) and a single-distribution (yellow) random data generating process. The x-axis showing the outcome y was log-scaled for visability.", fig.height=3.5, fig.width=5}
+```{r simdata, fig.cap= "Data simulated with a two-distribution (yellow) and a single-distribution (grey) random data-generating process. The x-axis showing the outcome y was log-scaled for visibility.", fig.height=3.5, fig.width=5}
 files <- list.files("../../mixture-model-sim/data", full.names = T)
 
 map_dfr(files, ~read_csv(.) %>% 
@@ -90,7 +90,7 @@ map_dfr(files, ~read_csv(.) %>%
        y = "Density")
 ```
 
-For each of these two data sets we simulated 1,000 observations. We run 2 models -- a two-distribution mixture model and a single-distribution model -- each for both data sets. Models were run with 3 chains, with each 6,000 iterations of which 3,000 were warmup. Estimates with 95% probability intervals are shown in Table \ref{tab:simparam}. The parameters are shown by type of data generating process along with the true parameter values. Parameter value estimates are shown by type of Bayesian model. The results show that either of the two Bayesian models succesfully uncovered the model parameters of the data with its corresponding data generating process, as shown in Table \ref{tab:simparam}, but less so when the model was applied to data generated with the incorrect underlying process. Particularly the mixing proportion $\theta$ and the slowdown parameter $\delta$ were not uncovered at all by they single-distribution model. 
+For each of these two datasets we simulated 1,000 observations. We fitted 2 models -- the two-distribution mixture model and the single-distribution model described above -- for each dataset. Models were run with 3 chains, with each 6,000 iterations of which 3,000 iterations were discarded as warmup samples. Estimates with 95% probability intervals are shown in Table \ref{tab:simparam}. True and estimated parameter values are shown for each data generating process and Bayesian model. Both models successfully uncovered the model parameters for the datasets simulated with the corresponding underlying process, but less so when the model was applied to the data generated with the other incorrect underlying process. 
 
 
 ```{r}
@@ -151,20 +151,20 @@ table <- bind_rows(mog_sim %>% mutate(model = "mog"),
   relocate(model) %>% 
   mutate(across(name, ~str_c("$", ., "$")))
 
-names(table) <- c("Model", "Parameter with true value", "Two-distributions model", "Single-distributions model")
+names(table) <- c("Model", "Parameter with true value", "Two-distribution data", "Single-distribution data")
 
 apa_table(table[,-1], 
           escape = FALSE,
-      col_spanners = list("Estimate with 95\\% PI" = 2:3),
-      caption = "Uncovered parameter estimates with 95\\% probability interval (PI) and true parameter values for each simulated data set and by model and their respective parameters.",
+      col_spanners = list("Estimates with 95\\% PIs" = 2:3),
+      caption = "Uncovered parameter estimates with 95\\% probability intervals (PI) and true parameter values for each simulated dataset by model.",
       align = c("l", rep("r", 2)),
-      stub_indents = list(`Two-distributions data` = 1:5, 
-                          `Single-distribution data` = 6:7))
+      stub_indents = list(`Two-distribution model` = 1:5, 
+                          `Single-distribution model` = 6:7))
 
 
 ```
 
-We used LOO-CV to compare the predictive performance of the two models for each data generating process. The model comparisons can be found for each data generating process in Table \ref{tab:loossim}. The results rule out the possibility that the mixture model does always lead to higher predictive performance. Indeed, the mixture model showed a slightly lower predictive performance for the data that were generated with a single-distribution process. However, for the data generated with a two-distribution mixture process, the mixture model shows a substantially higher predictive performance. In fact, the mixture model's predictive performance is 11.6 standard errors higher compared to the single-distribution model. In comparison, for the single-distribution data, the two-distributions mixture model was negligibly different from the single-distribution model with a difference of 0.77 standard errors. Thus, the single distribution is more parsimonious. 
+We used leave-one-out cross-validation to compare the predictive performance of the two models for each data-generating process. Model comparisons can be found in Table \ref{tab:loossim}. For the data generated with a two-distribution mixture process, the mixture model shows a substantially higher predictive performance. In fact, the mixture model's predictive performance is 11.6 standard errors higher compared to the single-distribution model. However, the mixture model showed a slightly lower predictive performance (i.e. a difference of 0.77 standard errors) for the single-process data. Thus, the single distribution model is the more parsimonious choice for the single-distribution data. These results rule out the possibility that mixture models always lead to higher predictive performance. 
 
 
 ```{r loossim, results='asis'}
@@ -189,7 +189,7 @@ names(table) <- c("Data", "Model", "$\\Delta\\widehat{elpd}$", "$\\widehat{elpd}
 
 apa_table(table[,-1], 
           escape = FALSE,
-      caption ="Model comparisons by data set. The top row shows the models with the highest predictive performance for each data generating process. Standard error is shown in parentheses.",
+      caption ="Model comparisons by dataset. The top row shows the models with the highest predictive performance for each data generating process. Standard error is shown in parentheses.",
      note = "$\\widehat{elpd}$ = predictive performance indicated as expected log pointwise predictive density; $\\Delta\\widehat{elpd}$ = difference in predictive performance relative to the model with the highest predictive performance in the top row.",
       align =c("l", rep("r", 2)),
       stub_indents = list(`Data: Two-distribution mixture process` = 1:2, 

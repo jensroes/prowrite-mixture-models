@@ -64,7 +64,7 @@ table %>%
   relocate(Dataset, ends_with("M4)")) %>% 
   arrange(Dataset) %>% 
   apa_table(caption = "Model comparisons. Models were compared incrementally from the simplest to the most complex model. Comparison are shown with the distribution type of the model with the higher predictive performance. A negative difference in $\\Delta\\widehat{elpd}$ indicates higher predictive performance for the more complex model; standard error shown in parentheses.",
-            align =c("p{1.75cm}", "p{4cm}", "p{4.25cm}", "p{3.5cm}"), 
+            align =c("p{2cm}", "p{4cm}", "p{4.25cm}", "p{3.5cm}"), 
             escape = FALSE,
             row.names = T,
             col.names = c("Dataset", "Mixture of two log-Gaussians (M3 -- M4)", "Single log-Gaussian (unequal variance; M2 -- M3)", "Single log-Gaussian (M1 -- M2)"),
@@ -94,7 +94,9 @@ subtitle_bw <- "Before word"
 subtitle_ww <- "Within word"
 
 # get files
-files <- list.files("../../stanout", pattern = "mog_constr_posterior_for_densityplot.csv", recursive = T, full.names = T)
+files <- list.files("../../stanout", 
+                    pattern = "mog_constr_posterior_for_densityplot.csv", 
+                    recursive = T, full.names = T)
 
 # load all posteriors
 ps_all <- map_dfr(files, ~read_csv(.) %>% mutate(dataset = .x)) %>% 
@@ -295,7 +297,7 @@ plots_fin <- wrap_plots(
 # add axes titles
 grid.arrange(patchworkGrob(plots_fin), 
                           left = "Density",
-                          bottom = "Interkey interval in secs")
+                          bottom = "Interkey intervals in secs")
 #ggsave("mixdists.png", plots_fin, width = 12, height = 6)
 
 ```
@@ -324,7 +326,9 @@ ps <- purrr::map_dfr(files, ~read_csv(.x) %>%
   filter(!(str_detect(data, "SPL2") & lang == "ES" & !is.na(lang)),
          !(str_detect(data, "CATO") & group == "dyslexic" & !is.na(group)),
          !(str_detect(data, "CATO") & task == "masked" & !is.na(task)),
-         !(str_detect(data, "GE2") & xn == "masked" & !is.na(xn))) 
+         !(str_detect(data, "GE2") & xn == "masked" & !is.na(xn))) %>% 
+  mutate(across(data, ~factor(., levels = unique(data)[6:1], ordered = T)),
+         across(location, factor))
 
 ps_beta <- filter(ps, param == "beta") %>% 
   rename(beta = value) %>%
@@ -354,7 +358,7 @@ ps <- filter(ps, param != "beta")  %>%
 Figure \ref{fig:mixmodel} highlighted how model parameters relate to each other in pairs of distributions but to compare the effect of transition location on model parameters we need to compare the posterior distribution of the three parameters of interest individually. Therefore Figure \ref{fig:crossstudypost2} visualises the same posterior as Figure \ref{fig:mixmodel} but expressed directly in terms of posterior probability distributions of the individual mixture-model parameters. These are shown for all datasets by transition location. Although models were fitted with all dataset-specific conditions, we aggregated the posterior across conditions^[We aggregated across pre and post tests for the PLanTra dataset as well as genre and topic of the LIFT data set. We demonstrate in Appendix \ref{pre-post-test-plantra} and \ref{genre-effect-lift}, respectively, that there is negligible evidence for differences between these conditions.], and excluded conditions that might confound comparisons^[We removed the masked writing condition in the GE2 and CATO, the dyslexic group in the CATO data set, and L2 writing in the SPL2 data set. There was evidence for L2 writing effects (see Appendix \ref{l2-effect-spl2}); evidence for marking effects was weak (see Appendix \ref{masking-effect-cato-ge2}).]. For posteriors of all conditions within datasets see Appendix \ref{posterior-parameter-estimates}. The resulting posterior allows us to examine differences and similarities associated with transition locations for all datasets. In particular we can see how transition location in the text is associated with hesitant interkey intervals and hesitation probability. For completeness we also report the estimate for fluent interkey intervals.
 
 
-```{r crossstudypost2, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group."}
+```{r crossstudypost2old, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group.", eval = F}
 
 posd <- position_dodge(.5)
 dotsize <- 2.75
@@ -442,10 +446,102 @@ plot <- beta + delta + theta + plot_layout(guides = "collect",
                                            widths = c(.5, 1, 1))
 
 grid.arrange(patchworkGrob(plot), 
-             left = "Posterior estimate with 95% PIs",
+             left = "Posterior estimates with 95% PIs",
              bottom = "Transition location")
 
 ```
+
+```{r crossstudypost2, fig.cap="Mixture model parameter estimates across studies. Distributions of parameter estimates are represented as posterior mean and 95\\% probability interval (PI). Interkey-interval duration measures are shown in msecs and hesitation probability is shown in proportions. Estimates for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group.", fig.height=5.5}
+
+posd <- position_dodge(-.5)
+dotsize <- 2.5
+grouplabel <- "Transition\nlocations:"
+shapes <- c(8, 9, 1)
+width <- 0
+linewidth <- .35
+nrow <- 1
+beta <- filter(ps, name == "beta", 
+               location == "before\nword") %>%
+  mutate(name = beta_label,
+         location = "overall") %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = data)) +
+  geom_errorbar(width = width, alpha = .75) +
+  geom_point(size = dotsize) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.title = element_blank(),
+        axis.ticks.y = element_blank()) +
+  coord_flip() +
+  labs(colour = grouplabel,
+       shape = grouplabel) +
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
+
+delta <- filter(ps, name == "beta2") %>% 
+  mutate(name = delta_label) %>% 
+  #mutate(across(c(mean, lower, upper), ~./1000)) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = data,
+             shape = location)) +
+  geom_errorbar(width = width, alpha = .75, position = posd) +
+  geom_point(aes(colour = location), 
+            size = dotsize, 
+            position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(colour = grouplabel,
+       shape = grouplabel) +
+  theme(axis.title = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  coord_flip() +
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
+
+theta <- filter(ps, name == "prob") %>% 
+  mutate(name = theta_label) %>% 
+  ggplot(aes(y = mean, 
+             ymin = lower, 
+             ymax = upper,
+             x = data,
+             shape = location)) +
+  geom_errorbar(width = width, alpha = .75, position = posd) +
+  geom_point(aes(colour = location), 
+            size = dotsize, 
+            position = posd) +
+  facet_grid(~name) +
+  scale_shape_manual(values = shapes) +
+  scale_colour_colorblind() +
+  scale_y_continuous(labels = dezero_plot, limits = c(0, 1)) +
+  labs(colour = grouplabel,
+       shape = grouplabel) +
+  theme(axis.title = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) + 
+  coord_flip() +
+  guides(colour=guide_legend(nrow=nrow,byrow=TRUE),
+         shape = guide_legend(nrow=nrow,byrow=TRUE))
+
+plot <- beta + delta + theta + plot_layout(guides = "collect",
+                                           widths = c(.4, 1, 1))
+
+plot <- grid.arrange(patchworkGrob(plot), 
+             bottom = "Posterior estimates with 95% PIs")
+
+ggsave("../posteriorplot.pdf", plot = plot, width = 8, height = 6)
+```
+
+
+
 
 Figure \ref{fig:crossstudypost2} shows largely the same patterns (with caveats) for all datasets. We summarise the evidence for differences between transitions locations in Table \ref{tab:loceffectconbf}. We found that hesitations were more frequent -- higher hesitation probability -- before words than within words (BFs > 100 for all datasets) but only for half of the datasets hesitation durations were longer (GE2: BF = 27; PLanTra: BF = 56; SPL2: BF = 9.1; negligible evidence for C2L1: BF = 0.1; CATO: BF = 0.2; LIFT: BF = 0.4). Hesitations were equally likely before sentences and words (C2L1 and CATO: BFs = 0.7; PLanTra: BF = 0.3; LIFT: BF = 1.6; except for GE2 and SPL2; both BFs > 100) but longer (all BFs > 100, except for C2L1: BF = 1.11 and LIFT = 0.5). Full results and parameter estimates can be found in Appendix \ref{transition-location-effect-1}. 
 
@@ -500,11 +596,10 @@ apa_table(tmp,
           escape = FALSE,
           row.names = T,
           col.names = c("Dataset", rep(c("before sentence vs word", "before vs within word"), 2)),
-          col_spanners = list(" " = c(1),
-                              "Hesitation slowdown" = c(2, 3), 
-                              "Hesitation probability" = c(4, 5)),
-          note = "BF = evidence in favour of the alternative hypothesis over the null hypothesis.",
-          caption = "BFs for the effect of transition location on interkey intervals shown for the hesitation slowdown and hesitation probability. Comparisons for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group.") 
+          col_spanners = list("Hesitation duration" = 2:3, 
+                              "Hesitation probability" = 4:5),
+          note = "BF = evidence in favour of the alternative hypothesis over the null hypothesis calculated using the Savage-Dickey method (Dickey et al., 1970; Wagenmakers et al., 2010). BFs greater than 3 indicate moderate evidence, greater than 10 strong evidence, and greater than 30 very strong evidence for a statistically meaningful effect (Jeffreys, 1961; Lee \\& Wagenmakers, 2014). A BF smaller than 0.33 suggests evidence in favour of a null effect (Dienes, 2014) and a BF around 1 is inconclusive evidence.",
+          caption = "BFs for the effect of transition location on interkey intervals shown for the hesitation duration and hesitation probability. Comparisons for the CATO dataset were calculated for the non-dyslexic group, unmasked condition; also the GE2 estimtes represent the unmasked condition; SPL2 estimates are for the L1 group.") 
 
 ```
 

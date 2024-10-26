@@ -1,13 +1,13 @@
 param,Transition location,Dataset,Group,Unmasked,Masked,Difference,BF
-delta,before sentence,CATO,dyslexic,"2,231 [1,543, 3,111]","1,680 [1,239, 2,205]","-0.25 [-0.64, 0.13]",0.44
-delta,before sentence,CATO,non dyslexic,"1,733 [1,241, 2,325]","1,502 [1,134, 1,942]","-0.12 [-0.47, 0.22]",0.23
-delta,before sentence,GE2,non dyslexic,"1,124 [954, 1,307]","1,418 [1,218, 1,634]","0.21 [0.05, 0.36]",2.59
-delta,before word,CATO,dyslexic,"444 [405, 485]","407 [369, 447]","-0.06 [-0.13, 0.01]",0.14
-delta,before word,CATO,non dyslexic,"345 [312, 381]","326 [295, 361]","-0.04 [-0.11, 0.04]",0.06
-delta,before word,GE2,non dyslexic,"363 [325, 403]","379 [341, 420]","0.03 [-0.05, 0.11]",0.05
-delta,within word,CATO,dyslexic,"278 [166, 400]","177 [116, 252]","-0.24 [-0.52, 0.06]",0.57
-delta,within word,CATO,non dyslexic,"409 [244, 593]","392 [230, 591]","-0.03 [-0.42, 0.38]",0.2
-delta,within word,GE2,non dyslexic,"182 [105, 279]","209 [135, 306]","0.08 [-0.24, 0.4]",0.19
+delta,before sentence,CATO,dyslexic,"2,423 [1,731, 3,302]","1,871 [1,428, 2,398]","-0.25 [-0.64, 0.13]",0.44
+delta,before sentence,CATO,non dyslexic,"1,924 [1,429, 2,518]","1,693 [1,323, 2,134]","-0.12 [-0.47, 0.22]",0.23
+delta,before sentence,GE2,non dyslexic,"1,282 [1,108, 1,469]","1,575 [1,369, 1,796]","0.21 [0.05, 0.36]",2.59
+delta,before word,CATO,dyslexic,"635 [590, 683]","598 [553, 644]","-0.06 [-0.13, 0.01]",0.14
+delta,before word,CATO,non dyslexic,"536 [497, 579]","518 [480, 558]","-0.04 [-0.11, 0.04]",0.06
+delta,before word,GE2,non dyslexic,"520 [476, 567]","536 [492, 584]","0.03 [-0.05, 0.11]",0.05
+delta,within word,CATO,dyslexic,"469 [356, 593]","368 [305, 445]","-0.24 [-0.52, 0.06]",0.57
+delta,within word,CATO,non dyslexic,"600 [434, 787]","583 [420, 784]","-0.03 [-0.42, 0.38]",0.2
+delta,within word,GE2,non dyslexic,"339 [261, 438]","367 [290, 466]","0.08 [-0.24, 0.4]",0.19
 prob,before sentence,CATO,dyslexic,".60 [.38, .79]",".80 [.60, .93]","0.2 [-0.06, 0.46]",0.45
 prob,before sentence,CATO,non dyslexic,".55 [.34, .76]",".68 [.47, .84]","0.13 [-0.16, 0.4]",0.21
 prob,before sentence,GE2,non dyslexic,".88 [.82, .93]",".90 [.85, .94]","0.16 [-0.46, 0.79]",0.36

@@ -5,12 +5,12 @@
 */
 
 data {
-	int<lower=1> N;          // Number of observations
-  int<lower=1> nS;        //number of subjects
-  int<lower=1, upper=nS> ppt[N];
-  int<lower=1> K;          // Number of conditions
-  int<lower=1> condition[N];
-  vector[N] y;            //outcome: for each subject one IKI per column/bigram (in 
+  int<lower=1> N;               // Number of observations
+  int<lower=1> nS;              // Number of subjects
+  int<lower=1, upper=nS> ppt[N];// Participant identifiers
+  int<lower=1> K;               // Number of conditions
+  int<lower=1> condition[N];    // Condition identifiers
+  vector[N] y;                  // Outcome: interkey intervals
 }
 
 
@@ -25,7 +25,7 @@ parameters {
   vector<lower=0>[K] sigma_diff; 
 
   // For random effects
-	vector[nS] u; // participant intercepts
+  vector[nS] u; // participant intercepts
   real<lower=0> sigma_u; // participant sd
   matrix[K, nS] theta_s; // participant hesitations
 
@@ -82,7 +82,7 @@ generated quantities{
     lp_parts[1] = log_theta_s_1[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu + delta[condition[n]], sigmap_e[condition[n]]); 
     lp_parts[2] = log_theta_s_2[condition[n], ppt[n]] + lognormal_lpdf(y[n] | mu, sigma_e[condition[n]]); 
     log_lik[n] = log_sum_exp(lp_parts);
- 		prob_tilde = bernoulli_rng(prob_s[condition[n], ppt[n]]); 
+    prob_tilde = bernoulli_rng(prob_s[condition[n], ppt[n]]); 
     if(prob_tilde) { 
       y_tilde[n] = lognormal_rng(mu + delta[condition[n]], sigmap_e[condition[n]]);
     }

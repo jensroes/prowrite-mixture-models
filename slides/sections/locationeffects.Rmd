@@ -221,6 +221,9 @@ grid.arrange(patchworkGrob(plots_fin),
 ```
 
 
+
+
+
 ## Location estimates by model parameter
 
 
@@ -272,6 +275,71 @@ ps <- filter(ps, param != "beta")  %>%
   filter(name %in% c("beta", "beta2", "delta", "prob"))
 ```
 
+
+
+```{r loceffectconbf}
+
+files <- list.files(str_c("../../stanout/", 
+                          c("lift", "spl2", "gunnexp2", "plantra", "cato", "c2l1")), pattern = "mogbetacon.+.csv", full.names = T) # "spl2_shift",
+
+ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>% 
+                                 mutate(data = .x)) %>% 
+  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
+         across(data, ~recode(., 
+                              "cato" = "CATO",
+                              "spl2" = "SPL2", 
+                              "gunnexp2" = "GE2",
+                              #                "spl2_shift" = "*SPL2* (L1; shift + C)", 
+                              "plantra" = "PLanTra",
+                              "lift" = "LIFT",
+                              "c2l1" = "C2L1"))) %>% 
+  filter(!(str_detect(data, "SPL2") & lang == "ES"),
+         !(str_detect(data, "CATO") & group == "dyslexic"),
+         !(str_detect(data, "CATO") & task == "masked"),
+         !(str_detect(data, "GE2") & xn == "masked"),
+         param %in% c("delta", "theta")) %>%
+  select(param, location, data, value) %>% 
+  mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
+  pivot_wider(names_from = location, values_from = value) %>%
+  unnest(-c(data, param)) %>% 
+  mutate(diff.1 = `before sentence` - `before word`,
+         diff.2 = `before word` - `within word`) %>% 
+  summarise(across(starts_with("diff"), 
+                   list(mean = mean, 
+                        lower = lower, 
+                        upper = upper, 
+                        BF = ~log(BF(.)))),
+            .by = c(data, param)) 
+
+tmp <- ps_loc_diffs %>% 
+  pivot_longer(starts_with("diff"), names_to = c("diffid", ".value"), names_sep = "_") %>% 
+  #mutate(across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2))))) %>% 
+  mutate(across(BF, ~round(.,2))) %>% 
+  select(-mean, -lower, -upper) %>% 
+  pivot_wider(names_from = c(diffid, param), values_from = BF) %>% 
+  select(data, contains("delta"), contains("theta")) %>% 
+  arrange(data)
+
+tmp %>% 
+  mutate(across(-data, ~cell_spec(., color = ifelse(. > 1 | . < 0, "white", "black"), 
+                                  background = ifelse(. > 1, "blue",
+                                                  ifelse(. < 0, "red", "white"))))) %>% 
+  kable(col.names = c("Dataset", rep(c("before sentence vs word", "before vs within word"), 2)),
+        caption = "Values indicate log BFs in support of the alternative hypothesis over the null hypothesis.", 
+        align = c("l", rep("r", 4)),
+        escape = F,
+        format = "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
+                full_width = T, 
+                position = "right",
+                font_size = 14) %>% 
+  add_header_above(c(" " = 1,
+                     "Hesitation slowdown" = 2,
+                     "Hesitation probability" = 2)) %>% 
+  row_spec(0:6, extra_css = "line-height: 2.25;")  
+```
+
+## Location estimates by model parameter
 
 
 ```{r crossstudypost2, fig.cap="", fig.height=4.5, fig.width=10}
@@ -391,60 +459,3 @@ grid.arrange(patchworkGrob(plot),
 ```
 
 
-## Location estimates by model parameter
-
-
-```{r loceffectconbf, results='asis'}
-
-files <- list.files(str_c("../../stanout/", 
-                          c("lift", "spl2", "gunnexp2", "plantra", "cato", "c2l1")), pattern = "mogbetacon.+.csv", full.names = T) # "spl2_shift",
-
-ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>% 
-                                 mutate(data = .x)) %>% 
-  mutate(across(data, ~sub(".*/([^/]+)/[^/]+\\..*", "\\1", .)),
-         across(data, ~recode(., 
-                              "cato" = "CATO",
-                              "spl2" = "SPL2", 
-                              "gunnexp2" = "GE2",
-                              #                "spl2_shift" = "*SPL2* (L1; shift + C)", 
-                              "plantra" = "PLanTra",
-                              "lift" = "LIFT",
-                              "c2l1" = "C2L1"))) %>% 
-  filter(!(str_detect(data, "SPL2") & lang == "ES"),
-         !(str_detect(data, "CATO") & group == "dyslexic"),
-         !(str_detect(data, "CATO") & task == "masked"),
-         !(str_detect(data, "GE2") & xn == "masked"),
-         param %in% c("delta", "theta")) %>%
-  select(param, location, data, value) %>% 
-  mutate(across(value, ~ifelse(param == "theta", .*-1, .))) %>% 
-  pivot_wider(names_from = location, values_from = value) %>%
-  unnest(-c(data, param)) %>% 
-  mutate(diff.1 = `before sentence` - `before word`,
-         diff.2 = `before word` - `within word`) %>% 
-  summarise(across(starts_with("diff"), 
-                   list(mean = mean, 
-                        lower = lower, 
-                        upper = upper, 
-                        BF = BF)),
-            .by = c(data, param)) 
-
-tmp <- ps_loc_diffs %>% 
-  pivot_longer(starts_with("diff"), names_to = c("diffid", ".value"), names_sep = "_") %>% 
-  mutate(across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2))))) %>% 
-  select(-mean, -lower, -upper) %>% 
-  pivot_wider(names_from = c(diffid, param), values_from = BF) %>% 
-  select(data, contains("delta"), contains("theta")) %>% 
-  arrange(data)
-
-tmp %>% 
-  kable(col.names = c("Dataset", rep(c("before sentence vs word", "before vs within word"), 2)),
-        caption = "Values indicate BFs in support of the alternative hypothesis over the null hypothesis.", align = c("l", rep("r", 4))) %>% 
-  kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
-                full_width = T, 
-                position = "right",
-                font_size = 14) %>% 
-  add_header_above(c(" " = 1,
-                     "Hesitation slowdown" = 2,
-                     "Hesitation probability" = 2))
-
-```

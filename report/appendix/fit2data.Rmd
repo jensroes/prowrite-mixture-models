@@ -1,6 +1,6 @@
 # Fit to data
 
-Model fit was assessed by testing to what extent simulations obtained from the model fit the observed data. From each model we obtained 50 simulations (predictions); see Figure \ref{fig:prediction}. The model predictions fitted the data substantially better for the mixture models. The worse fit was observed for the single distribution Gaussian model which predicted a larger number of negative keystroke intervals; a log-normal distribution removed these negative predictions.
+Model fit was assessed by testing to what extent data simulated from the model match the observed data. From each model we obtained 50 simulations (predictions). Simulated and observed data are visualised in Figure \ref{fig:prediction}. Data predicted by the mixture model were substantially more similar to the observed data compared to any of the single-distribution models. The worse fit was observed for the single-distribution Gaussian model which predicted a larger number of negative keystroke intervals.
 
 ```{r eval = F}
 theme_set(theme_few(base_size = 10) +
@@ -50,7 +50,7 @@ ggsave("../figures/fitplots.pdf", plots_fin, height = 7.25, width = 6.25)
 ```
 
 
-```{r prediction, fig.cap="Predicted data (50 simulations in each cell) in red in comparison to the interkey interval data shown in black by model types and datasets. Model fit to the data was order from the best (left) to the weakest (right). For illustration the x-axis was truncated at 2 secs.", eval = T, fig.height=8.25, fig.width=6.75}
+```{r prediction, fig.cap="Predicted data (50 simulations in each cell) in red compared to interkey interval data shown in black shown by model and datasets. Better fit i shown on the left and weaker fit is shown on the right. X-axes were truncated at 2 secs.", eval = T, fig.height=8.25, fig.width=6.75}
 knitr::include_graphics("figures/fitplots.pdf")
 ```
 

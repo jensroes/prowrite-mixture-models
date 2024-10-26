@@ -46,6 +46,6 @@ ggsave("../misc/gfx/fit.png", plot = plots_fin, width = 6.25, height = 8.5)
 ```
 
 ```{r fitplot, fig.cap="", eval = T}
-include_graphics("../misc/gfx/fit.png")
+include_graphics("misc/gfx/fit.png")
 ```
 

@@ -1,19 +1,22 @@
+# Mixture model parameters
+
 
 ---
   
 ::: {style="margin-top:-20px; width: 96%;"}
 ```{r contpred}
 inputPanel(
-  sliderInput("beta_0", "Fluent typing", min = 100, max = 500, value = 150, ticks = FALSE),
-  sliderInput("delta", "Hesitation slowdown", min = 50, max = 300, value = 100, ticks = FALSE),
-  sliderInput("theta", "Hesitation probability", min = .001, max = .999, value = .3, ticks = FALSE),  
-  switchInput("params", 
-              size = "mini", 
-              label = "Show means",
-              onLabel = "on", 
-              offLabel = "off", 
-              labelWidth = "50%",
-              width = "50%")
+  sliderInput("beta_0", "Fluent typing", min = 50, max = 500, value = 300, step = 10, ticks = FALSE),
+  sliderInput("delta", "Hesitation slowdown", min = 50, max = 1500, value = 100, step = 50, ticks = FALSE),
+  sliderInput("theta", "Hesitation probability", min = .001, max = .999, value = .3, step = .05, ticks = FALSE)  
+  # switchInput("params", 
+  #             size = "mini", 
+  #             label = "Show means",
+  #             onLabel = "on", 
+  #             offLabel = "off", 
+  #             labelWidth = "50%",
+  #             width = "50%", 
+  #             value = FALSE)
 )
 
 renderPlot({
@@ -39,69 +42,67 @@ renderPlot({
   sigma_diff <- .01
   sigmae <- sigma
   sigmae_p <- sigma + sigma_diff
-  data <- data.frame(x = c(0, 1500))
-  
-  
+  data <- data.frame(x = c(0, 2500))
   
   # Formula shown in plot
-  formula <- list(~'iki'[i]~"~"~theta~paste("\u00B7")~  "logN("*beta~+~delta*","~sigma[2]^2*")",
-                  ~+~"(1" - theta*")"~paste("\u00B7")~"logN("*beta*","~sigma[1]^2*")")
+  # formula <- list(~'iki'[i]~"~"~theta~paste("\u00B7")~  "logN("*beta~+~delta*","~sigma[2]^2*")",
+  #                 ~+~"(1" - theta*")"~paste("\u00B7")~"logN("*beta*","~sigma[1]^2*")")
+  # 
+  # p2 <- ggplot() +
+  #   # annotate("text", 
+  #   #          x = 1.5, 
+  #   #          y = seq(1, .25, 
+  #   #                  length = length(formula)),
+  #   #          label = formula, 
+  #   #          parse = TRUE, 
+  #   #          size = 7) +
+  #   geom_rect(aes(xmin = -Inf, 
+  #                 xmax = Inf, 
+  #                 ymin = -Inf, 
+  #                 ymax = Inf), 
+  #             fill = "blue", 
+  #             alpha = 0.05, 
+  #             color = "black") +
+  #   theme_void() +
+  #   coord_cartesian(xlim = c(0, 3), ylim = c(-2.25, 2.4))
   
-  p2 <- ggplot() +
-    annotate("text", 
-             x = 1.5, 
-             y = seq(1, .25, 
-                     length = length(formula)),
-             label = formula, 
-             parse = TRUE, 
-             size = 6) +
-    geom_rect(aes(xmin = -Inf, 
-                  xmax = Inf, 
-                  ymin = -Inf, 
-                  ymax = Inf), 
-              fill = "blue", 
-              alpha = 0.05, 
-              color = "black") +
-    theme_void() +
-    coord_cartesian(xlim = c(0, 3), ylim = c(-2.25, 2.4))
-  
-  if(input$params){
-    beta_value <- round(exp(beta_0),0)
-    theta_value <- dezero(theta, 2)
-    delta_value <- round(delta, 2)
-    beta_label <- substitute(beta==beta0, list(
-      beta0 = beta_value))
-    theta_label <- substitute(theta==theta_value, list(
-      theta_value = theta_value))
-    delta_label <- substitute(delta==delta_value, list(
-      delta_value = delta_value))
-    
-    
-    p2 <- p2 + 
-      annotate("text",
-               x = 2.25,
-               y = -1,
-               label = deparse(beta_label), 
-               parse = TRUE, 
-               size = 6) +
-      annotate("text",
-               x = 2.25,
-               y = -1.5,
-               label = deparse(theta_label), 
-               parse = TRUE, 
-               size = 6) +
-      annotate("text",
-               x = 2.25,
-               y = -2,
-               label = deparse(delta_label), 
-               parse = TRUE, 
-               size = 6)
-    
-  }
+  # if(input$params){
+  #   beta_value <- round(exp(beta_0),0)
+  #   theta_value <- dezero(theta, 2)
+  #   delta_value <- round(delta, 2)
+  #   beta_label <- substitute(beta==beta0, list(
+  #     beta0 = beta_value))
+  #   theta_label <- substitute(theta==theta_value, list(
+  #     theta_value = theta_value))
+  #   delta_label <- substitute(delta==delta_value, list(
+  #     delta_value = delta_value))
+  #   
+  #   
+  #   p2 <- p2 + 
+  #     annotate("text",
+  #              x = 2.25,
+  #              y = -1,
+  #              label = deparse(beta_label), 
+  #              parse = TRUE, 
+  #              size = 6) +
+  #     annotate("text",
+  #              x = 2.25,
+  #              y = -1.5,
+  #              label = deparse(theta_label), 
+  #              parse = TRUE, 
+  #              size = 6) +
+  #     annotate("text",
+  #              x = 2.25,
+  #              y = -2,
+  #              label = deparse(delta_label), 
+  #              parse = TRUE, 
+  #              size = 6)
+  #   
+  # }
   
   
   
-  p1 <- ggplot(data, aes(x)) +
+  ggplot(data, aes(x)) +
     stat_function(geom = "line", fun = plot_mix_comps,
                   size = size,
                   args = list(beta_0, sigmae, lam = 1 - theta)) +
@@ -149,16 +150,16 @@ renderPlot({
     scale_fill_manual(breaks = c("Fluent typing", 'Hesitation ("Pause")'),
                       values = c("#000000","#009E73")) +
     scale_x_continuous(labels = scales::comma, breaks = seq(0, 2500, 200)) +
-    coord_cartesian(ylim = c(0, .007), 
-                    xlim = c(0, 800)) +
+    coord_cartesian(ylim = c(0, .005), 
+                    xlim = c(-10, 2100)) +
     labs(title = "",
          fill = "Mixture components",
          x = "Inter-keystroke interval [in msecs]",
          y = "Density") 
   
-  p1 + p2 + 
-    plot_layout(widths = c(3, 1.25)) + 
-    plot_layout(guides = 'collect')
+#  p1 + p2 + 
+#    plot_layout(widths = c(3, 1.25)) + 
+#    plot_layout(guides = 'collect')
   
 })
 
@@ -167,3 +168,136 @@ renderPlot({
 :::
   
   
+  
+
+## Parallel view: mixture of two processes {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+# function for mixture models
+plot_mix_comps <- function(x, mu, sigma, lam) lam * dnorm(x, mu, sigma)
+
+# Parameters
+data <- data.frame(x = c(50, 1500))
+theta_conj <- .3
+theta_simp <- .1
+alpha <- 250
+delta <- c(250, 500)
+alpha2_w <- alpha + delta[1]
+alpha2_s <- alpha + delta[2]
+sigma <- 40
+sigma_diff <- c(30, 60)
+sigmae <- sigma
+sigmae_p_w <- sigma + sigma_diff[1]
+sigmae_p_s <- sigma + sigma_diff[2]
+
+ggplot(data, aes(x)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  scale_color_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_fill_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_x_continuous(labels = scales::comma, 
+                     limits = c(50, 1000), 
+                     breaks = seq(0, 1500, 200)) +
+  labs(x = "Interkey intervals [in ms]", 
+       colour = "Text location",
+       fill = "Text location") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_{i} \sim\text{ } \theta \times \text{log}\mathcal{N}(\beta + \delta, \sigma_{e'}^2) + \\
+   (1 - \theta) \times \text{log}\mathcal{N}(\beta, \sigma_{e}^2)
+$$
+
+</div>
+
+
+
+## Parallel view: mixture of two processes {.smaller}
+
+
+<div style="float: left; width: 40%;">
+
+```{r fig.width=5}
+ggplot(data, aes(x)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = sent_lbl),
+                linewidth = linewidth,
+                args = list(alpha, sigmae, lam = 1 - theta_conj)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = word_lbl),
+                linewidth = linewidth,
+                args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  stat_function(geom = "line", fun = plot_mix_comps,
+                aes(colour = sent_lbl),
+                linewidth = linewidth,
+                args = list(alpha2_s, sigmae_p_s, lam = theta_conj)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha, sigmae, lam = 1 - theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = sent_lbl), alpha = .15,
+            args = list(alpha, sigmae, lam = 1 - theta_conj)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = word_lbl), alpha = .25, 
+            args = list(alpha2_w, sigmae_p_w, lam = theta_simp)) +
+  geom_area(stat = "function", fun = plot_mix_comps, aes(fill = sent_lbl), alpha = .15,
+            args = list(alpha2_s, sigmae_p_s, lam = theta_conj)) +
+  geom_curve(aes(x = alpha2_w, 
+                 xend = alpha2_s, y = 0.0008, yend = 0.0015),
+             curvature = -0.2, 
+             size = .15,
+             arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate("text", 
+           x = (alpha2_w + alpha2_s)/2,
+           y=.0022, 
+           label=paste0("theta[diff]", "~and~", "delta[diff]"), size = 4, parse=TRUE) +
+  scale_color_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_fill_manual(breaks = c(word_lbl, sent_lbl), values = ggthemes::colorblind_pal()(2)) +
+  scale_x_continuous(labels = scales::comma, 
+                     limits = c(50, 1000), 
+                     breaks = seq(0, 1500, 200)) +
+  labs(x = "Interkey intervals [in ms]", 
+       colour = "Text location",
+       fill = "Text location") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+</div>
+
+<div style="float: right; width: 50%;">
+\
+\
+\
+\
+
+$$
+\text{iki}_{i} \sim\text{ } \theta_\text{location[i]} \times \text{log}\mathcal{N}(\beta + \delta_\text{location[i]}, \sigma_{e'_\text{location[i]}}^2) + \\
+   (1 - \theta_\text{location[i]}) \times \text{log}\mathcal{N}(\beta, \sigma_{e_\text{location[i]}}^2)
+$$

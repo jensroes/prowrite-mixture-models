@@ -3,7 +3,8 @@
 ```{r loceffectcon, results='asis'}
 
 files <- list.files(str_c("../../stanout/", 
-                          c("lift", "spl2", "gunnexp2", "plantra", "cato", "c2l1")), pattern = "mogbetacon.+.csv", full.names = T) # "spl2_shift",
+                          c("lift", "spl2", "gunnexp2", "plantra", "cato", "c2l1")), 
+                    pattern = "mogbetacon.+.csv", full.names = T) # "spl2_shift",
 
 ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>% 
                                  mutate(data = .x)) %>% 
@@ -35,7 +36,9 @@ ps_loc_diffs <- purrr::map_dfr(files, ~read_csv(.x) %>%
             .by = c(data, param)) 
 
 tmp <- ps_loc_diffs %>% 
-  pivot_longer(starts_with("diff"), names_to = c("diffid", ".value"), names_sep = "_") %>% 
+  pivot_longer(starts_with("diff"), 
+               names_to = c("diffid", ".value"),
+               names_sep = "_") %>% 
   mutate(across(mean, ~pmap_chr(list(., lower, upper, 2), PI)),
          across(BF, ~ifelse(.>100, "> 100", as.character(round(.,2))))) %>% 
   select(-lower, -upper) %>% 
@@ -61,13 +64,10 @@ apa_table(tmp[,-1],
                               `\\textbf{PLanTra}` = 9:10,
                               `\\textbf{SPL2 (L1)}` = 11:12),
           #                              `\\textbf{SPL2 (L1; shift + C)}` = 13:14),
-          col_spanners = list(" " = c(1),
-                          #    "Fluent transitions" = c(2, 3), 
-                              "Hesitation slowdown" = c(2, 3), 
-                              "Hesitation probability" = c(4, 5)),
+          col_spanners = list("Hesitation duration" = 2:3, 
+                              "Hesitation probability" = 4:5),
           note = "PI = probability intervals. BF = evidence in favour of the alternative hypothesis over the null hypothesis.",
-          caption = "Effect of transition location on interkey intervals. Differences are shown on log scale (for durations) and logit scale for hesitation probability. 95\\% PIs in brackets.") 
-
+          caption = "Transition-location effect. Differences are shown for the hesitation duration (log scale) and the hesitation probability (logit scale); 95\\% PIs in brackets.") 
 
 ```
 

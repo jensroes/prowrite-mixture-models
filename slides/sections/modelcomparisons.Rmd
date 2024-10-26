@@ -68,7 +68,7 @@ mc %>%
   rename(`Data set` = dataset) %>% 
   select(1, 4, 3, 2) %>% 
   kable(align = c("l", rep("r", 3)),
-        caption = "Vales are the absolute ratio of the difference in predictive performance measured as $\\widehat{elpd}$ and its standard error $\\mid\\frac{\\Delta\\widehat{elpd}}{\\text{SE}}\\mid$ which corresponds to the $z$-score of the difference between models [@sivula2020uncertainty].") %>% 
+        caption = "Values are the absolute ratio of the difference in predictive performance measured as $\\widehat{elpd}$ [@vehtari2015pareto; @vehtari2017practical] and its standard error $\\mid\\frac{\\Delta\\widehat{elpd}}{\\text{SE}}\\mid$ which corresponds to the $z$-score of the change in predictive performance [@sivula2020uncertainty].") %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
                 full_width = T, 
                 position = "right",
@@ -78,6 +78,7 @@ mc %>%
 
 ## Model comparisons
 
+
 ```{r loos2, results='asis'}
 mc %>% 
   select(dataset, Comparison = model, elpd_diff_ratio) %>%
@@ -85,7 +86,7 @@ mc %>%
   rename(`Data set` = dataset) %>% 
   select(1, 4, 3, 2) %>% 
   kable(align = c("l", rep("r", 3)),
-        caption = "Vales are the absolute ratio of the difference in predictive performance measured as $\\widehat{elpd}$ and its standard error $\\mid\\frac{\\Delta\\widehat{elpd}}{\\text{SE}}\\mid$ which corresponds to the $z$-score of the difference between models [@sivula2020uncertainty].") %>% 
+        caption = "Values are the absolute ratio of the difference in predictive performance measured as $\\widehat{elpd}$ [@vehtari2015pareto; @vehtari2017practical] and its standard error $\\mid\\frac{\\Delta\\widehat{elpd}}{\\text{SE}}\\mid$ which corresponds to the $z$-score of the change in predictive performance [@sivula2020uncertainty].") %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
                 full_width = T, 
                 position = "right",

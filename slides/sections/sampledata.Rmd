@@ -4,8 +4,8 @@
 
 Essay-writing task from ProWrite project [e.g. @dux2022automating] without deletions and spaces.
 
-```{r eval = F}
-read_csv('tutorial/data/process_data_by_event.csv') %>% 
+```{r eval = F, message=F}
+read_csv('../../tutorial/data/process_data_by_event.csv') %>% 
   filter(location != "post-paragraph", 
          !is.na(location),
          next_event_type == "production",
@@ -18,7 +18,7 @@ read_csv('tutorial/data/process_data_by_event.csv') %>%
   filter(text %in% letters) %>% 
   mutate(.by = c(token, location), 
          idx = sample(n())) %>% 
-  filter(idx <= 50) %>% 
+  filter(idx <= 20) %>% 
   select(participant, iki = event_duration, location, pretext, text) %>% 
   mutate(across(location, ~recode(., 
                                   "within-word" = "within word",
@@ -26,27 +26,75 @@ read_csv('tutorial/data/process_data_by_event.csv') %>%
                                   "post-sentence" = "before sentence"))) %>% 
   filter(participant %in% sample(unique(participant), 10)) %>% 
   mutate(recent_text = substr(pretext, 
-                              start = nchar(pretext) - 40,
+                              start = nchar(pretext) - 15,
                               stop = nchar(pretext))) %>% 
   select(-pretext) %>% 
   rename(new_letter = text) %>% 
   relocate(participant, location, recent_text, new_letter, iki) %>% 
-  write_csv("slides/data/sampledata.csv")
+  write_csv("../data/sampledata.csv")
 ```
 
 ```{r}
-data <- read_csv("slides/data/sampledata.csv")
-slice(data, sample(nrow(data), size = 10))
+data <- read_csv("../data/sampledata.csv")
+slice(data, sample(nrow(data), size = 20)) %>% 
+  kable() %>% 
+  kable_styling(full_width = T, font_size = 16)
 ```
 
 
-## How are these data distributed?
+## How are interkey intervals distributed?
 
-```{r fig.width=10, fig.height=6}
+```{r fig.width=10, fig.height=4.5}
 ggplot(data, aes(x = iki, colour = location, fill = location)) +
   geom_density(alpha = .25) +
   scale_colour_colorblind() +
   scale_fill_colorblind() +
   scale_x_log10() 
+```
+
+
+## Usual practice
+
+```{r fig.width=10, fig.height=4.5}
+ggplot(data, aes(x = iki, colour = location, fill = location)) +
+  geom_density(alpha = .25) +
+  scale_colour_colorblind() +
+  scale_fill_colorblind() +
+  scale_x_log10() +
+  geom_vline(xintercept = c(500, 1000, 2000), colour = "red", linetype = "dashed") +
+  annotate(geom = "text",
+           x = c(500, 1000, 2000), 
+           y = c(1.5, 1.25, 1),
+           label = str_c(c(500, 1000, 2000), " msecs")) +
+  labs(y = "density")
+```
+
+
+## Usual practice
+
+```{r echo = T}
+data_with_pause <- data %>% 
+  mutate(is_pause.500 = iki > 500,
+         is_pause.1k = iki > 1000,
+         is_pause.2k = iki > 2000)
+```
+
+```{r echo = T}
+data_with_pause %>% 
+  summarise(across(starts_with("is_pause"), list(prop = mean)), .by = location) %>% 
+  rename_with(.fn = ~str_remove(., "^.+\\.")) %>% 
+  arrange(location)
+```
+
+
+
+## Usual practice
+
+```{r echo = T}
+data_with_pause %>% 
+  pivot_longer(starts_with("is_pause"), names_to = c(".value", "threshold"), names_sep = "\\.") %>% 
+  filter(is_pause) %>% 
+  summarise(avg = mean(iki), sd = sd(iki), n = n(), .by = c(threshold, location)) %>% 
+  arrange(threshold)
 ```
 

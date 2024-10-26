@@ -37,8 +37,8 @@ singledata <- table %>% filter(str_detect(data, "Single"), elpd_diff != "--") %>
 \
 \
 
-- Simulate data from a single log-normal distribution
-- Simulate data from a mixture of to log-normal distribution
+- Simulate data from (i) a single log-normal distribution and (ii) a mixture of two log-normal distributions.
+- Analysed both in (i) a single process model and (ii) a mixture model.
 - Data simulated with mixture process: 
   - Advantage for mixture model over single process model: $\Delta\widehat{elpd} =$ `r mixturedata`
 - Data simulated with single process: 

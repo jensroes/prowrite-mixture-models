@@ -14,12 +14,12 @@ beta_plots <- list()
 delta_plots <- list()
 theta_plots <- list()
 datasets <- unique(ps$ds)
-size <- 2
+size <- 1.5
 width <- 0
 linewidth <- .35
 beta_label <- "Fluent interkey\nintervals"
-delta_label <- "Slowdown for hesitations"
-theta_label <- "Probability of hesitations"
+delta_label <- "Hesitation duration"
+theta_label <- "Hesitation probability"
 
 ps <- ps %>% mutate(across(group, ~case_when(str_detect(., "L1") ~ "L1",
                                              str_detect(., "L2") ~ "L2",
@@ -52,10 +52,10 @@ beta_plots <- map(datasets, ~filter(ps,
                            shape = guide_legend(nrow=1,byrow=TRUE)))
 
 delta_plots <- map(datasets, ~filter(ps, 
-                                     name == "delta", 
+                                     name == "beta2", 
                                      ds == .x) %>% 
                      mutate(across(c(ds,group), ~factor(.)),
-                            across(c(mean, lower, upper), ~ . /1000),
+#                            across(c(mean, lower, upper), ~ . /1000),
                             name = delta_label) %>% 
                      ggplot(aes(y = mean, 
                                 ymin = lower, 
@@ -133,7 +133,7 @@ theta_plots[c(1,2,4,5)] <- map(c(1,2,4,5), ~theta_plots[[.]] + theme(axis.text.x
 
 
 plot_param <- map(1:6, ~beta_plots[[.]] + delta_plots[[.]] + theta_plots[[.]] + labs[[.]] +
-                    plot_layout(guides = "collect", widths = c(.45, 1, 1, .1)) &
+                    plot_layout(guides = "collect", widths = c(.4, 1, 1, .1)) &
                     theme(legend.position = "bottom"))
 
 plot_param[[2]] <- plot_param[[2]] & theme(legend.position = "none")
@@ -153,13 +153,13 @@ plot_param[[6]] <- plot_param[[6]] & guides(colour=guide_legend(nrow=1,byrow=TRU
 
 plot_fin_1 <-  plot_param[[2]] / plot_param[[1]] / plot_param[[3]]
 plot_fin_1 <- grid.arrange(patchworkGrob(plot_fin_1), 
-                           left = "Posterior estimate with 95% PIs",
+                           left = "Posterior estimates with 95% PIs",
                            bottom = "Transition location")
 ggsave("../figures/psplots1constr.pdf", plot_fin_1, height = 6, width = 6)
 
 plot_fin_2 <- plot_param[[4]] / plot_param[[5]] / plot_param[[6]]
 plot_fin_2 <- grid.arrange(patchworkGrob(plot_fin_2), 
-                           left = "Posterior estimate with 95% PIs",
+                           left = "Posterior estimates with 95% PIs",
                            bottom = "Transition location")
 ggsave("../figures/psplots2constr.pdf", plot_fin_2, height = 6.75, width = 6.5)
 ```
@@ -168,7 +168,7 @@ ggsave("../figures/psplots2constr.pdf", plot_fin_2, height = 6.75, width = 6.5)
 \begin{figure}[!htb]
 \centering
 \includegraphics{figures/psplots1constr.pdf}
-\caption{Distribution of posterior parameter estimates with 95\% probability intervals (PI). Fluent interkey intervals are shown in msecs and the slowdown for hesitant key intervals in secs; probability of hesitations is the proportion of hesitant interkey intervals.}
+\caption{Distribution of posterior parameter estimates with 95\% probability intervals (PI). Fluent interkey intervals and hesitation durations are shown in msecs; probability of hesitations is the proportion of hesitant interkey intervals.}
 \end{figure}
 \newpage
 \begin{figure}[!htb]
@@ -177,7 +177,7 @@ ggsave("../figures/psplots2constr.pdf", plot_fin_2, height = 6.75, width = 6.5)
 \centering
 \includegraphics{figures/psplots2constr.pdf}
 \label{fig:fullps1}
-\caption{Distribution of posterior parameter estimates with 95\% probability intervals (PI). Fluent interkey intervals are shown in msecs and the slowdown for hesitant key intervals in secs; probability of hesitations is the proportion of hesitant interkey intervals.}
+\caption{Distribution of posterior parameter estimates with 95\% probability intervals (PI). Fluent interkey intervals and hesitation durations are shown in msecs; probability of hesitations is the proportion of hesitant interkey intervals.}
 
 \end{figure}
 

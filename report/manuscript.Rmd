@@ -1,6 +1,7 @@
 ---
-title             : "Typing in tandem: finite mixture models reveal fundamental parallelism in multi-sentence text composition"
-shorttitle        : "Typing in tandem"
+title             : "Typing in tandem: language planning in multi-sentence text production is fundamentally parallel"
+#shorttitle        : "Typing in tandem"
+shorttitle        : "Revision of XGE-2024-2060 as invited by the action editor, Michele Diaz, Ph.D."
 
 csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
 documentclass     : "apa7"
@@ -14,14 +15,55 @@ author:
     address       : "50 Shakespeare St, Nottingham NG1 4FQ"
     corresponding : yes 
     email         : "jens.roeser@ntu.ac.uk"
+    role          : 
+      - Conceptualisation
+      - Data curation
+      - Formal analysis
+      - Funding acquisition
+      - Investigation
+      - Methodology
+      - Project administration
+      - Software
+      - Visualisation    
+      - Writing -- original draft
+      - Writing -- review \& editing
   - name          : "Rianne Conijn"
     affiliation   : "2"
+    role          :
+      - Conceptualisation
+      - Investigation
+      - Writing -- original draft
+      - Writing -- review \& editing
   - name          : "Evgeny Chukharev"
     affiliation   : "3"
+    role          :
+      - Funding acquisition
+      - Investigation
+      - Resources  
+      - Project administration
+      - Software
+      - Supervision
   - name          : "Gunn Helen Ofstad"
     affiliation   : "4"
+    role          :
+      - Investigation
+      - Resources  
+
   - name          : "Mark Torrance"
     affiliation   : "1"
+    role          :
+      - Conceptualisation
+      - Data curation
+      - Formal analysis
+      - Funding acquisition
+      - Investigation
+      - Methodology
+      - Resources  
+      - Supervision
+      - Visualisation    
+      - Writing -- original draft
+      - Writing -- review \& editing
+
 
 affiliation:
   - id            : "1"
@@ -34,18 +76,21 @@ affiliation:
     institution   : "Educational Sciences and Humanities, University of Stavanger, Norway"
 
 
+authornote: |
+  We are grateful for all authors who made their data available to us, in particular Nina Vandermeulen, Alessandra Rossetti, and colleagues, and Vibeke Rønneberg, Per Henning Uppstad, and colleagues at the Norwegian Reading National Centre, University of Stavanger. This work was supported by the National Science Foundation under Grant No. 2016868: "ProWrite: Biometric feedback for improving college students’ writing processes." and UKRI ESRC under Grant No. ES/W011832/1: "Can you use it in a sentence?: Establishing how word-production difficulties shape text formation." 
 
-# We are grateful for all authors who made their available (to us), in particular Nina Vandermeulen, Alessandra Rossetti, and colleagues. This work was supported by the National Science Foundation under Grant No. 2016868: "ProWrite: Biometric feedback for improving college students' writing processes." and UKRI ESRC under Grant No. ES/W011832/1: "Can you use it in a sentence?: Establishing how word-production difficulties shape text formation."
-# 
-# Data and analysis scripts written in R and Stan can be found on OSF (https://osf.io/z65dw/; Roeser et al., 2024). For a tutorial on Bayesian mixture-model analysis in the context of keystroke data see https://rpubs.com/jensroes/mixture-models-tutorial.
+  Data and analysis scripts written in R and Stan can be found on OSF (https://osf.io/z65dw/; Roeser et al., 2024). For a tutorial on Bayesian mixture-model analysis in the context of keystroke data see https://rpubs.com/jensroes/mixture-models-tutorial.
 
+  Parts of this work have been shared through conference presentations, namely at the SIG writing conference in Paris, France (2024) and in Umea, Sweden (2022), and at EARLI SIG Online Measurements in Southampton, UK (2022).
 
 
 abstract: 'Classical serial models view the process of producing a text as a chain of discrete pauses, during which the next span of text is planned, and bursts of activity during which this text is output onto the page or computer screen. In contrast, semi-parallel models of writing assume that planning is not complete at production onset and operates in parallel with execution. Across six datasets from participants composing multi-sentence texts we instantiated these assumptions in two sets of Bayesian mixed effects models: (1) single-distribution models as assumed by the serial processing account, and (2) a finite (two-distribution) mixture model as assumed by the parallel processing account. We analysed interkey intervals at before-sentence, before word, and within word transitions. Model comparisons demonstrated strong evidence in favour of the parallel view across all datasets. When pausing occurred, sentence initial pauses were longer than word initial pauses which is consistent with the idea that larger linguistic edges are associated with higher level planning. However, we found -- across populations -- that interkey intervals at word and even at sentence boundaries were often too rapid to permit planning of what was written next. Our results cannot be explained by the serial processing but are in line with the semi-parallel view of writing.'
 
-keywords: "Cascade; parallel models; serial models; finite mixture models; Bayesian models; text composition; keystrokes"
+keywords: "Parallel processing; writing; mixture models; language production; keystroke logging"
 
 bibliography      : ["references.bib"]
+nocite: | 
+  @brysbaert2021improving, @dickey1970weighted, @wagenmakers2010bayesian, @jeffreys1961theory, @lee2014bayesian, @dienes2014using
 
 figsintext        : yes
 figurelist        : no
@@ -128,8 +173,8 @@ theme_set(theme_few(base_size = 12) +
 
 options(scipen = 999)
 
-beta_label <- "Fluent interkey\nintervals (in msecs)"
-delta_label <- "Slowdown for hesitant\ninterkey intervals (in secs)"
+beta_label <- "Fluent interkey\nintervals"
+delta_label <- "Hesitant\ninterkey intervals"
 theta_label <- "Probability of hesitant\ninterkey intervals"
 ```
 
@@ -179,6 +224,7 @@ González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized s
 
 \newpage
 
+
 # References
 
 \begingroup
@@ -198,6 +244,11 @@ González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized s
 
 \newpage
 
+```{r child = 'appendix/parallel.Rmd'}
+```
+
+
+\newpage
 
 ```{r child = 'appendix/models.Rmd'}
 ```
@@ -205,16 +256,6 @@ González, N., & Calot, E. P. (2023). Dataset of human-written and synthesized s
 \newpage
 
 ```{r child = 'appendix/fit2data.Rmd'}
-```
-
-\newpage
-
-```{r child = 'appendix/transloc.Rmd', eval=F}
-```
-
-\newpage
- 
-```{r child = 'appendix/shift.Rmd', eval = F}
 ```
 
 \newpage

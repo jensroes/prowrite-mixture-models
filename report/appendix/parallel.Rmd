@@ -1,0 +1,14 @@
+# Interkey-interval predictions under a parallel theory of text production
+
+Figure \ref{fig:model} shows how a parallel understanding of language production [following @van1991handwriting; @olive2014toward] predicts interkey intervals. It demonstrates a fundamental property, in which upstream processes provide downstream processes with information as it becomes available (i.e. on a just-in-time basis), and there is the possibility of buffering. For the purposes of illustration, all processing above the final buffer is lumped together as "message and language processing" and all processing below this buffer as "motor processing and execution". We make no claims as to exactly how these processes are divided.
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics{figures/cascade_figure.pdf}
+  \caption{Illustration of a parallel theory of text production.}
+  \label{fig:model}
+\end{figure}
+
+In both cases the specific processing that is responsible for determining interkey interval is shown in black. Figure \ref{fig:model}A shows the case where upstream processing runs faster than, and therefore ahead of, motor execution. Message and language processing provides necessary information to the execution processes in advance of (or at exactly the same time as) when it can be used. In this case interkey intervals -- both IKI1 and IKI2 -- are determined just by the time taken to prepare and execute the keystroke. It is entirely unaffected by the duration of upstream processing. Figure \ref{fig:model}B shows the case where upstream processes deliver information to motor processes at a rate that lags behind that at which it could be potentially motor-planned and executed (i.e. where "just in time" processing fails). This results in a delay in output -- a "hesitation" in our terminology. IKI1 in Figure \ref{fig:model}B is therefore longer than IKI1 in Figure \ref{fig:model}A. Just-in-time processing is then resumed, and IKI2 in Figure \ref{fig:model}B is of the same duration as the interkey intervals in Figure \ref{fig:model}A.
+
+In the case where upstream processes run ahead of motor processing, the interkey interval is obviously determined just by the speed at which the writer can move their finger (can motor-plan and execute). The essential point that Figure \ref{fig:model} illustrates is that in the case where upstream processes lag behind motor output (Figure \ref{fig:model}B), the interkey interval is determined _just_ by time taken for upstream processing. Effects on the interkey interval are not additive. Interkey intervals are therefore determined by one of two entirely separate data-generating processes. This is the basis for our claim that a finite mixture of two distributions represents a statistical model of parallel processing.

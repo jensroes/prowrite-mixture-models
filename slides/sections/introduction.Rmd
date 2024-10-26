@@ -1,4 +1,4 @@
-## How do we produce texts?
+## Three general planning stages
 
 ```{r fig.width=10}
 casc <- tibble(stage = c(rep("Semantic",3), 
@@ -48,7 +48,7 @@ ggplot(casc, aes(x = start,
 
 ```
 
-## Planning text
+## Higher level info cascades into lower levels
 
 ```{r fig.width=10}
 casc <- tibble(stage = c(rep("Semantic",3), 
@@ -365,7 +365,7 @@ ggplot(casc, aes(x = start, xend = end,
             size = 4, colour = "white", parse = TRUE) +
   scale_colour_viridis_d("", begin = .1, end = .9) +
   scale_x_continuous(limits = c(0,20), breaks = 19,labels = "the xylophone") +
-  labs(x = "Time", y = "Planning\nstage") + 
+  labs(x = "Time", y = "Planning\nstages") + 
   theme_classic() +
   theme(axis.text.x = element_text(face = "italic"),
         axis.text.y = element_text(size = 12),

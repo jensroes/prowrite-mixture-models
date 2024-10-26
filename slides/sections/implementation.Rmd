@@ -1,7 +1,12 @@
-## Implentation
+## Implementation and model comparison
 
-- Bayesian inference [e.g. @lambert2018student]
-- Random effects for participants [see @roeser2021modelling] with code based on @vasishth2017
-- Stan [@carpenter2016stan] using `rstan` [@rstan] to interface with $R$
-- Leave-one-out cross-validation estimated as the sum of the expected log predictive density $\widehat{elpd}$ and compared by the difference between models $\Delta\widehat{elpd}$ [@vehtari2015pareto; @vehtari2017practical]
-- Difference between models was summarised as $\mid\frac{\Delta\widehat{elpd}}{\text{SE}}\mid$, the *z*-score of the difference between models [@sivula2020uncertainty].
+<!-- - Bayesian inference [e.g. @lambert2018student] models implemented in Stan [@carpenter2016stan] using `rstan` [@rstan] to interface with $R$ -->
+- Code based on @vasishth2017 [see @roeser2021modelling]
+- Random effects for participants
+- Leave-one-out cross-validation: sum of the *expected log predictive density* $\widehat{elpd}$ 
+- *Difference between models* $\Delta\widehat{elpd}$ [@vehtari2015pareto; @vehtari2017practical]
+- Difference between models was summarised as
+
+$\mid\frac{\Delta\widehat{elpd}}{\text{SE}_\text{diff}}\mid$, 
+
+i.e. the *z*-score of the change in predictive performance [@sivula2020uncertainty].

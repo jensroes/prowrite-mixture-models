@@ -1,10 +1,11 @@
 # Genre effect (LIFT)
 
-From the LIFT data, we compared the difference between genres, i.e. when writing an informative text as opposed to writing an argumentative text. The results are shown in Table \ref{tab:genreeffect}. Cellmeans and differences were average across writing topic. Evidence for a genre comparisons was negligible.
+From the LIFT data, we assessed differences between genres, i.e. writing an informative as opposed to argumentative text. Results are shown in Table \ref{tab:genreeffect}. Cellmeans and differences were average across writing topic. Evidence for all comparisons was negligible.
 
 
 ```{r genreeffect, results = 'asis'}
 cellmeans <- ps_lift %>% 
+  mutate(across(name, ~recode(., beta2 = "delta"))) %>% 
   separate(group, into = c("topic","genre"), sep = "; ") %>% 
   mutate(across(c(topic, genre), ~str_remove(., "Topic: |Genre: "))) %>% 
   mutate(across(location, ~str_replace(., "\\n", " "))) %>% 
@@ -13,7 +14,8 @@ cellmeans <- ps_lift %>%
             .by = c(location, name, genre)) %>% 
   pivot_wider(names_from = name, values_from = c(mean, lower, upper)) %>% 
   mutate(across(ends_with("prob"), ~dezero(., 2)),
-         across(c(ends_with("beta"), ends_with("delta")), 
+         across(c(ends_with("beta"), 
+                  ends_with("delta")), 
                 ~as.character(scales::comma(round(.))))) %>% 
   pivot_longer(-c(location, genre), 
                names_to = c(".value", "param"),
@@ -30,7 +32,8 @@ tmp <- read_csv(file) %>%
   mutate(across(value, ~ifelse(param == "theta", .*-1, value)),
          across(genre, ~ifelse(is.na(genre) & param != "beta", "ARG", .)),
          across(genre, ~ifelse(. == "Inf", "INF", .))) %>% 
-  pivot_wider(names_from = genre, values_from = value) %>% 
+  pivot_wider(names_from = genre, 
+              values_from = value) %>% 
   unnest(c(ARG, INF)) %>% 
   mutate(diff = ARG - INF) %>% 
   summarise(across(diff, list(mean = mean, 
@@ -54,7 +57,7 @@ write_csv(tmp, "../tables/genre_effect_cellmeans_constr.csv")
 
 apa_table(tmp[,-1],
           align = c("l", "r", "r", "r", "r"), 
-          caption = "Mixture model estimates for genre effect. Cell means are shown for argumentative and informative texts in msecs for the hesitation slowdown and the probability of hesitant transitions. The effect for genre is shown on log scale (for transition durations) and logit scale for probability of hesitant transitions. 95% PIs in brackets.",
+          caption = "Mixture-model estimates for genre effect. Cellmeans for hesitation duration (in msecs) and the probability of hesitant transitions are shown for argumentative and informative texts. The genre effect is shown on the log scale for hesitationn durations and on the logit scale for the probability of hesitant transitions; 95% PIs in brackets.",
           note = "PIs are probability intervals. BF is the evidence in favour of the alternative hypothesis over the null hypothesis.",
           longtable = T,
           font_size = "footnotesize",

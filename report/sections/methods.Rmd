@@ -24,17 +24,18 @@ tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT", "GE2"),
                            "InputLog", 
                            "InputLog",
                            "EyeWrite"),
-                `Writing task` = c("Argumentative", 
-                                 "Expository",
-                                 "Argumentative",
-                                 "Text simplification",
-                                 "Synthesis", 
-                                 "Argumentative"),
-                 N = as.character(c(126, 26*2, 39, 47, 658, 45)),
+                `Writing task` = c("Argumentative essay", 
+                                 "Expository essay",
+                                 "Argumentative essay",
+                                 "Paraphrase technical text$^b$",
+                                 "Synthesis of several printed sources$^b$", 
+                                 "Argumentative essay"),
+                 `Words in text$^a$` = c("128.5 (52.9)", "288 (119)", "668 (301)", "295 (79)", "374 (56)$^d$", "540 (141)"),
 #                n_texts = c(1, 2, 2, 2, NA),
 #                n_sentences = c(),
 #                n_words = c(),
-                `Mean age` = c(11.8, 16.9, 20.6, 23, 17.0, 19),
+                `Age` = c("11.8 (0.47)", "16.9 (0.88)", "20.6 (1.62)", "23 (2.7)", "16.7 (1.5)", "19.1 (1.4)$^c$"),
+                 N = as.character(c(126, 26*2, 39, 47, 658, 45)),
                  Sample = c("6th graders", "Secondary school students (dyslexic, non dyslexic)", "Undergraduate students", "Master students", "Secondary school students", "Undergraduate students"),
                  Country = c("Norway", "Norway", "USA", "Belgium", "The Netherlands", "UK"),
                  Language = c( "Norwegian", 
@@ -44,17 +45,17 @@ tibble(Dataset = c("C2L1", "CATO", "SPL2", "PLanTra", "LIFT", "GE2"),
                                "Dutch",
                                "English")) %>% 
   arrange(Dataset) %>% 
-  apa_table(align = c("l", "p{3cm}", "p{2cm}", "p{2.5cm}", "r", "r", "p{2.5cm}", "p{2.25cm}", "p{2.5cm}"), 
+  apa_table(align = c("p{1.5cm}", "p{2.75cm}", "p{1.75cm}", "p{2.25cm}", "p{1.75cm}", "p{1.75cm}", "p{.5cm}", "p{2.5cm}", "p{1.75cm}", "p{2cm}"), 
             escape = FALSE, 
+            longtable = FALSE,
+            row.names = T,
             font_size = "footnotesize",
-            caption = "Datasets in brief.")
+            caption = 'Datasets in brief.', 
+            note = "$^a$Mean number of words in the final text; standard deviations in parentheses. $^b$Reading activity was marked in the dataset and removed before analysis. $^c$Estimated from a similar sample from the same population. $^d$Estimated based on the number of characters in the final product following Brysbaert et al. (2021).")
 
-#                Manipulation = c("--", 
-#                               "Weak decoders / control; texted masked / unmasked",
-#                               "Text produced in L1 / L2",
-#                               "Pre / post test with training on plain language principles", 
-#                              "Various topics and genres",
-#                               "masked / unmasked")
+
+
+
 ```
 
 \elandscape
@@ -68,11 +69,11 @@ For C2L1, CATO, and GE2, keystroke data were captured using EyeWrite [@sim07; @t
 
 ## Data extraction
 
-From the keystroke data we extracted interkey intervals between adjacent keys at locations that have been identified repeatedly in previous research as locations where observed mean interkey intervals (or counts of interkey intervals over a predetermined threshold) have tended to vary substantially [e.g. @chukharev2019combined; @torrance2016adolescent; @de2018exploring] and are detailed in Table \ref{tab:keyloc}. In particular we analysed the interkey intervals that resulted in the insertion of a character that started a new sentence (before-sentence transition); interkey intervals that started a new word (other than those at the beginning of a sentence;  before-word transitions); and transitions between characters within words all transitions. At before-sentence locations, interkey intervals were timed to the shift keypress that resulted in the capitalization of the first key for most data sets (CATO, C2L1, SPL2, GE2) but were timed to the character key press in the  PLanTra and LIFT datasets (i.e. the duration included the time to perform the capitalisting shift keypress); we return to this difference in the Results section. Transitions that occurred at the very start of the text or at the beginning of a paragraph were not treated as before-sentence transitions and were removed from the analysis. Importantly we also removed transitions that were followed by an editing operation. We therefore just modelled the times between keypresses in ongoing production.
+From the keystroke data we extracted interkey intervals between adjacent keys at locations that have been identified repeatedly in previous research as locations where observed mean interkey intervals (or counts of interkey intervals over a predetermined threshold) have tended to vary substantially [e.g. @chukharev2019combined; @torrance2016adolescent; @de2018exploring] and are detailed in Table \ref{tab:keyloc}. In particular we analysed the interkey intervals that resulted in the insertion of a character that started a new sentence (before-sentence transition); interkey intervals that started a new word (other than those at the beginning of a sentence;  before-word transitions); and transitions between characters within words all transitions. At before-sentence locations, interkey intervals were timed to the shift keypress that resulted in the capitalization of the first key for most data sets (CATO, C2L1, SPL2, GE2) but were timed to the character key press in the  PLanTra and LIFT datasets (i.e. the duration included the time to perform the capitalising shift keypress); we return to this difference in the Results section. Transitions that occurred at the very start of the text or at the beginning of a paragraph were not treated as before-sentence transitions and were removed from the analysis. Importantly we also removed transitions that were followed by an editing operation. We therefore just modelled the times between keypresses in ongoing production.
 
 ```{r keyloc, results='asis'}
 
-table <- tibble(`Transition type` = c("Within word", "Below word", "Before sentence"),
+table <- tibble(`Transition type` = c("Within word", "Before word", "Before sentence"),
        Description = c("Transitions between any letter",
                        "Keypress after space followed by any letter",
                        "Keypress following a space preceding any letter"),
@@ -80,7 +81,7 @@ table <- tibble(`Transition type` = c("Within word", "Below word", "Before sente
                    "The $^{\\wedge}$cat $^{\\wedge}$meowed. That[bsp][bsp]en $^{\\wedge}$it $^{\\wedge}$slept.", 
                    "The cat meowed. $^{\\wedge}$That[bsp][bsp]en it slept."))
 
-apa_table(table, caption = "Transition location classification.",
+apa_table(table, caption = 'Transition location classification. The final text in all cases was "The cat meowed. Then it slept."',
             align = c("p{3cm}", "p{5cm}", "p{6cm}"), 
             escape = FALSE, 
             font_size = "footnotesize",
@@ -150,7 +151,7 @@ datareduction <- left_join(extrem_values, random_sample, by = "ds") %>%
 apa_table(datareduction, 
           escape = FALSE,  
           placement = "bp!",
-          caption = "Data reduction. Mean percentage of extreme data removed and the mean percentage of randomly sampled data analysed by transition location (`--` if all data were used). Standard error in parentheses.",
+          caption = "Data reduction. Shown are the percentage of extreme data that were removed and the percentage of randomly sampled data that were analysed by transition location (`--` if all data were included). Standard error in parentheses.",
           align =c("l", rep("r", 5)),
           col_spanners = list(" " = 1,
                               "Extreme values in \\%" = c(2, 3),
@@ -175,7 +176,7 @@ models <- tibble(Models = str_c("M",1:5),
        Description = c("Single Gaussian model with effects of transition location.",
                        "Single distribution log-Gaussian model equivialent to M1.",
                        "Equivalent to M2 but with different variance components for each transition location (unequal variance).",
-                       "Two-distributions mixture of a log-Gaussian for fluent interkey intervals and another wider log-Gaussian for hesitant / disfluent interkey intervals; the distribution of hesitant interkey intervals assumes -- similar to M3 -- different values for transition locations. The mixing weight of these distributions capture the relative number of disfluent transitions for each transition location.",
+                       "Two-distributions mixture of a log-Gaussian for fluent interkey intervals and another wider log-Gaussian for hesitant interkey intervals; the distribution of hesitant interkey intervals assumes -- similar to M3 -- different values for transition locations. The mixing weight (i.e. proportion of observations estimated to be associated with each distribution) captures the relative number of hesitant transitions for each transition location.",
                        "Equivialent to M4 but distribution of fluent transitions is allowed to vary by transition location.")) %>% 
   select(Models, Description)
 ```

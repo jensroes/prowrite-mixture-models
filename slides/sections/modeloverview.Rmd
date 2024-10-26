@@ -6,7 +6,7 @@ tibble(Models = str_c("M",1:4),
        Description = c("Single distribution Gaussian",
                        "Single distribution log-Gaussian",
                        "Single distribution log-Gaussian with different variance components per text location",
-                       "Two-distributions mixture of log-Gaussians.")) %>% 
+                       "Two-distributions mixture of log-Gaussians")) %>% 
   select(Models, Description) %>% 
   kable() %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "responsive"),
